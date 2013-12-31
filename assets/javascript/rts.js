@@ -2,11 +2,7 @@
 
 /* jshint loopfunc: true */
 
-/*
-	
-	window size
-	
-*/
+// declare all neccesary game functions/objects before initialising the game.
 var game = {
 	processes : {
 		pauze : {
@@ -28,17 +24,19 @@ var game = {
             width : 64,
             height : 32,
             draw : function (tileset, tile, x, y) {
+                var sx,
+                    sy;
                 x = x + tileset.tileOffsetX;
                 y = y + tileset.tileOffsetY;
                 
                 // perform a special calculation when the tile is the last in a tileset row
                 // [TODO] probably can be optimized.
                 if (tile  % (tileset.width / tileset.tileWidth) === 0) {
-                    var sx = ((tileset.width / tileset.tileWidth) * tileset.tileWidth)-tileset.tileWidth;
-                    var sy = (Math.floor(tile / (tileset.width / tileset.tileWidth))-1) * tileset.tileHeight;
+                    sx = ((tileset.width / tileset.tileWidth) * tileset.tileWidth)-tileset.tileWidth;
+                    sy = (Math.floor(tile / (tileset.width / tileset.tileWidth))-1) * tileset.tileHeight;
                 } else {
-                    var sx = ((tile  % (tileset.width / tileset.tileWidth)) * tileset.tileWidth)-tileset.tileWidth;
-                    var sy = Math.floor(tile / (tileset.width / tileset.tileWidth)) * tileset.tileHeight;
+                    sx = ((tile  % (tileset.width / tileset.tileWidth)) * tileset.tileWidth)-tileset.tileWidth;
+                    sy = Math.floor(tile / (tileset.width / tileset.tileWidth)) * tileset.tileHeight;
                 }
                 game.elements.canvas.context.drawImage(tileset,
                                                        sx,
@@ -293,8 +291,8 @@ game.common.initialiseObjects = function() {
     game.objects.road = {
         tile : 11,
         tileset : game.resources.tilesets.tiles,
-        baseWidth : 1,
-        baseHeight : 1,
+        width : 1,
+        height : 1,
         index : 0,
         drawGrid : true,
         create : function(x, y) {
@@ -314,10 +312,10 @@ game.common.initialiseObjects = function() {
                 baseLeft : 0,
                 baseRight : 0,
                 baseTop : 0,
-                baseWidth : 1,
-                baseHeight : 1,
+                width : 1,
+                height : 1,
                 destroy : function() {
-                    game.level.layers[this.zIndex][this.x][this.y].removeObject(this);
+                    game.level.layers[this.zIndex][this.x][this.y].destroyObject(this);
                 }
             };
             
@@ -335,8 +333,8 @@ game.common.initialiseObjects = function() {
     game.objects.defaultRoad = {
         tile : 11,
         tileset : game.resources.tilesets.tiles,
-        baseWidth : 1,
-        baseHeight : 1,
+        width : 1,
+        height : 1,
         index : 0,
         drawGrid : false,
         create : function(x, y) {
@@ -355,8 +353,8 @@ game.common.initialiseObjects = function() {
                 baseLeft : 0,
                 baseRight : 0,
                 baseTop : 0,
-                baseWidth : 1,
-                baseHeight : 1
+                width : 1,
+                height : 1
             };
             
             object.index = -1*object.id;
@@ -373,8 +371,8 @@ game.common.initialiseObjects = function() {
     game.objects.house = {
         tile : 1,
         tileset : game.resources.tilesets.house,
-        baseWidth : 2,
-        baseHeight : 2,
+        width : 2,
+        height : 2,
         index : 0,
         drawGrid : true,
         create : function(x, y) {
@@ -393,15 +391,15 @@ game.common.initialiseObjects = function() {
                 baseLeft : -1,
                 baseRight : 1,
                 baseTop : -1,
-                baseWidth : 2,
-                baseHeight : 2,
+                width : 2,
+                height : 2,
                 population : 0,
                 housing : 5,
                 destroy : function() {
-                    game.level.layers[this.zIndex][this.x][this.y].removeObject(this);
-                    game.level.layers[this.zIndex][this.x-1][this.y].removeObject(this);
-                    game.level.layers[this.zIndex][this.x][this.y-1].removeObject(this);
-                    game.level.layers[this.zIndex][this.x-1][this.y-1].removeObject(this);
+                    game.level.layers[this.zIndex][this.x][this.y].destroyObject(this);
+                    game.level.layers[this.zIndex][this.x-1][this.y].destroyObject(this);
+                    game.level.layers[this.zIndex][this.x][this.y-1].destroyObject(this);
+                    game.level.layers[this.zIndex][this.x-1][this.y-1].destroyObject(this);
                 }
             };
             
@@ -428,8 +426,8 @@ game.common.initialiseObjects = function() {
     game.objects.destroy = {
         tile : 94,
         tileset : game.resources.tilesets.tiles,
-        baseWidth : 1,
-        baseHeight : 1,
+        width : 1,
+        height : 1,
         index : 0,
         drawGrid : true,
         isCreateable : true,
@@ -472,12 +470,13 @@ game.common.initialiseObjects = function() {
                     }
                     
                     for(var i = 0; i < n; ++i) {
-                        game.objects.immigrant.create(x,y);
+                        game.objects.immigrant.create(this.x,this.y);
                     }
                 }
             };
             
             game.variables.immigrantSpawner = object;
+            //game.level.layers[1][x][y].addObject(object);
         }
     };
     
@@ -489,8 +488,8 @@ game.common.initialiseObjects = function() {
                 y : y,
                 zIndex : 2,
                 tile : 1,
-                baseWidth : 1,
-                baseHeight : 1,
+                width : 1,
+                height : 1,
                 tileset : game.resources.tilesets.immigrant,
                 id : game.common.assignObjectId(),
                 isSelectable : true,
@@ -499,11 +498,12 @@ game.common.initialiseObjects = function() {
                 isMoving : false
             };
             
+            
             object.index = object.id;
             
             game.variables.population.immigrants += 3;
             
-            game.level.layers[object.zIndex][x][y].objects.push(object);
+            game.level.layers[object.zIndex][x][y].addObject(object);
             return object;
         }
     };
@@ -511,8 +511,8 @@ game.common.initialiseObjects = function() {
     game.objects.select = {
         tile : 91,
         tileset : game.resources.tilesets.tiles,
-        baseWidth : 1,
-        baseHeight : 1,
+        width : 1,
+        height : 1,
         index : 0,
         drawGrid : false
     };
@@ -546,11 +546,44 @@ game.level.draw = function() {
         y,
         lenY,
         tile,
-        object;
+        object,
+        xStart,
+        xEnd,
+        yStart,
+        yEnd;
+    
+    /*
+        When a player clicks and drags multiple build objects should be drawn, in order to do this easily the correct start and end are calculated
+    */
+    if (typeof game.variables.selection.xStart === 'undefined' || game.variables.selection.xStart === null) {
+        xStart = Math.floor(game.variables.hover.x);
+        xEnd = Math.floor(game.variables.hover.x);
+    }
+    else if (game.variables.selection.xStart < game.variables.hover.x) {
+        xStart = game.variables.selection.xStart;
+        xEnd = Math.floor(game.variables.hover.x);
+    } else {
+        xStart = Math.floor(game.variables.hover.x);
+        xEnd = game.variables.selection.xStart;
+    }
+    
+    if (typeof game.variables.selection.yStart === 'undefined' || game.variables.selection.yStart === null) {
+        yStart = Math.floor(game.variables.hover.y);
+        yEnd = Math.floor(game.variables.hover.y);
+    }
+    else if (game.variables.selection.yStart < game.variables.hover.y) {
+        yStart = game.variables.selection.yStart;
+        yEnd = Math.floor(game.variables.hover.y);
+    } else {
+        yStart = Math.floor(game.variables.hover.y);
+        yEnd = game.variables.selection.yStart;
+    }
+
+    
     
     // loop through all layers, and draw all objects and tiles
     var lenLayer = game.level.layers.length;
-    //console.log(lenLayer)
+
     for (layer = 0; layer < lenLayer; ++layer) {
         lenX = game.level.layers[layer].length;
         for (x=0;x<lenX; ++x) { 
@@ -574,7 +607,7 @@ game.level.draw = function() {
                     game.objects.tile.draw(game.resources.tilesets.tiles,tile,x,y);
                 }
                 
-                // draw objects
+                // draw all objects with an index below 0
                 var oLen = game.level.layers[layer][x][y].lowDrawStack.length;
                 for(var o = 0; o< oLen; ++o) {
                     object = game.level.layers[layer][x][y].lowDrawStack[o];
@@ -585,27 +618,24 @@ game.level.draw = function() {
                 }
                 
                 
-                if (Math.floor(game.variables.hover.x) === x && Math.floor(game.variables.hover.y) === y && game.variables.selection.build_object) {
+                // draw build object on index 0
+                if (layer === 1 && game.variables.selection.build_object && xStart <= x && x <= xEnd && yStart <= y && y <= yEnd && (x-xStart) % game.variables.selection.build_object.width === 0 && (y-yStart) % game.variables.selection.build_object.height === 0) {
                     
                     game.elements.canvas.context.save();
                     game.elements.canvas.context.globalAlpha = 0.7;
                     object = game.variables.selection.build_object;
                     
-                    game.objects.tile.draw(object.tileset,object.tile,Math.floor(game.variables.hover.x),Math.floor(game.variables.hover.y));
+                    game.objects.tile.draw(object.tileset,object.tile,x,y);
                     
                     game.elements.canvas.context.restore();
                     
                 }
                 
-                                // draw objects
+                // draw all objects with an index above 0
                 oLen = game.level.layers[layer][x][y].highDrawStack.length;
                 for(var o = 0; o< oLen; ++o) {
                     object = game.level.layers[layer][x][y].highDrawStack[o];
                     
-                    //console.log(o+ ":" + object.name);
-                    //if (x === 16 && y === 18) {
-                    //    console.log(o+ ":" + object.name);
-                    //}
                     
                     if (typeof object.tileset !== 'undefined' || typeof object.tile !== 'undefined' || object.tile !== 0) {
                         game.objects.tile.draw(object.tileset,object.tile,x,y);
@@ -637,24 +667,28 @@ game.level.scroll = function() {
 	game.level.xOffset += game.variables.scroll.x * game.variables.scroll.speed;
 	game.level.yOffset -= game.variables.scroll.y * game.variables.scroll.speed;
 
-	if (game.level.xOffset < game.level.margin.left) {
-		game.level.xOffset = game.level.margin.left;
-		//game.processes.scroll.state = "inactive";
-	} 
-	if (game.level.xOffset > game.level.margin.right) {
-		game.level.xOffset = game.level.margin.right;
-		//game.processes.scroll.state = "inactive";
+    if (game.level.xOffset <= 0) {
+        if ((game.level.width*game.objects.tile.width/2) - (game.level.xOffset * -1 + game.objects.window.width) < -1* game.level.margin.right) {
+            game.level.xOffset = -1 * ((game.level.width*game.objects.tile.width/2) - game.objects.window.width) - game.level.margin.right;
+        }
+    } else {
+        if (game.objects.window.width - (game.level.xOffset + (game.level.width*game.objects.tile.width/2)) > game.level.margin.right) {
+            game.level.xOffset = game.objects.window.width - (game.level.width*game.objects.tile.width/2) -  game.level.margin.right;
+        }
+    }
+    
+    if (game.level.xOffset - (game.level.width*game.objects.tile.width/2) > game.level.margin.left) {
+		game.level.xOffset = (game.level.width*game.objects.tile.width/2) + game.level.margin.left;
+	}
+    
+	if ((game.level.height*game.objects.tile.height)-(game.level.yOffset*-1 + game.objects.window.height) < -1 * game.level.margin.bottom) {
+		game.level.yOffset = -1 * ((game.level.height*game.objects.tile.height) - game.objects.window.height) - game.level.margin.bottom;
 	}
 
-	if (game.level.yOffset < game.level.margin.top) {
+    if (game.level.yOffset > game.level.margin.top) {
 		game.level.yOffset = game.level.margin.top;
-		//game.processes.scroll.state = "inactive";
-	} 
-	if (game.level.yOffset > game.level.margin.bottom) {
-		game.level.yOffset = game.level.margin.bottom;
-		//game.processes.scroll.state = "inactive";
 	}
-
+    
 	if(game.processes.scroll.state === "active") {
 		setTimeout(game.level.scroll, game.variables.scroll.interval);
 	}
@@ -743,7 +777,9 @@ game.level.load = function() {
             var oLen = definition.layers[iLayer].objects.length;
             for (var o = 0; o < oLen; ++o) {
                 var object = definition.layers[iLayer].objects[o];
-                game.objects[object.type].create(object.x/object.width,object.y/object.height);
+                if (game.objects[object.type].create) {
+                    game.objects[object.type].create(object.x/object.width,object.y/object.height);
+                }
             }
         }
         
@@ -779,10 +815,10 @@ game.initialise = function () {
 	game.elements.canvas.height=game.objects.window.height;
 
 	game.level.margin = {
-		left: 0,
-		right: 700,
-		top: -500,
-		bottom: 200
+		left: 100,
+		right: 100,
+		top: 100,
+		bottom: 100
 	};
     
     game.level.draw();
@@ -852,15 +888,15 @@ game.elements.canvas.addEventListener('mousemove', function(evt) {
     game.variables.hover.y = ((mouse.y) / (game.objects.tile.height/2) - (mouse.x) / (game.objects.tile.width/2) ) /2;
     
     if (game.variables.selection.build_object) {
-        if (game.variables.hover.x < 0 + game.variables.selection.build_object.baseWidth) {
-            game.variables.hover.x = game.variables.selection.build_object.baseWidth - 1;
-        } else if (game.variables.hover.x >= game.level.width - game.variables.selection.build_object.baseWidth+1) {
+        if (game.variables.hover.x < 0 + game.variables.selection.build_object.width) {
+            game.variables.hover.x = game.variables.selection.build_object.width - 1;
+        } else if (game.variables.hover.x >= game.level.width - game.variables.selection.build_object.width+1) {
             game.variables.hover.x = game.level.width-1;
         }
         
-        if (game.variables.hover.y < 0 + game.variables.selection.build_object.baseHeight) {
-            game.variables.hover.y = 0 + game.variables.selection.build_object.baseHeight-1;
-        } else if (game.variables.hover.y >= game.level.height - game.variables.selection.build_object.baseHeight+1) {
+        if (game.variables.hover.y < 0 + game.variables.selection.build_object.height) {
+            game.variables.hover.y = 0 + game.variables.selection.build_object.height-1;
+        } else if (game.variables.hover.y >= game.level.height - game.variables.selection.build_object.height+1) {
             game.variables.hover.y = game.level.height-1;
         }
         
@@ -877,33 +913,66 @@ game.elements.canvas.addEventListener('mousemove', function(evt) {
             game.variables.hover.y = game.level.height-1;
         }
     }
-    
-    if (game.variables.events.mousedown && game.variables.selection.build_object !== null) {
-        var tempObject = game.variables.selection.build_object;
-        tempObject = tempObject.create(parseInt(game.variables.hover.x,10),parseInt(game.variables.hover.y,10));
-        if(tempObject !== null) {
-            game.variables.selection.setObjects(game.level.layers[tempObject.zIndex][parseInt(game.variables.hover.x,10)][parseInt(game.variables.hover.y,10)].objects);
-        }
-    }
 }, false);
 
 game.elements.canvas.addEventListener("mouseup", function () {
     game.variables.events.mousedown = false;
-    game.variables.selection.q = null;
-    game.variables.selection.r = null;
+    
+    var xStart,
+        xEnd,
+        yStart,
+        yEnd;
+    
+    /*
+        When a player clicks and drags multiple build objects should be drawn, in order to do this easily the correct start and end are calculated
+    */
+    if (typeof game.variables.selection.xStart === 'undefined') {
+        xStart = Math.floor(game.variables.hover.x);
+        xEnd = Math.floor(game.variables.hover.x);
+    }
+    else if (game.variables.selection.xStart < game.variables.hover.x) {
+        xStart = game.variables.selection.xStart;
+        xEnd = Math.floor(game.variables.hover.x);
+    } else {
+        xStart = Math.floor(game.variables.hover.x);
+        xEnd = game.variables.selection.xStart;
+    }
+    
+    if (typeof game.variables.selection.yStart === 'undefined') {
+        yStart = Math.floor(game.variables.hover.y);
+        yEnd = Math.floor(game.variables.hover.y);
+    }
+    else if (game.variables.selection.yStart < game.variables.hover.y) {
+        yStart = game.variables.selection.yStart;
+        yEnd = Math.floor(game.variables.hover.y);
+    } else {
+        yStart = Math.floor(game.variables.hover.y);
+        yEnd = game.variables.selection.yStart;
+    }
+    
+    for (var x = xStart; x <= xEnd; ++x) {
+        for (var y = yStart; y <= yEnd; ++y) {
+            if (game.variables.selection.build_object && (x-xStart) % game.variables.selection.build_object.width === 0 && (y-yStart) % game.variables.selection.build_object.height === 0) {
+                    
+                // build all objects
+                if (game.variables.selection.build_object !== null && game.variables.selection.build_object.create) {
+                    var buildObject = game.variables.selection.build_object;
+                    buildObject.create(x,y);
+                }
+                    
+            }
+        }
+    }
+    
+    game.variables.selection.xStart = null;
+    game.variables.selection.yStart = null;
 });
 
 game.elements.canvas.addEventListener("mousedown", function() {
     game.variables.events.mousedown = true;
     
-    if (game.variables.selection.build_object !== null && game.variables.selection.build_object.create) {
-        var tempObject = game.variables.selection.build_object;
-        //game.variables.selection.build_object = null;
-        tempObject = tempObject.create(parseInt(game.variables.hover.x,10),parseInt(game.variables.hover.y,10));
-        if (typeof tempObject !== 'undefined' && tempObject !== null) {
-            game.variables.selection.setObjects(game.level.layers[tempObject.zIndex][parseInt(game.variables.hover.x,10)][parseInt(game.variables.hover.y,10)].objects);
-        }
-    }
+    game.variables.selection.xStart = Math.floor(game.variables.hover.x);
+    game.variables.selection.yStart = Math.floor(game.variables.hover.y);
 });
 
 game.elements.canvas.addEventListener ("mouseout", function() {
@@ -1044,14 +1113,6 @@ window.addEventListener("resize", function() {
 	game.common.calculateWindowSize();
 	game.elements.canvas.width=game.objects.window.width;
 	game.elements.canvas.height=game.objects.window.height;
-
-    game.level.margin = {
-		left: 0,
-		right: 700,
-		top: -500,
-		bottom: 200
-	};
-
 });
 
 game.elements.menu_build_road.addEventListener("click", function() {
