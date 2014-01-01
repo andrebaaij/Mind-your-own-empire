@@ -1,11 +1,17 @@
+/*
+    
+
+    Styleguide: https://github.com/airbnb/javascript
+*/
+
+
 /* global Image,document,window,setTimeout,console */
 
 /* jshint loopfunc: true */
 
-// declare all neccesary game functions/objects before initialising the game.
 var game = {
 	processes : {
-		pauze : {
+		pause : {
 			state : 'inactive'
 		},
 		scroll : {
@@ -23,6 +29,20 @@ var game = {
         tile : {
             width : 64,
             height : 32,
+            /**
+             * game.objects.tile.draw() draws a tile
+             * from a tileset on the given position
+             *
+             * @param <game.resources.tileset> tileset
+             *      This is the tileset from which to draw a tile
+             * @param <integer> tile
+             *      This integer is used to calcualte the to be drawn tile,
+             *      The first tile is 1, the second is 2 etc... (from left to right, top to bottom)
+             * @param <integer> x
+             *      The x defines at which grid position the tile should be drawn.
+             * @param <integer> y
+             *      The y defines at which grid position the tile should be drawn.
+             */
             draw : function (tileset, tile, x, y) {
                 var sx,
                     sy;
@@ -66,6 +86,11 @@ var game = {
             game.resources.nbErrors += 1;
         },
 		images : {},
+        /**
+         * game.resources.load() loads all the needed resources (images and tilesets)
+         * It is nice to keep this in one place as it will simplify a loading screen in the future.
+         *
+         */
         load : function() {
             
             /*
@@ -103,49 +128,77 @@ var game = {
             
             
         },
-		loadImage : function (imageName, source) {
+        /**
+         * game.resources.loadImage() loads an image 
+         * based on the passed source parameter
+         *
+         * @param <String> name
+         *      This is the name which will be used to refer to the image, accessible through:
+         *          game.resources.images[name]
+         * @param <String> source
+         *      This is the source of the image, always make it a relative link.
+         */
+		loadImage : function (name, source) {
             "use strict";
             
-			game.resources.images[imageName] = new Image();
-            game.resources.images[imageName].src = source;
-            game.resources.images[imageName].errors = 0;
+			game.resources.images[name] = new Image();
+            game.resources.images[name].src = source;
+            game.resources.images[name].errors = 0;
             
-            if (game.resources.images[imageName].complete) {
+            if (game.resources.images[name].complete) {
                 game.resources.onLoad();
             }
             else {
-                game.resources.images[imageName].addEventListener('load', game.resources.onLoad);
+                game.resources.images[name].addEventListener('load', game.resources.onLoad);
             }
             
-            game.resources.images[imageName].addEventListener('error', function() {
-                if (game.resources.images[imageName].errors < 3) {
-                    game.resources.images[imageName].errors += 1;
-                    game.resources.images[imageName].src = game.resources.images[imageName].src;
+            game.resources.images[name].addEventListener('error', function() {
+                if (game.resources.images[name].errors < 3) {
+                    game.resources.images[name].errors += 1;
+                    game.resources.images[name].src = game.resources.images[name].src;
                 } else {
                     game.resources.onError();
                 }
             });
 		},
         tilesets : {},
-        loadTileset : function(tilesetName, source, tileWidth, tileHeight, tileOffsetX, tileOffsetY ) {
-            game.resources.tilesets[tilesetName] = new Image();
-            game.resources.tilesets[tilesetName].src = source;
-            game.resources.tilesets[tilesetName].errors = 0;
-            game.resources.tilesets[tilesetName].tileWidth = tileWidth;
-            game.resources.tilesets[tilesetName].tileHeight = tileHeight;
-            game.resources.tilesets[tilesetName].tileOffsetX = tileOffsetX;
-            game.resources.tilesets[tilesetName].tileOffsetY = tileOffsetY;
-            if (game.resources.tilesets[tilesetName].complete) {
+        /**
+         * game.resources.loadTileset() loads a tileset 
+         * based on the passed source parameter
+         *
+         * @param <String> name
+         *      This is the name which will be used to refer to the tileset, accessible through:
+         *          game.resources.tilesets[name]
+         * @param <String> source
+         *      This is the source of the image, always make it a relative link.
+         * @param <String> tileWidth
+         *      This is the width of the tile, ex. 64
+         * @param <String> tileHeight
+         *      This is the width of the tile, ex. 32
+         * @param <String> tileOffsetX
+         *      This is the x offset of the tile base defined as in "x" number of tiles.
+         * @param <String> tileOffsetY
+         *      This is the y offset of the tile base defined as in "y" number of tiles.
+         */
+        loadTileset : function(name, source, tileWidth, tileHeight, tileOffsetX, tileOffsetY ) {
+            game.resources.tilesets[name] = new Image();
+            game.resources.tilesets[name].src = source;
+            game.resources.tilesets[name].errors = 0;
+            game.resources.tilesets[name].tileWidth = tileWidth;
+            game.resources.tilesets[name].tileHeight = tileHeight;
+            game.resources.tilesets[name].tileOffsetX = tileOffsetX;
+            game.resources.tilesets[name].tileOffsetY = tileOffsetY;
+            if (game.resources.tilesets[name].complete) {
                 game.resources.onLoad();
             }
             else {
-                game.resources.tilesets[tilesetName].addEventListener('load', game.resources.onLoad);
+                game.resources.tilesets[name].addEventListener('load', game.resources.onLoad);
             }
             
-            game.resources.tilesets[tilesetName].addEventListener('error', function() {
-                if (game.resources.tilesets[tilesetName].errors < 3) {
-                    game.resources.tilesets[tilesetName].errors += 1;
-                    game.resources.tilesets[tilesetName].src = game.resources.tilesets[tilesetName].src;
+            game.resources.tilesets[name].addEventListener('error', function() {
+                if (game.resources.tilesets[name].errors < 3) {
+                    game.resources.tilesets[name].errors += 1;
+                    game.resources.tilesets[name].src = game.resources.tilesets[name].src;
                 } else {
                     game.resources.onError();
                 }
@@ -154,40 +207,40 @@ var game = {
 
 	},
     elements : {
+        /**
+         * game.elements.load() loads all the needed html elements
+         */
         load : function() {
-            game.elements.add("canvas");
-            game.elements.add("pauze");
-            game.elements.add("pauze_continue");
-            game.elements.add("pauze_fullscreen");
-            game.elements.add("menu_pauze");
-            game.elements.add("menu_selection");
-            game.elements.add("menu_build_road");
-            game.elements.add("menu_build_house");
-            game.elements.add("menu_destroy");
+            game.elements.add("canvas","canvas");
+            game.elements.add("pause","pause");
+            game.elements.add("pause_continue","pause_continue");
+            game.elements.add("pause_fullscreen","pause_fullscreen");
+            game.elements.add("menu_pause","menu_pause");
+            game.elements.add("menu_build_road","menu_build_road");
+            game.elements.add("menu_build_house","menu_build_house");
+            game.elements.add("menu_destroy","menu_destroy");
         },
-        add : function(Id) {
-            game.elements[Id] = document.getElementById(Id);
+        /**
+         * game.elements.add() adds a new element based on its id
+         * @param <String> name
+         *      This is the name which will be used to refer to the element, accessible through:
+         *          game.elements[name]
+         * @param <String> id
+         *      This is the id of the html element, remember that an id should always be unique on a html page.
+         */
+        add : function(name, id) {
+            game.elements[name] = document.getElementById(id);
         }
     },
     variables : {
         scroll : {
             speed: 2, //pixels
-            margin:100, //pixels
+            margin: 100, //pixels
             interval: 10 //milliseconds
         },
         selection : {
-            q : null,
-            r : null,
             objects : [],
-            build_object : null,
-            setObjects : function(objects) {
-                game.variables.selection.objects = objects;
-                if (game.variables.selection.objects.length > 999) {
-                    game.elements.menu_selection.textContent =  "999+";
-                } else {
-                    game.elements.menu_selection.textContent =game.variables.selection.objects.length;
-                }
-            }
+            build_object : null
         },
         hover : {},
         draw : {
@@ -206,6 +259,9 @@ var game = {
     }
 };
 
+/**
+ * game.common.calculateWindowSize() calculates the current window size
+ */
 game.common.calculateWindowSize = function () {
     "use strict";
 	game.objects.window.width = 630;
@@ -224,45 +280,59 @@ game.common.calculateWindowSize = function () {
 	}
 };
 
-game.common.getMousePosition = function (evt) {
+/**
+ * game.common.getMousePosition() returns the current mouse position
+ * based on a mouse event
+ *
+ * @param <Event> event
+ *    This must be a mouse event.
+ * @return <Object> {x : x, y : y}
+ */
+game.common.getMousePosition = function (event) {
     "use strict";
 	var rect = game.elements.canvas.getBoundingClientRect();
 
 	return {
-        x: evt.clientX - rect.left,
-        y: evt.clientY - rect.top
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
 	};
 };
 
-game.common.pauze = function() {
-	if (game.processes.pauze.state === 'inactive') {
+/**
+ * game.common.pause() pauses the game, pauses all active processes and shows the pause menu
+ */
+game.common.pause = function() {
+	if (game.processes.pause.state === 'inactive') {
         var oProcess;
         
 		for (var process in game.processes) {
 			oProcess = game.processes[process].state;
 
 			if (oProcess === "active") {
-				oProcess = "pauze";
+				oProcess = "pause";
 			}
 		}
-		game.elements.pauze.style.display = "block";
-		game.processes.pauze.state = 'active';
+		game.elements.pause.style.display = "block";
+		game.processes.pause.state = 'active';
 	}
 };
 
-game.common.unpauze = function() {
+/**
+ * game.common.unpause() unpauses the game, reactivates paused processes and hides the pause menu
+ */
+game.common.unpause = function() {
     var oProcess;
     
-	if (game.processes.pauze.state === 'active') {
+	if (game.processes.pause.state === 'active') {
 		for (var process in game.processes) {
 			oProcess = game.processes[process].state;
 
-			if (oProcess === "pauze") {
+			if (oProcess === "pause") {
 				oProcess = "active";
 			}
 		}
-		game.elements.pauze.style.display = "none";
-		game.processes.pauze.state = 'inactive';
+		game.elements.pause.style.display = "none";
+		game.processes.pause.state = 'inactive';
         
         if(game.processes.draw.state === "inactive") {
             game.processes.draw.state = "active";
@@ -271,20 +341,32 @@ game.common.unpauze = function() {
 	}
 };
 
-game.common.isPauzed = function() {
-	if (game.processes.pauze.state === 'active') {
+/**
+ * game.common.isPaused() returns the current "pause" state of the game
+ * @return <Boolean> isPaused
+ */
+game.common.isPaused = function() {
+	if (game.processes.pause.state === 'active') {
 		return true;
 	} else {
 		return false;
 	}
 };
 
-game.common.getJSON = function(file) {
+/**
+ * game.common.getJSONFromURI() returns the result of the passedURI parsed to JSON
+ * based on a mouse event
+ *
+ * @param <String> URI
+ * @return <Object> response
+ */
+game.common.getJSONFromURI = function(URI) {
     var request = new XMLHttpRequest();
-    request.open('GET', file, false);
+    request.open('GET', URI, false);
     request.send(null);
-    if (request.status == 200)
+    if (request.status == 200) {
         return JSON.parse(request.responseText);
+    }
 };
 
 game.common.initialiseObjects = function() {
@@ -662,7 +744,7 @@ game.level.draw = function() {
 
 game.level.scroll = function() {
     "use strict";
-	if (game.common.isPauzed()) return;
+	if (game.common.isPaused()) return;
     
 	game.level.xOffset += game.variables.scroll.x * game.variables.scroll.speed;
 	game.level.yOffset -= game.variables.scroll.y * game.variables.scroll.speed;
@@ -801,7 +883,7 @@ game.level.load = function() {
 game.initialise = function () {
     "use strict";
     var levelURI = "./maps/test.json";
-    game.level.definition = game.common.getJSON(levelURI);
+    game.level.definition = game.common.getJSONFromURI(levelURI);
     
     game.resources.load();
     game.elements.load();
@@ -992,15 +1074,15 @@ game.elements.canvas.addEventListener ("mouseout", function() {
 		game.level.scroll();
     }, false);
 
-game.elements.pauze_continue.addEventListener("click", function() {
-	game.common.unpauze();
+game.elements.pause_continue.addEventListener("click", function() {
+	game.common.unpause();
 }, false);
 
-game.elements.menu_pauze.addEventListener("click", function() {
-    game.common.pauze();
+game.elements.menu_pause.addEventListener("click", function() {
+    game.common.pause();
 });
 
-game.elements.pauze_fullscreen.onclick = function() {
+game.elements.pause_fullscreen.onclick = function() {
     var pfx = ["webkit", "moz", "ms", "o", ""];
     function RunPrefixMethod(obj, method) {
         
@@ -1035,18 +1117,17 @@ document.onkeydown = function(evt) {
     switch(evt.keyCode){
     case 27: // Escape
         game.variables.selection.objects = [];
-        game.elements.menu_selection.textContent = 0;
         game.variables.selection.build_object = game.objects.select;
             
-        if (game.common.isPauzed()) {
-            game.common.unpauze();
+        if (game.common.isPaused()) {
+            game.common.unpause();
         }
         break;
     case 80: // P = Pause
-        if (game.common.isPauzed()) {
-            game.common.unpauze();
+        if (game.common.isPaused()) {
+            game.common.unpause();
         } else {
-            game.common.pauze();
+            game.common.pause();
         }
         break;
     case 68:  //d
@@ -1119,7 +1200,6 @@ game.elements.menu_build_road.addEventListener("click", function() {
     if (game.variables.selection.build_object === game.objects.road) {
         game.variables.selection.build_object = game.objects.select;
     } else {
-        game.variables.selection.setObjects([]);
         game.variables.selection.build_object = game.objects.road;
     }
 });
@@ -1128,7 +1208,6 @@ game.elements.menu_build_house.addEventListener("click", function() {
     if (game.variables.selection.build_object === game.objects.house) {
         game.variables.selection.build_object = game.objects.select;
     } else {
-        game.variables.selection.setObjects([]);
         game.variables.selection.build_object = game.objects.house;
     }
 });
@@ -1137,7 +1216,6 @@ game.elements.menu_destroy.addEventListener("click", function() {
     if (game.variables.selection.build_object === game.objects.destroy) {
         game.variables.selection.build_object = game.objects.select;
     } else {
-        game.variables.selection.setObjects([]);
         game.variables.selection.build_object = game.objects.destroy;
     }
 });
