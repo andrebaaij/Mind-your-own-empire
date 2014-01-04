@@ -5,6 +5,14 @@
 
 body {
 	font-family: Verdana, Geneva, sans-serif;
+    background: no-repeat fixed center url('http://paper-backgrounds.com/textureimages/2012/09/old-wood-board-texture.jpg') ;
+    background-size: cover;
+}
+
+
+@font-face {
+    font-family: 'nashville'; /*a name to be used later*/
+    src: url('../fonts/nashville.ttf'); /*URL to font*/
 }
 
 .wrapper {
@@ -25,32 +33,45 @@ body {
 .menu {
 	margin-left: auto;
 	margin-right: auto;
-	width: 300px;
 	margin-top: 100px;
+    width: 600px;
+    min-height: 800px;
+    border-radius: 10px 10px 10px 10px;
+    -moz-border-radius: 10px 10px 10px 10px;
+    -webkit-border-radius: 10px 10px 10px 10px;
+    background-color: rgba(173, 169, 163, 0.75);
+    border: 0px solid #000000;
 }
 
 .menu h1 {
-	color: #fff;
+	color: #FFF047;
+    font-family: 'nashville';
 	width: 100%;
 	display: block;
 	text-align: center;
-	padding: 10px 20px;
+    font-size: 130px;
+    padding-top: 50px;
 
 }
 
 .menu .item{
-	padding: 10px 20px;
-	background-color: #4E6BB2;
-	color: #fff;
-	width: 100%;
+	padding: 10px 0;
+	//background-color: #4E6BB2;
+    font-family: 'nashville';
+    font-size: 50px;
+    color: #fff;
+	width: 500px;
 	display: block;
 	text-align: center;
 	text-decoration: none;
-	margin-bottom: 5PX;
+	margin-bottom: 5px;
+    margin-left: auto;
+	margin-right: auto;
+    
 }
 
 .menu .item:hover{
-	background-color: #4660a1;
+	color: #4660a1;
 }
 
 .side-menu {
