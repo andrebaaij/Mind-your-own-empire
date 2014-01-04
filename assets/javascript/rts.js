@@ -5,7 +5,7 @@
 */
 
 
-/* global Image,document,window,setTimeout,console */
+/* global Image,document,window,setTimeout,console,XMLHttpRequest */
 
 /* jshint loopfunc: true */
 
@@ -219,6 +219,9 @@ var game = {
             game.elements.add("menu_build_road","menu_build_road");
             game.elements.add("menu_build_house","menu_build_house");
             game.elements.add("menu_destroy","menu_destroy");
+            game.elements.add("mainMenu_newGame","mainMenu_newGame");
+            game.elements.add("game","game");
+            game.elements.add("mainMenu","mainMenu");
         },
         /**
          * game.elements.add() adds a new element based on its id
@@ -369,7 +372,82 @@ game.common.getJSONFromURI = function(URI) {
     }
 };
 
+/**
+ * game.common.initialiseObjects() In this function most game.objects are initialised, just to keep them easily in one place.
+ */
 game.common.initialiseObjects = function() {
+    //Example object
+    
+    /* 
+      game.objects.objectName = {
+        tile : 1, // <integer> Which tile to draw
+        tileset : game.resources.tilesets.house, // <game.resources.tileset> From which tileset to draw
+        width : 2, // <integer> the base width of the object in n tiles
+        height : 2, // <integer> the base width of the object in n tiles
+        index : 0, // <integer>
+        drawGrid : true, // When this object is the buildObject, should the grid be drawn?
+        //**
+         * game.common.getJSONFromURI() returns the result of the passedURI parsed to JSON
+         * based on a mouse event
+         *
+         * @param <String> URI
+         * @return <Object> response
+         //
+        create : function(x, y) {
+            var object = {
+                name : "house",
+                tile : 1,
+                tileset : game.resources.tilesets.house,
+                isSelectable : true,
+                isSelected : false,
+                isMovable : false,
+                isMoving : false,
+                zIndex : 1,
+                id : game.common.assignObjectId(),
+                x : x,
+                y : y,
+                baseLeft : -1,
+                baseRight : 1,
+                baseTop : -1,
+                width : 2,
+                height : 2,
+                population : 0,
+                housing : 5,
+                destroy : function() {
+                    game.level.layers[this.zIndex][this.x][this.y].destroyObject(this);
+                    game.level.layers[this.zIndex][this.x-1][this.y].destroyObject(this);
+                    game.level.layers[this.zIndex][this.x][this.y-1].destroyObject(this);
+                    game.level.layers[this.zIndex][this.x-1][this.y-1].destroyObject(this);
+                }
+            };
+            
+            object.index = object.id;
+            
+            if (game.level.layers[object.zIndex][x][y].objects.length === 0 && 
+                    game.level.layers[object.zIndex][x-1][y].objects.length === 0 &&
+                    game.level.layers[object.zIndex][x][y-1].objects.length === 0 &&
+                    game.level.layers[object.zIndex][x-1][y-1].objects.length === 0) {
+                
+                game.variables.population.housing += 5;
+                game.variables.immigrantSpawner.spawn(1);
+                game.level.layers[object.zIndex][x][y].addObject(object);
+                game.level.layers[object.zIndex][x-1][y].addObject(object);
+                game.level.layers[object.zIndex][x][y-1].addObject(object);
+                game.level.layers[object.zIndex][x-1][y-1].addObject(object);
+                return object;         
+            } else {
+                return null;
+            }
+        }
+    };
+      
+        
+        
+        }
+    
+    */ 
+    
+    
     game.objects.road = {
         tile : 11,
         tileset : game.resources.tilesets.tiles,
@@ -600,6 +678,11 @@ game.common.initialiseObjects = function() {
     };
 };
 
+/**
+ * game.common.arraySort() This function can be passed to an array.sort(game.common.arraySort), it sorts based on the passed property.
+  * @param <String> property
+  *     The property which will be used to sort the array.
+ */
 game.common.arraySort = function(property) {
     var sortOrder = 1;
     if(property[0] === "-") {
@@ -612,11 +695,17 @@ game.common.arraySort = function(property) {
     };
 };
 
+/**
+ * game.common.assignObjectId() It returns a new unique object id
+ */
 game.common.assignObjectId = function() {
     var id = game.variables.lastObjectId += 1;
     return id;
 };
 
+/**
+ * game.level.draw() All the drawing is done in this function
+ */
 game.level.draw = function() {
 	game.elements.canvas.context.clearRect(0, 0, game.elements.canvas.width, game.elements.canvas.height);
 	game.elements.canvas.context.fillStyle = "#143c2f";
@@ -715,7 +804,7 @@ game.level.draw = function() {
                 
                 // draw all objects with an index above 0
                 oLen = game.level.layers[layer][x][y].highDrawStack.length;
-                for(var o = 0; o< oLen; ++o) {
+                for(o = 0; o< oLen; ++o) {
                     object = game.level.layers[layer][x][y].highDrawStack[o];
                     
                     
@@ -742,6 +831,9 @@ game.level.draw = function() {
     }
 };
 
+/**
+ * game.level.draw() All the drawing is done in this function
+ */
 game.level.scroll = function() {
     "use strict";
 	if (game.common.isPaused()) return;
@@ -776,6 +868,9 @@ game.level.scroll = function() {
 	}
 };
 
+/**
+ * game.level.load() loads the level based on the level definition from a .json file saved from the tool tiled (http://www.mapeditor.org/)
+ */
 game.level.load = function() {
     var definition = game.level.definition;
     
@@ -880,6 +975,9 @@ game.level.load = function() {
 
 };
 
+/**
+ * game.level.initialise() initialises all assets of the game.
+ */
 game.initialise = function () {
     "use strict";
     var levelURI = "./maps/test.json";
@@ -1218,4 +1316,9 @@ game.elements.menu_destroy.addEventListener("click", function() {
     } else {
         game.variables.selection.build_object = game.objects.destroy;
     }
+});
+
+game.elements.mainMenu_newGame.addEventListener("click", function() {
+    game.elements.mainMenu.style.display = "none";
+    game.elements.game.style.display = "block"; 
 });
