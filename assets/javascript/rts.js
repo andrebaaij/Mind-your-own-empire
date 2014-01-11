@@ -27,8 +27,8 @@ var game = {
 	common : {},
 	objects : {
         tile : {
-            width : 64,
-            height : 32,
+            width : 128,
+            height : 64,
             /**
              * game.objects.tile.draw() draws a tile
              * from a tileset on the given position
@@ -49,6 +49,8 @@ var game = {
                 x = x + tileset.tileOffsetX;
                 y = y + tileset.tileOffsetY;
                 
+                var gridPositions = game.common.getScreenFromGrid(x,y);
+                
                 // perform a special calculation when the tile is the last in a tileset row
                 // [TODO] probably can be optimized.
                 if (tile  % (tileset.width / tileset.tileWidth) === 0) {
@@ -63,11 +65,14 @@ var game = {
                                                        sy,
                                                        tileset.tileWidth,
                                                        tileset.tileHeight,
-                                                       Math.round(game.level.xOffset) + ((parseInt(x,10) - parseInt(y,10)) * (game.objects.tile.width / 2)),
-                                                       Math.round(game.level.yOffset) + ((parseInt(x,10) + parseInt(y,10)) * (game.objects.tile.height / 2)),
+                                                       gridPositions.x,
+                                                       gridPositions.y,
                                                        tileset.tileWidth,
                                                        tileset.tileHeight
                                                       );
+                
+                
+                //game.elements.canvas.context.fillText("( " + x  + " , " + y  + " )", gridPositions.x, gridPositions.y);
             }
         },
 		window : {},
@@ -113,6 +118,7 @@ var game = {
             
             game.resources.loadTileset("house","./assets/images/emptyPlot.png",128,144,-4,-3);
             game.resources.loadTileset("immigrant","./assets/images/immigrant.png",64,64,-1,-1);
+            game.resources.loadTileset("tree","./assets/images/trees128_64.png",128,128,-1,-1);
             
             var definition = game.level.definition;
             
@@ -222,6 +228,7 @@ var game = {
             game.elements.add("mainMenu_newGame","mainMenu_newGame");
             game.elements.add("game","game");
             game.elements.add("mainMenu","mainMenu");
+            game.elements.add("minimap", "minimap");
         },
         /**
          * game.elements.add() adds a new element based on its id
@@ -233,11 +240,14 @@ var game = {
          */
         add : function(name, id) {
             game.elements[name] = document.getElementById(id);
+            if (game.elements[name] === null) {
+                console.error("The html element with id: '" + id + "' could not be found.");
+            }
         }
     },
     variables : {
         scroll : {
-            speed: 2, //pixels
+            speed: 10, //pixels
             margin: 100, //pixels
             interval: 10 //milliseconds
         },
@@ -299,6 +309,28 @@ game.common.getMousePosition = function (event) {
         x: event.clientX - rect.left,
         y: event.clientY - rect.top
 	};
+};
+
+game.common.getGridFromScreen = function(x,y) {
+    x = x - game.level.xOffset - (game.objects.tile.width/2);
+    y = y - game.level.yOffset;
+    
+    var gx = Math.floor(((x) / (game.objects.tile.width/2) + (y) / (game.objects.tile.height/2)) /2);
+    var gy = Math.floor(((y) / (game.objects.tile.height/2) - (x) / (game.objects.tile.width/2) ) /2);
+    
+    if (gx < 0) gx = 0;
+    else if (gx >= game.level.width) gx = game.level.width-1;
+
+    if (gy < 0) gy = 0;
+    else if (gy >= game.level.height) gy = game.level.height-1;
+    
+    return { x : gx, y : gy};
+};
+
+game.common.getScreenFromGrid = function(x,y) {
+    var sx = Math.round(game.level.xOffset) + ((parseInt(x,10) - parseInt(y,10)) * (game.objects.tile.width / 2));
+    var sy = Math.round(game.level.yOffset) + ((parseInt(x,10) + parseInt(y,10)) * (game.objects.tile.height / 2));
+    return { x : sx, y : sy};
 };
 
 /**
@@ -440,17 +472,12 @@ game.common.initialiseObjects = function() {
             }
         }
     };
-      
-        
-        
-        }
-    
     */ 
     
     
     game.objects.road = {
         tile : 11,
-        tileset : game.resources.tilesets.tiles,
+        tileset : game.resources.tilesets.tiles128_64,
         width : 1,
         height : 1,
         index : 0,
@@ -460,7 +487,7 @@ game.common.initialiseObjects = function() {
             var object = {
                 name : "road",
                 tile : 11,
-                tileset : game.resources.tilesets.tiles,
+                tileset : game.resources.tilesets.tiles128_64,
                 isSelectable : false,
                 isSelected : false,
                 isMovable : false,
@@ -492,7 +519,7 @@ game.common.initialiseObjects = function() {
 
     game.objects.defaultRoad = {
         tile : 11,
-        tileset : game.resources.tilesets.tiles,
+        tileset : game.resources.tilesets.tiles128_64,
         width : 1,
         height : 1,
         index : 0,
@@ -501,7 +528,7 @@ game.common.initialiseObjects = function() {
             var object = {
                 name : "defaultRoad",
                 tile : 11,
-                tileset : game.resources.tilesets.tiles,
+                tileset : game.resources.tilesets.tiles128_64,
                 isSelectable : false,
                 isSelected : false,
                 isMovable : false,
@@ -529,17 +556,20 @@ game.common.initialiseObjects = function() {
     };
     
     game.objects.house = {
-        tile : 1,
-        tileset : game.resources.tilesets.house,
-        width : 2,
-        height : 2,
+        tile : 4,
+        tileset : game.resources.tilesets.tree,
+        width : 1,
+        height : 1,
         index : 0,
         drawGrid : true,
         create : function(x, y) {
+            var possibleTiles = [4,5];
+            
             var object = {
                 name : "house",
-                tile : 1,
-                tileset : game.resources.tilesets.house,
+                // take the left or right 
+                tile : possibleTiles[Math.floor(Math.random() * possibleTiles.length)],
+                tileset : game.resources.tilesets.tree,
                 isSelectable : true,
                 isSelected : false,
                 isMovable : false,
@@ -551,31 +581,22 @@ game.common.initialiseObjects = function() {
                 baseLeft : -1,
                 baseRight : 1,
                 baseTop : -1,
-                width : 2,
-                height : 2,
+                width : 1,
+                height : 1,
                 population : 0,
                 housing : 5,
                 destroy : function() {
                     game.level.layers[this.zIndex][this.x][this.y].destroyObject(this);
-                    game.level.layers[this.zIndex][this.x-1][this.y].destroyObject(this);
-                    game.level.layers[this.zIndex][this.x][this.y-1].destroyObject(this);
-                    game.level.layers[this.zIndex][this.x-1][this.y-1].destroyObject(this);
                 }
             };
             
             object.index = object.id;
             
-            if (game.level.layers[object.zIndex][x][y].objects.length === 0 && 
-                    game.level.layers[object.zIndex][x-1][y].objects.length === 0 &&
-                    game.level.layers[object.zIndex][x][y-1].objects.length === 0 &&
-                    game.level.layers[object.zIndex][x-1][y-1].objects.length === 0) {
+            if (game.level.layers[object.zIndex][x][y].objects.length === 0) {
                 
-                game.variables.population.housing += 5;
-                game.variables.immigrantSpawner.spawn(1);
+                game.variables.population.housing += 2;
+                //game.variables.immigrantSpawner.spawn(1);
                 game.level.layers[object.zIndex][x][y].addObject(object);
-                game.level.layers[object.zIndex][x-1][y].addObject(object);
-                game.level.layers[object.zIndex][x][y-1].addObject(object);
-                game.level.layers[object.zIndex][x-1][y-1].addObject(object);
                 return object;         
             } else {
                 return null;
@@ -585,7 +606,7 @@ game.common.initialiseObjects = function() {
 
     game.objects.destroy = {
         tile : 94,
-        tileset : game.resources.tilesets.tiles,
+        tileset : game.resources.tilesets.tiles128_64,
         width : 1,
         height : 1,
         index : 0,
@@ -596,7 +617,7 @@ game.common.initialiseObjects = function() {
             var destroy = {
                 name : "destroy",
                 tile : 94,
-                tileset : game.resources.tilesets.tiles,
+                tileset : game.resources.tilesets.tiles128_64,
                 isSelectable : false,
                 isSelected : false,
                 isMovable : false,
@@ -670,11 +691,125 @@ game.common.initialiseObjects = function() {
     
     game.objects.select = {
         tile : 91,
-        tileset : game.resources.tilesets.tiles,
+        tileset : game.resources.tilesets.tiles128_64,
         width : 1,
         height : 1,
         index : 0,
         drawGrid : false
+    };
+    
+    game.objects.tree1 = {
+        tile : 1, // <integer> Which tile to draw
+        tileset : game.resources.tilesets.tree, // <game.resources.tileset> From which tileset to draw
+        width : 1, // <integer> the base width of the object in n tiles
+        height : 1, // <integer> the base width of the object in n tiles
+        index : 0, // <integer>
+        drawGrid : true, // When this object is the buildObject, should the grid be drawn?
+        create : function(x, y) {
+            var object = {
+                name : "house",
+                tile : 1,
+                tileset : game.resources.tilesets.tree,
+                isSelectable : true,
+                isSelected : false,
+                isMovable : false,
+                isMoving : false,
+                zIndex : 1,
+                id : game.common.assignObjectId(),
+                x : x,
+                y : y,
+                baseLeft : 0,
+                baseRight : 0,
+                baseTop : 0,
+                width : 1,
+                height : 1
+            };
+            
+            object.index = object.id;
+            
+            if (game.level.layers[object.zIndex][x][y].objects.length === 0) {
+                game.level.layers[object.zIndex][x][y].addObject(object);
+                return object;         
+            } else {
+                return null;
+            }
+        }
+    };
+
+    game.objects.tree2 = {
+        tile : 2, // <integer> Which tile to draw
+        tileset : game.resources.tilesets.tree, // <game.resources.tileset> From which tileset to draw
+        width : 2, // <integer> the base width of the object in n tiles
+        height : 2, // <integer> the base width of the object in n tiles
+        index : 0, // <integer>
+        drawGrid : true, // When this object is the buildObject, should the grid be drawn?
+        create : function(x, y) {
+            var object = {
+                name : "house",
+                tile : 2,
+                tileset : game.resources.tilesets.tree,
+                isSelectable : true,
+                isSelected : false,
+                isMovable : false,
+                isMoving : false,
+                zIndex : 1,
+                id : game.common.assignObjectId(),
+                x : x,
+                y : y,
+                baseLeft : 0,
+                baseRight : 0,
+                baseTop : 0,
+                width : 1,
+                height : 1
+            };
+            
+            object.index = object.id;
+            
+            if (game.level.layers[object.zIndex][x][y].objects.length === 0) {
+                game.level.layers[object.zIndex][x][y].addObject(object);
+                return object;         
+            } else {
+                return null;
+            }
+        }
+    };
+    
+    game.objects.stone1 = {
+        tile : 3, // <integer> Which tile to draw
+        tileset : game.resources.tilesets.tree, // <game.resources.tileset> From which tileset to draw
+        width : 2, // <integer> the base width of the object in n tiles
+        height : 2, // <integer> the base width of the object in n tiles
+        index : 0, // <integer>
+        drawGrid : true, // When this object is the buildObject, should the grid be drawn?
+        create : function(x, y) {
+            var object = {
+                name : "house",
+                tile : 3,
+                tileset : game.resources.tilesets.tree,
+                isSelectable : true,
+                isSelected : false,
+                isMovable : false,
+                isMoving : false,
+                zIndex : 1,
+                id : game.common.assignObjectId(),
+                x : x,
+                y : y,
+                baseLeft : 0,
+                baseRight : 0,
+                baseTop : 0,
+                width : 1,
+                height : 1
+            };
+            
+            object.index = object.id;
+            
+            if (game.level.layers[object.zIndex][x][y].objects.length === 0) {
+                game.level.layers[object.zIndex][x][y].addObject(object);
+                return object;         
+            } else {
+                return null;
+            }
+        }
     };
 };
 
@@ -708,14 +843,10 @@ game.common.assignObjectId = function() {
  */
 game.level.draw = function() {
 	game.elements.canvas.context.clearRect(0, 0, game.elements.canvas.width, game.elements.canvas.height);
-	game.elements.canvas.context.fillStyle = "#143c2f";
-	game.elements.canvas.context.fillRect(0,0,game.elements.canvas.width, game.elements.canvas.height);
-    
+	
     var layer,
         x,
-        lenX,
         y,
-        lenY,
         tile,
         object,
         xStart,
@@ -750,16 +881,36 @@ game.level.draw = function() {
         yEnd = game.variables.selection.yStart;
     }
 
+    // Calculate from which gridx, gridy to which gridx, gridy should be drawn.
+    
+    var tr = game.common.getGridFromScreen(game.elements.canvas.width, 0);
+    var tl = game.common.getGridFromScreen(0, 0);
+    var bl = game.common.getGridFromScreen(0, game.elements.canvas.height);
+    var br = game.common.getGridFromScreen(game.elements.canvas.width, game.elements.canvas.height);
+    
+    
+//    mouse.x = mouse.x - game.level.xOffset - (game.objects.tile.width/2);
+//    mouse.y = mouse.y - game.level.yOffset;
+//    var gridFrom = {gridFromX},
+//        gridTo = {x : 10, y : 10};
+    
+    var drawXFrom = Math.min(tr.x,tl.x,bl.x,br.x),
+        drawYFrom = Math.min(tr.y,tl.y,bl.y,br.y),
+        drawXTo = Math.max(tr.x,tl.x,bl.x,br.x),
+        drawYTo = Math.max(tr.y,tl.y,bl.y,br.y);
+    
+    //console.log(drawXFrom + "," + drawYFrom + "-" + drawXTo + "," + drawYTo);
+    
+    game.elements.canvas.context.textAlign = "left";
+    game.elements.canvas.context.textBaseline = "top";
     
     
     // loop through all layers, and draw all objects and tiles
     var lenLayer = game.level.layers.length;
 
     for (layer = 0; layer < lenLayer; ++layer) {
-        lenX = game.level.layers[layer].length;
-        for (x=0;x<lenX; ++x) { 
-            lenY = game.level.layers[layer][x].length;
-            for (y=0;y<lenY; ++y) {
+        for (x=drawXFrom;x<=drawXTo; ++x) { 
+            for (y=drawYFrom;y<=drawYTo; ++y) {
                 
                 // Which tile to draw?
                 if(game.level.layers[layer].name === "grid" && game.variables.selection.build_object.drawGrid) {  
@@ -775,7 +926,8 @@ game.level.draw = function() {
                 
                 //draw tile
                 if (tile !== 0) {
-                    game.objects.tile.draw(game.resources.tilesets.tiles,tile,x,y);
+                    game.objects.tile.draw(game.resources.tilesets.tiles128_64,tile,x,y);
+                    
                 }
                 
                 // draw all objects with an index below 0
@@ -889,6 +1041,8 @@ game.level.load = function() {
     
     
     
+    
+    //game.level.layers[1][x][y].objects
     for(var iLayer = 0; iLayer < layerLen; ++iLayer) {
         
         
@@ -954,8 +1108,23 @@ game.level.load = function() {
             var oLen = definition.layers[iLayer].objects.length;
             for (var o = 0; o < oLen; ++o) {
                 var object = definition.layers[iLayer].objects[o];
-                if (game.objects[object.type].create) {
-                    game.objects[object.type].create(object.x/object.width,object.y/object.height);
+                if (game.objects[object.type] === null || !game.objects[object.type].create) {
+                    console.error("The level definition contains the non-existing object:'"  + object.name +
+                                  "' of type: '" + object.type +
+                                  "' at gridposition (" + object.x/game.objects.tile.width + "," + object.x/game.objects.tile.height + ") ");
+                } else {
+                    var nx = Math.ceil((object.width / game.objects[object.type].width) / game.objects.tile.height),
+                        ny = Math.ceil((object.height / game.objects[object.type].height) / game.objects.tile.height);
+                    
+                    console.log(object);
+                    console.log(nx);
+                    console.log(ny);
+                    
+                    for (x = 0; x < nx; ++x) {
+                        for (y=0; y < ny; ++y) {   
+                            game.objects[object.type].create((object.x/game.objects.tile.height) + x,(object.y/game.objects.tile.height) + y);
+                        }
+                    }
                 }
             }
         }
@@ -980,7 +1149,7 @@ game.level.load = function() {
  */
 game.initialise = function () {
     "use strict";
-    var levelURI = "./maps/test.json";
+    var levelURI = "./maps/west.json";
     game.level.definition = game.common.getJSONFromURI(levelURI);
     
     game.resources.load();
@@ -991,6 +1160,7 @@ game.initialise = function () {
     game.variables.selection.build_object = game.objects.select;
     
     game.elements.canvas.context = game.elements.canvas.getContext("2d");
+    game.elements.minimap.context = game.elements.minimap.getContext("2d");
 	game.elements.canvas.width=game.objects.window.width;
 	game.elements.canvas.height=game.objects.window.height;
 
@@ -1061,11 +1231,12 @@ game.elements.canvas.addEventListener('mousemove', function(evt) {
 		}
 	}
     
-    mouse.x = mouse.x - game.level.xOffset - (game.objects.tile.width/2);
-    mouse.y = mouse.y - game.level.yOffset;
     
-    game.variables.hover.x = ((mouse.x) / (game.objects.tile.width/2) + (mouse.y) / (game.objects.tile.height/2)) /2;
-    game.variables.hover.y = ((mouse.y) / (game.objects.tile.height/2) - (mouse.x) / (game.objects.tile.width/2) ) /2;
+    
+    var gridPositions = game.common.getGridFromScreen(mouse.x, mouse.y);
+    game.variables.hover.x = gridPositions.x;
+    game.variables.hover.y = gridPositions.y;
+    
     
     if (game.variables.selection.build_object) {
         if (game.variables.hover.x < 0 + game.variables.selection.build_object.width) {
@@ -1322,3 +1493,6 @@ game.elements.mainMenu_newGame.addEventListener("click", function() {
     game.elements.mainMenu.style.display = "none";
     game.elements.game.style.display = "block"; 
 });
+
+game.elements.mainMenu.style.display = "none";
+game.elements.game.style.display = "block"; 

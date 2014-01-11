@@ -4,17 +4,17 @@
 		<link rel="stylesheet" type="text/css" href="./assets/stylesheets/style.css">
 	</head>
 	<body id="wrapper">
+        <div id="progressBar" class="progress bar">
+            <div id="progressBarProgress" class="progress"></div>
+        </div>
         <div id="mainMenu">
             <div id="mainMenu" class="menu">
-                <div class="menu">
-                    <H1>Oregon</h1>
-                    <a href="#" id="mainMenu_newGame" class="item">New game</a>
-                </div>
+                <a href="#" id="mainMenu_newGame" class="item">New game</a>
             </div>
         </div>
         <div id="game" style="display:none;">
             <canvas id="canvas" oncontextmenu="return false;"></canvas>
-            <div id="menu" class="side-menu">
+            <div id="menu" class="side menu">
                 <div id="menu_build" class="item" style="background-image: url('./assets/images/menu/build.png');">
                     <div id="menu_build_items" class="child">
                         <div id="menu_build_road" class="item" style="background-image: url('./assets/images/roadTile.png');"></div>
@@ -33,7 +33,8 @@
                     <a href="#" id="pause_fullscreen" class="item">Fullscreen on/off</a>
                 </div>
             </div>
-            <script src="./assets/javascript/rts.js"></script>
+            <canvas id="minimap" class="minimap"></canvas>
+            <script src="./assets/javascript/init.js"></script>
         </div>
 	</body>
 </html>

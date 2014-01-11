@@ -5,14 +5,13 @@
 
 body {
 	font-family: Verdana, Geneva, sans-serif;
-    background: no-repeat fixed center url('http://paper-backgrounds.com/textureimages/2012/09/old-wood-board-texture.jpg') ;
-    background-size: cover;
+    background-color: #c9c2ab;
 }
 
 
 @font-face {
     font-family: 'nashville'; /*a name to be used later*/
-    src: url('../fonts/nashville.ttf'); /*URL to font*/
+    src: url('../fonts/PixelCowboy.otf'); /*URL to font*/
 }
 
 .wrapper {
@@ -31,22 +30,21 @@ body {
 }
 
 .menu {
-	margin-left: auto;
-	margin-right: auto;
+    text-align: center;
 	margin-top: 100px;
-    width: 600px;
-    min-height: 800px;
+    width: 100%;
+    //min-height: 800px;
     border-radius: 10px 10px 10px 10px;
     -moz-border-radius: 10px 10px 10px 10px;
     -webkit-border-radius: 10px 10px 10px 10px;
-    background-color: rgba(173, 169, 163, 0.75);
     border: 0px solid #000000;
+    padding-bottom: 100px;
 }
 
 .menu h1 {
 	color: #FFF047;
     font-family: 'nashville';
-	width: 100%;
+    width: 100%;
 	display: block;
 	text-align: center;
     font-size: 130px;
@@ -74,23 +72,28 @@ body {
 	color: #4660a1;
 }
 
-.side-menu {
+.side.menu {
     display: block;
     position: absolute;
+    margin:0;
     left: 0;
     top: 0;
     width: 80px;
     height: 100%;
-    background-color: rgba(0,0,0,0.7);
+    background-color: #3c3a33;
+    border-radius: 0px 0px 0px 0px;
+    -moz-border-radius: 0px 0px 0px 0px;
+    -webkit-border-radius: 0px 0px 0px 0px;
+    padding-bottom: 0;
 }
 
-.side-menu .bottom {
+.side.menu .bottom {
     display: block;
     position: absolute;
     bottom: 0;
 }
 
-.side-menu .item{
+.side.menu .item{
     width: 50px;
     height: 50px;
     padding: 15px;
@@ -99,15 +102,15 @@ body {
     color: #fff;
 }
 
-.side-menu .item:hover{
+.side.menu .item:hover{
     background-color: rgba(0,0,0,0.5); 
 }
 
-.side-menu .item:hover .child{
+.side.menu .item:hover .child{
     display: block;
 }
 
-.side-menu .item .child {
+.side.menu .item .child {
     display: none;
     width: 80px;
     background-color: rgba(0,0,0,0.84);
@@ -116,7 +119,32 @@ body {
     left: 65px;
 }
 
-.side-menu .item .child:hover {
+.side.menu .item .child:hover {
     display: block;
     background-color: rgba(0,0,0,0.7);
+}
+
+.progress.bar {
+    display: block;
+    position: absolute;
+    z-index: 1000;
+    left: 0;
+    bottom: 0;
+    height: 6px;
+    width: 100%;
+
+}
+
+.progress.bar .progress {
+    display: block;
+    width: 0%;
+    background-color: #f66;
+    height: 6px;
+}
+
+.minimap {
+    position: absolute;
+    display: none;
+    top: 0;
+    right: 0;
 }
