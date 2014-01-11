@@ -108,17 +108,18 @@ var game = {
             */
             game.resources.nbTotal = 7;
             
-            game.resources.loadImage("imgHexagon","./assets/images/hexagon.png");
-            game.resources.loadImage("imgHoverHexagon","./assets/images/hoverHexagon.png");
-            game.resources.loadImage("imgHoverHexagon_error","./assets/images/hoverHexagon_error.png");
-            game.resources.loadImage("imgSelectedHexagon","./assets/images/selectedHexagon.png");
-            game.resources.loadImage("transport","./assets/images/transport.bmp");
-            game.resources.loadImage("tileHover","./assets/images/tileHover.png");
-            game.resources.loadImage("house","./assets/images/emptyPlot.png");
-            
+//            game.resources.loadImage("imgHexagon","./assets/images/hexagon.png");
+//            game.resources.loadImage("imgHoverHexagon","./assets/images/hoverHexagon.png");
+//            game.resources.loadImage("imgHoverHexagon_error","./assets/images/hoverHexagon_error.png");
+//            game.resources.loadImage("imgSelectedHexagon","./assets/images/selectedHexagon.png");
+//            game.resources.loadImage("transport","./assets/images/transport.bmp");
+//            game.resources.loadImage("tileHover","./assets/images/tileHover.png");
+//            game.resources.loadImage("house","./assets/images/emptyPlot.png");
+//            
             game.resources.loadTileset("house","./assets/images/emptyPlot.png",128,144,-4,-3);
             game.resources.loadTileset("immigrant","./assets/images/immigrant.png",64,64,-1,-1);
             game.resources.loadTileset("tree","./assets/images/trees128_64.png",128,128,-1,-1);
+            game.resources.loadTileset("indian","./assets/images/indian128_64.png",128,128,-1,-1);
             
             var definition = game.level.definition;
             
@@ -777,8 +778,8 @@ game.common.initialiseObjects = function() {
     game.objects.stone1 = {
         tile : 3, // <integer> Which tile to draw
         tileset : game.resources.tilesets.tree, // <game.resources.tileset> From which tileset to draw
-        width : 2, // <integer> the base width of the object in n tiles
-        height : 2, // <integer> the base width of the object in n tiles
+        width : 1, // <integer> the base width of the object in n tiles
+        height : 1, // <integer> the base width of the object in n tiles
         index : 0, // <integer>
         drawGrid : true, // When this object is the buildObject, should the grid be drawn?
         create : function(x, y) {
@@ -786,6 +787,44 @@ game.common.initialiseObjects = function() {
                 name : "house",
                 tile : 3,
                 tileset : game.resources.tilesets.tree,
+                isSelectable : true,
+                isSelected : false,
+                isMovable : false,
+                isMoving : false,
+                zIndex : 1,
+                id : game.common.assignObjectId(),
+                x : x,
+                y : y,
+                baseLeft : 0,
+                baseRight : 0,
+                baseTop : 0,
+                width : 1,
+                height : 1
+            };
+            
+            object.index = object.id;
+            
+            if (game.level.layers[object.zIndex][x][y].objects.length === 0) {
+                game.level.layers[object.zIndex][x][y].addObject(object);
+                return object;         
+            } else {
+                return null;
+            }
+        }
+    };
+    
+    game.objects.indianMale1 = {
+        tile : 1, // <integer> Which tile to draw
+        tileset : game.resources.tilesets.indian, // <game.resources.tileset> From which tileset to draw
+        width : 1, // <integer> the base width of the object in n tiles
+        height : 1, // <integer> the base width of the object in n tiles
+        index : 0, // <integer>
+        drawGrid : true, // When this object is the buildObject, should the grid be drawn?
+        create : function(x, y) {
+            var object = {
+                name : "house",
+                tile : 1,
+                tileset : game.resources.tilesets.indian,
                 isSelectable : true,
                 isSelected : false,
                 isMovable : false,

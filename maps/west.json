@@ -285,6 +285,32 @@
                  "width":64,
                  "x":448,
                  "y":1344
+                }, 
+                {
+                 "height":64,
+                 "name":"indianMale1",
+                 "properties":
+                    {
+
+                    },
+                 "type":"indianMale1",
+                 "visible":true,
+                 "width":64,
+                 "x":576,
+                 "y":1280
+                }, 
+                {
+                 "height":64,
+                 "name":"indianMale1",
+                 "properties":
+                    {
+
+                    },
+                 "type":"indianMale1",
+                 "visible":true,
+                 "width":64,
+                 "x":1472,
+                 "y":512
                 }],
          "opacity":1,
          "type":"objectgroup",
