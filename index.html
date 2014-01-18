@@ -14,14 +14,15 @@
         </div>
         <div id="game" style="display:none;">
             <canvas id="canvas" oncontextmenu="return false;"></canvas>
-            <div id="menu" class="side menu">
+            <div id="gameMenu" class="game menu" oncontextmenu="return false;">
                 <div id="menu_build" class="item" style="background-image: url('./assets/images/menu/build.png');">
                     <div id="menu_build_items" class="child">
-                        <div id="menu_build_road" class="item" style="background-image: url('./assets/images/roadTile.png');"></div>
                         <div id="menu_build_house" class="item" style="background-image: url('./assets/images/menu/build_house.png');"></div>
                     </div>
                 </div>
                 <div id="menu_destroy" class="item" style="background-image: url('./assets/images/menu/destroy.png');"></div>
+            </div>
+            <div id="menu" class="side menu">
                 <div id="" class="bottom">
                     <div id="menu_pause" class="item" style="background-image: url('./assets/images/menu/pause.png');"></div>
                 </div>

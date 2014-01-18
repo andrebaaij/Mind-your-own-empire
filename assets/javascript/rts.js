@@ -79,7 +79,7 @@ var game = {
         mouse : {}
 	},
     menu : {
-        width : 70
+        width : 0
     },
 	resources : {
         nbLoaded : 0,
@@ -120,6 +120,7 @@ var game = {
             game.resources.loadTileset("immigrant","./assets/images/immigrant.png",64,64,-1,-1);
             game.resources.loadTileset("tree","./assets/images/trees128_64.png",128,128,-1,-1);
             game.resources.loadTileset("indian","./assets/images/indian128_64.png",128,128,-1,-1);
+            game.resources.loadTileset("gameTiles","./assets/images/gameTiles128_64.png",128,64,0,0);
             
             var definition = game.level.definition;
             
@@ -223,13 +224,13 @@ var game = {
             game.elements.add("pause_continue","pause_continue");
             game.elements.add("pause_fullscreen","pause_fullscreen");
             game.elements.add("menu_pause","menu_pause");
-            game.elements.add("menu_build_road","menu_build_road");
             game.elements.add("menu_build_house","menu_build_house");
             game.elements.add("menu_destroy","menu_destroy");
             game.elements.add("mainMenu_newGame","mainMenu_newGame");
             game.elements.add("game","game");
             game.elements.add("mainMenu","mainMenu");
             game.elements.add("minimap", "minimap");
+            game.elements.add("gameMenu","gameMenu");
         },
         /**
          * game.elements.add() adds a new element based on its id
@@ -269,7 +270,8 @@ var game = {
             immigrants : 0,
             emigrants : 0
         },
-        lastObjectId : 0
+        lastObjectId : 0,
+        objectLayer : 2
     }
 };
 
@@ -333,6 +335,15 @@ game.common.getScreenFromGrid = function(x,y) {
     var sy = Math.round(game.level.yOffset) + ((parseInt(x,10) + parseInt(y,10)) * (game.objects.tile.height / 2));
     return { x : sx, y : sy};
 };
+
+window.requestAnimFrame = (function(){
+    return  window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        function( callback ){
+            window.setTimeout(callback, 1000 / 60);
+        };
+})();
 
 /**
  * game.common.pause() pauses the game, pauses all active processes and shows the pause menu
@@ -606,8 +617,8 @@ game.common.initialiseObjects = function() {
     };
 
     game.objects.destroy = {
-        tile : 94,
-        tileset : game.resources.tilesets.tiles128_64,
+        tile : 4,
+        tileset : game.resources.tilesets.gameTiles,
         width : 1,
         height : 1,
         index : 0,
@@ -617,8 +628,8 @@ game.common.initialiseObjects = function() {
         create : function(x, y) {
             var destroy = {
                 name : "destroy",
-                tile : 94,
-                tileset : game.resources.tilesets.tiles128_64,
+                tile : 4,
+                tileset : game.resources.tilesets.gameTiles,
                 isSelectable : false,
                 isSelected : false,
                 isMovable : false,
@@ -691,8 +702,8 @@ game.common.initialiseObjects = function() {
     };
     
     game.objects.select = {
-        tile : 91,
-        tileset : game.resources.tilesets.tiles128_64,
+        tile : 1,
+        tileset : game.resources.tilesets.gameTiles,
         width : 1,
         height : 1,
         index : 0,
@@ -723,7 +734,22 @@ game.common.initialiseObjects = function() {
                 baseRight : 0,
                 baseTop : 0,
                 width : 1,
-                height : 1
+                height : 1,
+                menu : function(selection) {
+                    var menu = game.common.menu();
+                    
+                    if(typeof selection !== 'undefined' && selection !== null) {
+                        selection.forEach(function(object) {
+
+                            if (object.name === "indian") {
+                                console.log("indian");
+                                menu.addItem("harvest");    
+                            }
+                        });
+                    }
+                    console.log(menu);
+                    return menu;
+                }
             };
             
             object.index = object.id;
@@ -822,7 +848,7 @@ game.common.initialiseObjects = function() {
         drawGrid : true, // When this object is the buildObject, should the grid be drawn?
         create : function(x, y) {
             var object = {
-                name : "house",
+                name : "indian",
                 tile : 1,
                 tileset : game.resources.tilesets.indian,
                 isSelectable : true,
@@ -848,6 +874,43 @@ game.common.initialiseObjects = function() {
             } else {
                 return null;
             }
+        }
+    };
+};
+
+game.common.menu = function() {
+    return {
+        items : [],
+        addItem : function(id) {
+            var item = {
+                id : id,
+                items : [],
+                addChildItem : function(id) {
+                    var item = {
+                        id : id    
+                    };
+                    
+                    this.items.add(item);
+                    return item;
+                }
+            };
+                
+            this.items.add(item);
+            return item;
+        },
+        apply: function() {
+            game.elements.gameMenu.innerHTML = '';
+            
+            this.items.forEach(function(item) {
+                var itemDOM = document.createElement("div").setAttribute("id","menu" + item.id).setAttribute("class","item");
+                var childDOM = document.createElement("div").setAttribute("class","child");
+                item.items.forEach(function(childItem) {
+                    var childItemDOM = document.createElement("div").setAttribute("id","menu" + childItem.id).setAttribute("class","item");
+                    childDOM.appendChild(childItemDOM);
+                });
+                childDOM.appendChild(itemDOM);
+                game.elements.gameMenu.appendChild(childDOM);
+            });     
         }
     };
 };
@@ -881,12 +944,17 @@ game.common.assignObjectId = function() {
  * game.level.draw() All the drawing is done in this function
  */
 game.level.draw = function() {
+    if(game.processes.draw.state === "active") {
+        window.requestAnimFrame(game.level.draw);
+    }
+    
 	game.elements.canvas.context.clearRect(0, 0, game.elements.canvas.width, game.elements.canvas.height);
 	
     var layer,
         x,
         y,
         tile,
+        tileset,
         object,
         xStart,
         xEnd,
@@ -928,17 +996,10 @@ game.level.draw = function() {
     var br = game.common.getGridFromScreen(game.elements.canvas.width, game.elements.canvas.height);
     
     
-//    mouse.x = mouse.x - game.level.xOffset - (game.objects.tile.width/2);
-//    mouse.y = mouse.y - game.level.yOffset;
-//    var gridFrom = {gridFromX},
-//        gridTo = {x : 10, y : 10};
-    
     var drawXFrom = Math.min(tr.x,tl.x,bl.x,br.x),
         drawYFrom = Math.min(tr.y,tl.y,bl.y,br.y),
         drawXTo = Math.max(tr.x,tl.x,bl.x,br.x),
         drawYTo = Math.max(tr.y,tl.y,bl.y,br.y);
-    
-    //console.log(drawXFrom + "," + drawYFrom + "-" + drawXTo + "," + drawYTo);
     
     game.elements.canvas.context.textAlign = "left";
     game.elements.canvas.context.textBaseline = "top";
@@ -954,18 +1015,20 @@ game.level.draw = function() {
                 // Which tile to draw?
                 if(game.level.layers[layer].name === "grid" && game.variables.selection.build_object.drawGrid) {  
                     if (x == game.level.layers[layer].length-1 || y == game.level.layers[layer][x].length-1) {
-                        tile = 92;
+                        tile = 2;
                     } else {
-                        tile = 93;
+                        tile = 3;
                     }
+                    tileset = game.resources.tilesets.gameTiles;
                 } else {
                     tile = game.level.layers[layer][x][y].tile;
+                    tileset = game.resources.tilesets.tiles128_64;
                 }
                 
                 
                 //draw tile
                 if (tile !== 0) {
-                    game.objects.tile.draw(game.resources.tilesets.tiles128_64,tile,x,y);
+                    game.objects.tile.draw(tileset,tile,x,y);
                     
                 }
                 
@@ -1015,11 +1078,6 @@ game.level.draw = function() {
      //else {
     //   game.objects.tile.draw(img,91,game.variables.hover.x,game.variables.hover.y);
     //}
-
-    
-    if(game.processes.draw.state === "active") {
-        setTimeout(game.level.draw, game.variables.draw.interval);
-    }
 };
 
 /**
@@ -1154,11 +1212,7 @@ game.level.load = function() {
                 } else {
                     var nx = Math.ceil((object.width / game.objects[object.type].width) / game.objects.tile.height),
                         ny = Math.ceil((object.height / game.objects[object.type].height) / game.objects.tile.height);
-                    
-                    console.log(object);
-                    console.log(nx);
-                    console.log(ny);
-                    
+                
                     for (x = 0; x < nx; ++x) {
                         for (y=0; y < ny; ++y) {   
                             game.objects[object.type].create((object.x/game.objects.tile.height) + x,(object.y/game.objects.tile.height) + y);
@@ -1358,11 +1412,36 @@ game.elements.canvas.addEventListener("mouseup", function () {
     game.variables.selection.yStart = null;
 });
 
-game.elements.canvas.addEventListener("mousedown", function() {
+game.elements.canvas.addEventListener("mousedown", function(event) {
     game.variables.events.mousedown = true;
+    var button;
     
-    game.variables.selection.xStart = Math.floor(game.variables.hover.x);
-    game.variables.selection.yStart = Math.floor(game.variables.hover.y);
+    if (event.which === null) {
+        /* IE case */
+        button = (event.button < 2) ? "LEFT" :
+                 ((event.button == 4) ? "MIDDLE" : "RIGHT");
+    } else {
+        /* All others */
+        button = (event.which < 2) ? "LEFT" :
+                 ((event.which == 2) ? "MIDDLE" : "RIGHT");
+    }
+    
+    if (button === "LEFT") {
+        game.elements.gameMenu.style.display = "none";
+        game.variables.selection.xStart = Math.floor(game.variables.hover.x);
+        game.variables.selection.yStart = Math.floor(game.variables.hover.y);
+        
+        if (game.level.layers[game.variables.objectLayer][game.variables.hover.x][game.variables.hover.y].objects[0]) {
+            var mainObjectMenu = game.level.layers[game.variables.objectLayer][game.variables.hover.x][game.variables.hover.y].objects[0].menu;
+            if (mainObjectMenu) {
+                mainObjectMenu.apply();   
+            }
+        }
+    } else if (button === "RIGHT") {
+        game.elements.gameMenu.style.display = "block";
+        game.elements.gameMenu.style.left = game.objects.mouse.x;
+        game.elements.gameMenu.style.top =  game.objects.mouse.y;
+    }
 });
 
 game.elements.canvas.addEventListener ("mouseout", function() {
@@ -1390,7 +1469,19 @@ game.elements.menu_pause.addEventListener("click", function() {
     game.common.pause();
 });
 
+game.elements.menu_pause.onmouseover = function(){
+    game.variables.scroll.x = 0;
+    game.variables.scroll.y = 0;
+};
+
+game.elements.menu_destroy.onmouseover = function(){
+    game.variables.scroll.x = 0;
+    game.variables.scroll.y = 0;
+};
+
 game.elements.pause_fullscreen.onclick = function() {
+
+    
     var pfx = ["webkit", "moz", "ms", "o", ""];
     function RunPrefixMethod(obj, method) {
         
@@ -1424,11 +1515,14 @@ document.onkeydown = function(evt) {
     
     switch(evt.keyCode){
     case 27: // Escape
-        game.variables.selection.objects = [];
-        game.variables.selection.build_object = game.objects.select;
-            
         if (game.common.isPaused()) {
             game.common.unpause();
+        } else if(game.elements.gameMenu.style.display !== "none") {
+            game.elements.gameMenu.style.display = "none";
+        } else if(game.variables.selection.build_object !== game.objects.select) {
+            game.variables.selection.build_object = game.objects.select;
+        } else {
+            game.variables.selection.objects.length = 0;    
         }
         break;
     case 80: // P = Pause
@@ -1504,19 +1598,13 @@ window.addEventListener("resize", function() {
 	game.elements.canvas.height=game.objects.window.height;
 });
 
-game.elements.menu_build_road.addEventListener("click", function() {
-    if (game.variables.selection.build_object === game.objects.road) {
-        game.variables.selection.build_object = game.objects.select;
-    } else {
-        game.variables.selection.build_object = game.objects.road;
-    }
-});
 
 game.elements.menu_build_house.addEventListener("click", function() {
     if (game.variables.selection.build_object === game.objects.house) {
         game.variables.selection.build_object = game.objects.select;
     } else {
         game.variables.selection.build_object = game.objects.house;
+        game.elements.gameMenu.style.display = "none";
     }
 });
 
@@ -1525,6 +1613,7 @@ game.elements.menu_destroy.addEventListener("click", function() {
         game.variables.selection.build_object = game.objects.select;
     } else {
         game.variables.selection.build_object = game.objects.destroy;
+        game.elements.gameMenu.style.display = "none";
     }
 });
 
@@ -1534,4 +1623,10 @@ game.elements.mainMenu_newGame.addEventListener("click", function() {
 });
 
 game.elements.mainMenu.style.display = "none";
-game.elements.game.style.display = "block"; 
+game.elements.game.style.display = "block";
+
+window.onblur = function(){  
+    if (!game.common.isPaused()) {
+        game.common.pause();
+    }
+};

@@ -30,7 +30,6 @@ var common = {
         document.getElementsByTagName("head")[0].appendChild(script);
     },
     updateProgress : function(percentage) {
-        console.log((initilise.nbFilesLoaded/initilise.nbFilesToLoad) * 100);
         document.getElementById("progressBarProgress").style.width = percentage + "%";
         
         // Hide the load bar when finished.

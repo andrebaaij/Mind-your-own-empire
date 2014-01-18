@@ -1,17 +1,18 @@
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Roboto Regular'), local('Roboto-Regular'), url(http://themes.googleusercontent.com/static/fonts/roboto/v10/2UX7WLTfW3W8TclTUvlFyQ.woff) format('woff');
+}
+
 * {
 	margin: 0;
 	padding: 0;
 }
 
 body {
-	font-family: Verdana, Geneva, sans-serif;
+	font-family: 'Roboto', Arial, Geneva, sans-serif;
     background-color: #c9c2ab;
-}
-
-
-@font-face {
-    font-family: 'nashville'; /*a name to be used later*/
-    src: url('../fonts/PixelCowboy.otf'); /*URL to font*/
 }
 
 .wrapper {
@@ -43,7 +44,6 @@ body {
 
 .menu h1 {
 	color: #FFF047;
-    font-family: 'nashville';
     width: 100%;
 	display: block;
 	text-align: center;
@@ -55,7 +55,6 @@ body {
 .menu .item{
 	padding: 10px 0;
 	//background-color: #4E6BB2;
-    font-family: 'nashville';
     font-size: 50px;
     color: #fff;
 	width: 500px;
@@ -72,13 +71,15 @@ body {
 	color: #4660a1;
 }
 
+
+
 .side.menu {
     display: block;
     position: absolute;
     margin:0;
     left: 0;
     top: 0;
-    width: 80px;
+    width: 0;
     height: 100%;
     background-color: #3c3a33;
     border-radius: 0px 0px 0px 0px;
@@ -96,10 +97,13 @@ body {
 .side.menu .item{
     width: 50px;
     height: 50px;
-    padding: 15px;
+    padding: 5px;
+    margin: 10px;
+    margin-right: 0;
     text-align: center;
     line-height: 50px;
     color: #fff;
+    background-color: #3c3a33;
 }
 
 .side.menu .item:hover{
@@ -112,16 +116,80 @@ body {
 
 .side.menu .item .child {
     display: none;
-    width: 80px;
+    width: 60px;
     background-color: rgba(0,0,0,0.84);
     position: relative;
     top:-15px;
-    left: 65px;
+    left: 60px;
 }
 
 .side.menu .item .child:hover {
     display: block;
     background-color: rgba(0,0,0,0.7);
+}
+
+.game.menu {
+    display: none;
+    position: absolute;
+    margin:0;
+    left: 0;
+    top: 0;
+    width: auto;
+    background-color: transparent;
+    border-radius: 0px 0px 0px 0px;
+    -moz-border-radius: 0px 0px 0px 0px;
+    -webkit-border-radius: 0px 0px 0px 0px;
+    padding-bottom: 0;
+}
+
+.game.menu .item{
+    width: 50px;
+    height: 50px;
+    padding: 5px;
+    text-align: center;
+    line-height: 50px;
+    color: #fff;
+    background-color: #3c3a33;
+    float: left;
+    position: relative;
+    float: left;
+    height: 55px;
+}
+
+.game.menu .item:hover{
+    background-color: #59564C; 
+}
+
+.game.menu .item:hover .child{
+    display: block;
+    width: 120px;
+    background-color: #59564C;
+}
+
+.game.menu .item .child {
+    display: none;
+    width: 60px;
+    background-color: #59564C;
+    position: relative;
+    top:60px;
+    left: -5px;
+}
+
+.game.menu .item .child:hover {
+    display: block;
+    background-color: #59564C;
+}
+
+.game.menu .item .child .item{
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    background-color: #59564C;
+    position: relative;
+}
+
+.game.menu .item .child .item:hover{
+    background-color: #403E36;
 }
 
 .progress.bar {
