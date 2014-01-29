@@ -1242,7 +1242,7 @@ game.level.load = function() {
  */
 game.initialise = function () {
     "use strict";
-    var levelURI = "./maps/west.json";
+    var levelURI = "./assets/maps/west.json";
     game.level.definition = game.common.getJSONFromURI(levelURI);
     
     game.resources.load();
