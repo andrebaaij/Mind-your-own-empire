@@ -116,10 +116,8 @@ var game = {
 //            game.resources.loadImage("tileHover","./assets/images/tileHover.png");
 //            game.resources.loadImage("house","./assets/images/emptyPlot.png");
 //            
-            game.resources.loadTileset("house","./assets/images/emptyPlot.png",128,144,-4,-3);
-            game.resources.loadTileset("immigrant","./assets/images/immigrant.png",64,64,-1,-1);
             game.resources.loadTileset("tree","./assets/images/trees128_64.png",128,128,-1,-1);
-            game.resources.loadTileset("indian","./assets/images/indian128_64.png",128,128,-1,-1);
+            game.resources.loadTileset("indian","./assets/images/indianMale1_40_80.png",128,128,-1,-1);
             game.resources.loadTileset("gameTiles","./assets/images/gameTiles128_64.png",128,64,0,0);
             
             var definition = game.level.definition;
