@@ -1,0 +1,10 @@
+{
+    "image" : "tiles128_64.png",
+    "grid" : {
+        "width" : 128,
+        "height" : 64
+    },
+    "animations" : {
+        
+    }
+}
