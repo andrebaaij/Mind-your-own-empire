@@ -11,5 +11,5 @@ game.initialise = function() {
 
 game.drawLoop = function() {
     requestAnimationFrame(game.drawLoop);
-    draw(userInterface.elements.canvas, level.get(), 0, 0);
+    draw(userInterface.elements.canvas, level.get(), objects.list(), 0, 0);
 };
