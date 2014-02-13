@@ -26,19 +26,19 @@ userInterface.canvasMoveMouseListener = function(event) {
     screenY = event.y;
     
     if(screenX < 100) {
-        this.variables.scrollX = 1;
+        userInterface.variables.scrollX = 1;
     } else if (screenX > canvas.width - 100) {
-        this.variables.scrollX = -1;
+        userInterface.variables.scrollX = -1;
     } else {
-        this.variables.scrollX = 0;
+        userInterface.variables.scrollX = 0;
     }
     
     if (screenY < 100) {
-        this.variables.scrollY = 1;
+        userInterface.variables.scrollY = 1;
     } else if (screenY > canvas.height - 100) {
-        this.variables.scrollY = -1;
+        userInterface.variables.scrollY = -1;
     } else {
-        this.variables.scrollY = 0;
+        userInterface.variables.scrollY = 0;
     }
 };
 
