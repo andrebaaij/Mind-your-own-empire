@@ -6,10 +6,10 @@ game.initialise = function() {
     common.require('objects');
     common.require('userInterface');
     
-    window.requestAnimFrame(game.drawLoop());
+    window.requestAnimFrame(game.gameLoop());
 };
 
-game.drawLoop = function() {
-    requestAnimationFrame(game.drawLoop);
+game.gameLoop = function() {
+    requestAnimationFrame(game.gameLoop);
     draw(userInterface.elements.canvas, level.get(), objects.list(), 0, 0);
 };
