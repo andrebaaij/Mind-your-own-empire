@@ -18,7 +18,9 @@
 
 /* global Image,document,window,setTimeout,console,XMLHttpRequest,common */
 
-function objects() {}
+function objects() {
+    objects.array = [];
+}
 
 objects.prototype.list = function() {
     return this.array;
@@ -109,4 +111,3 @@ objects.prototype.repository = new repository();
 
 // Initialise the Object objects
 objects = new objects();
-objects.array= [];
