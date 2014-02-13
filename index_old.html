@@ -1,0 +1,41 @@
+<html>
+	<head>
+		<title>RTS 0.0.8</title>
+		<link rel="stylesheet" type="text/css" href="./assets/stylesheets/style.css">
+	</head>
+	<body id="wrapper">
+        <div id="progressBar" class="progress bar">
+            <div id="progressBarProgress" class="progress"></div>
+        </div>
+        <div id="mainMenu">
+            <div id="mainMenu" class="menu">
+                <a href="#" id="mainMenu_newGame" class="item">New game</a>
+            </div>
+        </div>
+        <div id="game" style="display:none;">
+            <canvas id="canvas" oncontextmenu="return false;"></canvas>
+            <div id="gameMenu" class="game menu" oncontextmenu="return false;">
+                <div id="menu_build" class="item" style="background-image: url('./assets/images/menu/build.png');">
+                    <div id="menu_build_items" class="child">
+                        <div id="menu_build_house" class="item" style="background-image: url('./assets/images/menu/build_house.png');"></div>
+                    </div>
+                </div>
+                <div id="menu_destroy" class="item" style="background-image: url('./assets/images/menu/destroy.png');"></div>
+            </div>
+            <div id="menu" class="side menu">
+                <div id="" class="bottom">
+                    <div id="menu_pause" class="item" style="background-image: url('./assets/images/menu/pause.png');"></div>
+                </div>
+            </div>
+            <div id="pause" class="overlay">
+                <div class="menu">
+                    <H1>pause</h1>
+                    <a href="#" id="pause_continue" class="item">Continue</a>
+                    <a href="#" id="pause_fullscreen" class="item">Fullscreen on/off</a>
+                </div>
+            </div>
+            <canvas id="minimap" class="minimap"></canvas>
+            <script src="./assets/javascript/init.js"></script>
+        </div>
+	</body>
+</html>
