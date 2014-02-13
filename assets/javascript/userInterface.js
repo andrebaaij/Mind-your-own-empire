@@ -19,6 +19,8 @@ userInterface.initialise = function() {
 window.onresize = function() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    canvas.xOffset = 0;
+    canvas.yOffset = 0;
 };
 
 userInterface.canvasMoveMouseListener = function(event) {
