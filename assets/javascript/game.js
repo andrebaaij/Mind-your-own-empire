@@ -1,10 +1,10 @@
 var game = {};
 
 game.initialise = function() {
-    common.require('draw.js');
-    common.require('level.js');
-    common.require('objects.js');
-    common.require('userInterface.js');
+    common.require('draw');
+    common.require('level');
+    common.require('objects');
+    common.require('userInterface');
     
     window.requestAnimFrame(game.drawLoop());
 };
