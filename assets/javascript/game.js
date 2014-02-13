@@ -10,6 +10,6 @@ game.initialise = function() {
 };
 
 game.gameLoop = function() {
-    requestAnimationFrame(this.gameLoop);
+    requestAnimationFrame(game.gameLoop);
     draw(userInterface.elements.canvas, level.get(), objects.list());
 };
