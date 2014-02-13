@@ -37,7 +37,7 @@ common.getJSONFromURI = function(URI) {
 };
 
 common.require = function (name){
-    url = './assets/javascript/' + name + '.js';
+    url = './assets/javascript/' + name;
     
     var script = document.createElement("script");
     script.type = "text/javascript";

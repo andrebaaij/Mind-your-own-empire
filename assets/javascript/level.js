@@ -2,18 +2,17 @@
 
 /* jshint loopfunc: true */
 
-var level = {
+var level = {};
+
+level.initialise = function() {
+    this.load("west.json");
 };
 
-level.initialise = function (jsonFilename) {
+level.load = function (jsonFilename) {
     var URI = "./assets/maps/" + jsonFilename;
-    level = common.getJSONFromURI(URI);
-    
-    draw(document.getElementById("canvas"),level,0,0,0);
+    this.definition = common.getJSONFromURI(URI);
 };
 
 level.get = function() {
-    return level;
+    return this.definition;
 };
-
-level.initialise("west.json");

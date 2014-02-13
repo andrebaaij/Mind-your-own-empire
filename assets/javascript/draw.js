@@ -14,10 +14,6 @@ var draw = function(canvas, level, objects, xOffset, yOffset) {
     var tilesPerRow = imagewidth / tilewidth;
     
     var plaatje = common.resources.tilesets.get(tileset.name);
-
-    canvas.context = canvas.getContext("2d");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
     
     var layer = level.layers[0];
     for (var i = 0 ; i < imagewidth*imageheight ; i++) {
@@ -38,9 +34,4 @@ var draw = function(canvas, level, objects, xOffset, yOffset) {
                             );
     }
     
-    
-    
-
-
 };
-
