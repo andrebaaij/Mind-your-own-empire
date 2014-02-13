@@ -13,6 +13,8 @@ userInterface.initialise = function() {
     
     userInterface.elements.canvas.addEventListener('mousemove',userInterface.canvasMoveMouseListener);
     
+    userInterface.scrollLoop();
+    
     window.onresize();
 };
 
@@ -42,15 +44,19 @@ userInterface.canvasMoveMouseListener = function(event) {
     } else {
         userInterface.variables.scrollY = 0;
     }
+    
+    
+    
 };
 
 userInterface.scrollLoop = function() {
-    requestAnimationFrame(this);
+    requestAnimationFrame(userInterface.scrollLoop);
     
-    if (!scrollX && !scrollY) {
+    if (!userInterface.variables.scrollX && !userInterface.variables.scrollX) {
         return;    
     }
     
-    canvas.xOffset += (scrollSpeed * scrollX);
-    canvas.yOffset += (scrollSpeed * scrollY);
+    canvas.xOffset += (userInterface.variables.scrollSpeed * userInterface.variables.scrollX);
+    canvas.yOffset += (userInterface.variables.scrollSpeed * userInterface.variables.scrollY);
+    
 };
