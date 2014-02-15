@@ -19,7 +19,7 @@
 /* global Image,document,window,setTimeout,console,XMLHttpRequest,common */
 
 function objects() {
-    objects.array = [];
+    this.array = [];
 }
 
 objects.prototype.list = function() {
@@ -40,6 +40,8 @@ repository.prototype.get = function(name) {
     if (object !== null) {
         objects.repository[name] = object;
         objects.repository[name].tileset = common.resources.tilesets.get(object.tileset);
+        objects.repository[name].activeAnimation = {};
+        
         objects.repository[name].clone = function() {
             function GameObject() { }
             function clone(obj) {
@@ -54,6 +56,36 @@ repository.prototype.get = function(name) {
             this.x += x;
             this.y += y;
         };
+        
+        /*
+            Animation
+        */
+
+        
+        objects.repository[name].animationLoop = function() {
+            object = objects.repository[name];
+            setTimeout(object.animationLoop,100);
+
+            if (object.activeAnimation.index >= object.activeAnimation.array.length) {
+                object.activeAnimation.index = 0;
+            } else {
+                object.activeAnimation.index += 1;
+            }
+            
+            object.tile = object.activeAnimation.array[object.activeAnimation.index];
+        };
+        
+        objects.repository[name].setActiveAnimation = function(animation) {
+            if (this.activeAnimation.name !== animation) {
+                this.activeAnimation.name = animation;
+                this.activeAnimation.array = this.tileset.animations[animation].NE;
+                this.activeAnimation.index = 0;
+            }
+        };
+        
+        /*
+            Skills
+        */
         
         if(object.skills.indexOf("walk") !== -1) {
             objects.repository[name].walk = function(x,y) {
@@ -78,14 +110,21 @@ repository.prototype.get = function(name) {
             };
         }
         
+        /*
+            Create
+        */
+        
         objects.repository[name].create = function(x,y) {
             var object = objects.repository[name].clone();
             
             // remove pure repository functions
-            delete object.prototype.clone;
-            delete object.prototype.create;
+            object.clone = undefined;
+            object.create = undefined;
+            
             object.x = x;
             object.y = y;
+            object.setActiveAnimation(object.tileset.defaultAnimation);
+            object.animationLoop(); 
             objects.add(object);
         };
     } else {

@@ -4,6 +4,7 @@
         "width" : 40,
         "height" : 80
     },
+    "defaultAnimation" : "walk",
     "animations" : {
         "walk" : {
             "NW" : [1,2,3,4,5,6,7],

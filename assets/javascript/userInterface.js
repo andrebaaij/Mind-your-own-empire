@@ -44,9 +44,6 @@ userInterface.canvasMoveMouseListener = function(event) {
     } else {
         userInterface.variables.scrollY = 0;
     }
-    
-    
-    
 };
 
 userInterface.scrollLoop = function() {

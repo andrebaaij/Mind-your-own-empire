@@ -52,7 +52,6 @@ common.require = function (name){
         };
     } else {  //Others
         script.onload = function(){
-            console.log(window[name]);
             if (window[name].initialise) window[name].initialise();
         };
     }
@@ -114,6 +113,7 @@ tilesets.prototype.add = function(name) {
     
     common.resources.tilesets[name].grid = tilesetObject.grid;
     common.resources.tilesets[name].animations = tilesetObject.animations;
+    common.resources.tilesets[name].defaultAnimation = tilesetObject.defaultAnimation;
     common.resources.tilesets[name].src = imageURI;
     
     return common.resources.tilesets[name];
