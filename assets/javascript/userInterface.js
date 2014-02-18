@@ -25,21 +25,39 @@ window.onresize = function() {
     canvas.height = window.innerHeight;
 };
 
-userInterface.canvasMoveMouseListener = function(event) {
-    screenX = event.x;
-    screenY = event.y;
+userInterface.canvasMoveMouseListener = function(e) {
+    var rect = userInterface.elements.canvas.getBoundingClientRect();
+
+    var posx = 0;
+	var posy = 0;
+	if (!e) var e = window.event;
+	if (e.pageX || e.pageY) {
+		posx = e.pageX;
+		posy = e.pageY;
+	}
+	else if (e.clientX || e.clientY) {
+		posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+		posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+	}
+	// posx and posy contain the mouse position relative to the document
+	// Do something with this information
     
-    if(screenX < 100) {
+    mouseX = posx - rect.left;
+    mouseY = posy - rect.top;
+    
+    console.log(posx);
+    
+    if(mouseX < 100) {
         userInterface.variables.scrollX = 1;
-    } else if (screenX > canvas.width - 100) {
+    } else if (mouseX > canvas.width - 100) {
         userInterface.variables.scrollX = -1;
     } else {
         userInterface.variables.scrollX = 0;
     }
     
-    if (screenY < 100) {
+    if (mouseY < 100) {
         userInterface.variables.scrollY = 1;
-    } else if (screenY > canvas.height - 100) {
+    } else if (mouseY > canvas.height - 100) {
         userInterface.variables.scrollY = -1;
     } else {
         userInterface.variables.scrollY = 0;
@@ -47,9 +65,14 @@ userInterface.canvasMoveMouseListener = function(event) {
 };
 
 userInterface.scrollLoop = function() {
+    //console.log("scrollLoop");
+    //console.log(userInterface.variables.scrollX);
+    //console.log(userInterface.elements.canvas.xOffset);
+    
+    
     requestAnimationFrame(userInterface.scrollLoop);
     
-    if (!userInterface.variables.scrollX && !userInterface.variables.scrollY) {
+    if (!userInterface.variables.scrollX && !userInterface.variables.scroll) {
         return;    
     }
     
