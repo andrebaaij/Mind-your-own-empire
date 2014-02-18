@@ -54,9 +54,9 @@ userInterface.canvasMoveMouseListener = function(e) {
     }
     
     if (mouseY < 100) {
-        userInterface.variables.scrollY = 1;
-    } else if (mouseY > userInterface.elements.canvas.height - 100) {
         userInterface.variables.scrollY = -1;
+    } else if (mouseY > userInterface.elements.canvas.height - 100) {
+        userInterface.variables.scrollY = 1;
     } else {
         userInterface.variables.scrollY = 0;
     }
