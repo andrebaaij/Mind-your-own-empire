@@ -2,7 +2,8 @@
 
 /* jshint loopfunc: true */
 
-var draw = function(canvas, level, objects, xOffset, yOffset) {
+var draw = function(canvas, level, objects) {
+    canvas.context.clearRect(0, 0, canvas.width, canvas.height);
     
     var tileset = level.tilesets[0];
     
@@ -15,13 +16,18 @@ var draw = function(canvas, level, objects, xOffset, yOffset) {
     
     var plaatje = common.resources.tilesets.get(tileset.name);
     
-    var numberOfTilesForHeight = Math.ceil(canvas.height/tileheight) * 2;
-    var numberOfTilesForWidth = Math.ceil(canvas.width/tilewidth) * 2 + 2;
+    var tileXOffset = Math.floor(canvas.xOffset/32);
+    var tileYOffset = Math.floor(canvas.yOffset/32);
+    
+    var numberOfTilesForHeight = Math.ceil(canvas.height/tileheight);
+    var numberOfTilesForWidth = Math.ceil(canvas.width/tilewidth) * 2;
     
     var layer = level.layers[0];
-    for (var k = 0 ; k < numberOfTilesForHeight ; k++) {
-        for (var j = k-1 ; j < numberOfTilesForWidth + 5 ; j++) {
-            var i = k*level.width + j - 5;
+    for (var k = tileYOffset - Math.floor(tileXOffset/2) - numberOfTilesForHeight ; k < tileYOffset - Math.floor(tileXOffset/2) + numberOfTilesForHeight  ; k++) {
+        for (var j = k-1+tileXOffset ; j < numberOfTilesForWidth + k + tileXOffset + 1 ; j++) {
+    //for (var k = 0; k < 200  ; k++) {
+    //    for (var j = 0 ; j < 200 ; j++) {
+            var i = k*level.width + j;
             if (i < 0) {
                 continue;
             }
@@ -29,14 +35,14 @@ var draw = function(canvas, level, objects, xOffset, yOffset) {
             var sx = tileIndex % tilesPerRow;
             var sy = (tileIndex - sx) / tilesPerRow;
             var cx = i % layer.width;
-            var cy = (i - cx) / layer.width;
+            var cy = (i - cx) / layer.height;
             canvas.context.drawImage(plaatje,
                                    sx * tilewidth,
                                    sy * tileheight,
                                    tilewidth,
                                    tileheight,
-                                   0.5*(cx-cy+5)*tilewidth,
-                                   0.5*(cx+cy)*tileheight,
+                                   0.5*(cx-cy)*tilewidth-0.5*(canvas.xOffset/32)*tilewidth,
+                                   0.5*(cx+cy)*tileheight-(canvas.yOffset/32)*tileheight,
                                    tilewidth,
                                    tileheight
                                 );
