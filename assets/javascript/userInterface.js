@@ -45,19 +45,17 @@ userInterface.canvasMoveMouseListener = function(e) {
     mouseX = posx - rect.left;
     mouseY = posy - rect.top;
     
-    console.log(posx);
-    
     if(mouseX < 100) {
-        userInterface.variables.scrollX = 1;
-    } else if (mouseX > canvas.width - 100) {
         userInterface.variables.scrollX = -1;
+    } else if (mouseX > userInterface.elements.canvas.width - 100) {
+        userInterface.variables.scrollX = 1;
     } else {
         userInterface.variables.scrollX = 0;
     }
     
     if (mouseY < 100) {
         userInterface.variables.scrollY = 1;
-    } else if (mouseY > canvas.height - 100) {
+    } else if (mouseY > userInterface.elements.canvas.height - 100) {
         userInterface.variables.scrollY = -1;
     } else {
         userInterface.variables.scrollY = 0;
@@ -72,7 +70,7 @@ userInterface.scrollLoop = function() {
     
     requestAnimationFrame(userInterface.scrollLoop);
     
-    if (!userInterface.variables.scrollX && !userInterface.variables.scroll) {
+    if (!userInterface.variables.scrollX && !userInterface.variables.scrollY) {
         return;    
     }
     
