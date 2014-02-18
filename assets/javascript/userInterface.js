@@ -14,15 +14,15 @@ userInterface.initialise = function() {
     userInterface.elements.canvas.addEventListener('mousemove',userInterface.canvasMoveMouseListener);
     
     userInterface.scrollLoop();
-    
+
+    userInterface.elements.canvas.xOffset = 0;
+    userInterface.elements.canvas.yOffset = 0;
     window.onresize();
 };
 
 window.onresize = function() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    canvas.xOffset = 0;
-    canvas.yOffset = 0;
 };
 
 userInterface.canvasMoveMouseListener = function(event) {
@@ -49,11 +49,11 @@ userInterface.canvasMoveMouseListener = function(event) {
 userInterface.scrollLoop = function() {
     requestAnimationFrame(userInterface.scrollLoop);
     
-    if (!userInterface.variables.scrollX && !userInterface.variables.scrollX) {
+    if (!userInterface.variables.scrollX && !userInterface.variables.scrollY) {
         return;    
     }
     
-    canvas.xOffset += (userInterface.variables.scrollSpeed * userInterface.variables.scrollX);
-    canvas.yOffset += (userInterface.variables.scrollSpeed * userInterface.variables.scrollY);
+    userInterface.elements.canvas.xOffset += (userInterface.variables.scrollSpeed * userInterface.variables.scrollX);
+    userInterface.elements.canvas.yOffset += (userInterface.variables.scrollSpeed * userInterface.variables.scrollY);
     
 };
