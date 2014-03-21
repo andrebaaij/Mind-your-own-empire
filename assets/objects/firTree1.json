@@ -1,0 +1,5 @@
+{
+    "tileset" : "tree1",
+    "skills" : [],
+    "targetActions" : ["chop"]
+}

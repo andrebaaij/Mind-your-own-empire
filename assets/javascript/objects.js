@@ -57,7 +57,7 @@ repository.prototype.get = function(name) {
             this.y += y;
         };
         
-        /*
+        /* 
             Animation
         */
 
@@ -65,14 +65,14 @@ repository.prototype.get = function(name) {
         objects.repository[name].animationLoop = function() {
             object = objects.repository[name];
             setTimeout(object.animationLoop,100);
-
-            if (object.activeAnimation.index >= object.activeAnimation.array.length) {
-                object.activeAnimation.index = 0;
-            } else {
-                object.activeAnimation.index += 1;
-            }
             
             object.tile = object.activeAnimation.array[object.activeAnimation.index];
+            
+            if (object.activeAnimation.index < object.activeAnimation.array.length-1) {
+                object.activeAnimation.index += 1;
+            } else {
+                object.activeAnimation.index = 0;
+            }
         };
         
         objects.repository[name].setActiveAnimation = function(animation) {

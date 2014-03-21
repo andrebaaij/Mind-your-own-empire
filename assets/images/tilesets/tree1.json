@@ -1,0 +1,16 @@
+{
+    "image" : "trees128_64.png",
+    "grid" : {
+        "width" : 128,
+        "height" : 64
+    },
+    "defaultAnimation" : "stand",
+    "animations" : {
+        "stand" : {
+            "NW" : [1],
+            "NE" : [1],
+            "SE" : [1],
+            "SW" : [1]
+        }
+    }
+}
