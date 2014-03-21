@@ -16,10 +16,10 @@ userInterface.initialise = function() {
     
     /* EventListeners assignment*/
     userInterface.elements.canvas.addEventListener('mousemove',userInterface.canvasMoveMouseListener);
-    userInterface.elements.pauseContinue.addEventListener('click',userInterface.unpause);
+    userInterface.elements.pauseContinue.addEventListener('click',userInterface.pause("off"));
     userInterface.elements.pauseFullscreen.addEventListener('click',userInterface.fullscreen());
     
-    window.onblur = userInterface.pause;
+    window.onblur = userInterface.pause("on");
     
     /* Loops */
     userInterface.scrollLoop();
@@ -37,15 +37,17 @@ userInterface.setVariable = function(name, value) {
 
 /* Pause */
 userInterface.pause = function(command) {
+    console.log(command);
+    
     if (command !== "on" && command !== "off") {
         if (userInterface.elements.pause.style.display === "none") {
             userInterface.elements.pause.style.display = "block";
         } else {
             userInterface.elements.pause.style.display = "none";
         }
-    } else if (command !== "on" ) {
+    } else if (command === "on" ) {
         userInterface.elements.pause.style.display = "block";
-    } else if ( command !== "off") {
+    } else if ( command === "off") {
         userInterface.elements.pause.style.display = "none";
     }
 };

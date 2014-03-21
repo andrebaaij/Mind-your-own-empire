@@ -61,8 +61,6 @@ var draw = function(canvas, level, objects) {
             var sx = tileIndex % tilesPerRow;
             var sy = (tileIndex - sx) / tilesPerRow;
         
-            console.log(tileIndex);
-        
             canvas.context.drawImage(tileset,
                                    sx * tilewidth,
                                    sy * tileheight,
