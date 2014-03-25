@@ -13,6 +13,9 @@
     
     objects.list(orderArguments);
     returns a list of all the objects sorted by arguments
+    
+    objects.find(x, y);
+    find an object based on a x and y position.
 */
 
 
@@ -144,9 +147,18 @@ objects.prototype.add = function(object) {
     this.array.push(object);
 };
 
+objects.prototype.find = function(x, y) {
+    console.log(x,y);
+    
+    this.array.forEach(function(object, index) {
+        if (object.x <= x && object.x+200 >= x && object.y <= y && object.y+200 >= y) {
+            console.log(object.x, object.y);
+        }
+    });
+};
+
 // Initialise the Object objects.prototype.repository
 objects.prototype.repository = new repository();
-
 
 // Initialise the Object objects
 objects = new objects();

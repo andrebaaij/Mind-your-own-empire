@@ -72,7 +72,6 @@ common.resources = new resources();
 function tilesets(){}
 common.resources.tilesets = new tilesets();
 
-
 var tileset = Image;
 tileset.prototype.grid = {
     width : null,
@@ -126,5 +125,3 @@ tilesets.prototype.get = function(name) {
     
     return common.resources.tilesets[name];
 };
-
-
