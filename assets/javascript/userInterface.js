@@ -4,7 +4,8 @@ userInterface.elements = {};
 userInterface.variables = {
     scrollSpeed : 10,
     scrollX : 0,
-    scrollY : 0
+    scrollY : 0,
+    objects_selected : []
 };
 
 userInterface.initialise = function() {
@@ -17,7 +18,7 @@ userInterface.initialise = function() {
     
     /* EventListeners assignment*/
     userInterface.elements.canvas.addEventListener('mousemove',userInterface.canvasMoveMouseListener);
-    userInterface.elements.canvas.addEventListener('click',userInterface.canvasClickListener);
+    userInterface.elements.canvas.addEventListener('mouseup',userInterface.canvasClickListener);
     userInterface.elements.pauseContinue.addEventListener('click',function() {userInterface.pause("off");});
     userInterface.elements.pauseFullscreen.addEventListener('click',function() {userInterface.fullscreen("toggle");});
     userInterface.elements.menu_pause.addEventListener('mouseover',function() {userInterface.variables.scrollX = 0;userInterface.variables.scrollY = 0;});
@@ -141,8 +142,6 @@ userInterface.canvasMoveMouseListener = function(e) {
 };
 
 userInterface.canvasClickListener = function(e) {
-    console.log('click');
-    
     var rect = userInterface.elements.canvas.getBoundingClientRect();
 
     var posx = 0;
@@ -161,6 +160,39 @@ userInterface.canvasClickListener = function(e) {
     
     mouseX = posx - rect.left;
     mouseY = posy - rect.top;
+    
+    if (e.which === null) {
+        /* IE case */
+        button = (e.button < 2) ? "LEFT" :
+                 ((e.button == 4) ? "MIDDLE" : "RIGHT");
+    } else {
+        /* All others */
+        button = (e.which < 2) ? "LEFT" :
+                 ((e.which == 2) ? "MIDDLE" : "RIGHT");
+    }
+    
+    if (button === "LEFT") {
+        objects.list().forEach(function(object, index) {
+            object.deselect();
+        });
         
-    objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset)
+        userInterface.variables.objects_selected = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset)
+        
+        userInterface.variables.objects_selected.forEach(function(object, index) {
+            object.select();
+        });
+        
+    } 
+    if (button === "RIGHT") {
+        if (userInterface.variables.objects_selected) {
+            //array = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset)
+            console.log(userInterface.variables.objects_selected[0]);
+            userInterface.variables.objects_selected[0].walk(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset)
+            
+        }
+    }
 };
+
+
+
+objects.repository.get("indianMale1").create(10,10)

@@ -17,7 +17,7 @@ var draw = function(canvas, level, objects) {
     var plaatje = common.resources.tilesets.get(tileset.name);
     
     var tileXOffset = Math.floor(canvas.xOffset/tilewidth)*2;
-    var tileYOffset = Math.floor(canvas.yOffset/tileheight)*2;
+    var tileYOffset = Math.floor(canvas.yOffset/tileheight);
     
     var numberOfTilesForHeight = Math.ceil(canvas.height/tileheight);
     var numberOfTilesForWidth = Math.ceil(canvas.width/tilewidth) * 2;
@@ -47,7 +47,7 @@ var draw = function(canvas, level, objects) {
 //        }
 //    }
 //    
-    for (var k = tileYOffset - tileXOffset/2 - numberOfTilesForHeight ; k < tileYOffset - tileXOffset + numberOfTilesForHeight; k++) {
+    for (var k = tileYOffset - tileXOffset - numberOfTilesForHeight ; k < tileYOffset - tileXOffset + numberOfTilesForHeight; k++) {
         for (var j = k + tileXOffset ; j < numberOfTilesForWidth + k + tileXOffset; j++) {
             var i = k*level.width + j;
             if (i < 0) {
@@ -85,7 +85,7 @@ var draw = function(canvas, level, objects) {
             var sx = tileIndex % tilesPerRow;
             var sy = (tileIndex - sx) / tilesPerRow;
         
-            canvas.context.drawImage(tileset,
+            canvas.context.drawImage(object.image,
                                    sx * tilewidth,
                                    sy * tileheight,
                                    tilewidth,

@@ -13,3 +13,4 @@ game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);
     draw(userInterface.elements.canvas, level.get(), objects.list());
 };
+

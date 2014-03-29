@@ -43,7 +43,10 @@ repository.prototype.get = function(name) {
     if (object !== null) {
         objects.repository[name] = object;
         objects.repository[name].tileset = common.resources.tilesets.get(object.tileset);
+        objects.repository[name].width = objects.repository[name].tileset.grid.width;
+        objects.repository[name].height = objects.repository[name].tileset.grid.height;
         objects.repository[name].activeAnimation = {};
+        objects.repository[name].image = objects.repository[name].tileset;
         
         objects.repository[name].clone = function() {
             function GameObject() { }
@@ -58,6 +61,19 @@ repository.prototype.get = function(name) {
         objects.repository[name].move = function(x,y) {
             this.x += x;
             this.y += y;
+        };
+        
+        
+        objects.repository[name].select = function(){
+            if (this.tileset.image_selected) {
+                this.image = this.tileset.image_selected;
+            }
+        };
+
+        objects.repository[name].deselect = function(){
+            if (this.tileset.image_selected) {
+                this.image = this.tileset;
+            }
         };
         
         /* 
@@ -78,12 +94,16 @@ repository.prototype.get = function(name) {
             }
         };
         
-        objects.repository[name].setActiveAnimation = function(animation) {
+        objects.repository[name].setActiveAnimation = function(animation, direction) {
             if (this.activeAnimation.name !== animation) {
                 this.activeAnimation.name = animation;
-                this.activeAnimation.array = this.tileset.animations[animation].NE;
+                this.activeAnimation.array = this.tileset.animations[animation][direction];
                 this.activeAnimation.index = 0;
             }
+        };
+        
+        objects.repository[name].setActiveAnimationDirection = function(direction) {
+            this.activeAnimation.array = this.tileset.animations[this.activeAnimation.name][direction];
         };
         
         /*
@@ -92,24 +112,88 @@ repository.prototype.get = function(name) {
         
         if(object.skills.indexOf("walk") !== -1) {
             objects.repository[name].walk = function(x,y) {
-                this.path = []; //level.getPath(object,{ x = x, y  = y},);
+                this.path = level.getPath(this,{x:x, y:y});
+                   
+                var destination = this.path[0];
+                x = destination.x - this.x;
+                y = destination.y - this.y;
+
+                var NS,
+                    WE;
+
+                if (x < 0) {
+                    WE = 'W';
+                } else {
+                    WE = 'E';
+                }
+
+                if (y > 0) {
+                    NS = 'S';
+                } else {
+                    NS = 'N';
+                }
+
+                this.setActiveAnimationDirection(NS+WE);
+                
             };
             
             objects.repository[name].walkLoop = function() {
+                //self = objects.repository[name];
+                setTimeout(this.walkLoop.bind(this),15);
+                
+                if (this.path.length === 0) {
+                    return;
+                }
+                
                 var destination = this.path[0];
                 var x = destination.x - this.x;
                 var y = destination.y - this.y;
                 
-                if(x > 5) x = 5;
-                if(y > 5) y = 5;
+                // 2:1
                 
-                if (x < 5 && y < 5) {
-                    this.path.splice();
-                } else {
-                    setTimeout(this.walkLoop,100);
+                if(x >= 2) {
+                    x = 2;
+                } else if (x <= -2){
+                    x = -2;
+                }
+                
+                if(y >= 1) {
+                    y = 1;
+                } else if (y <= -1){
+                    y = -1;
                 }
                 
                 this.move(x,y);
+                
+                if (-3 < this.x-destination.x && this.x-destination.x < 3 && -2 < this.y-destination.y && this.y-destination.y < 2) {
+                    this.path.shift();
+                    
+                    destination = this.path[0];
+                    x = destination.x - this.x;
+                    y = destination.y - this.y;
+                    
+                    var NS,
+                        WE;
+                    
+                    if (x < 0) {
+                        WE = 'W';
+                    } else {
+                        WE = 'E';
+                    }
+
+                    if (y > 0) {
+                        NS = 'S';
+                    } else {
+                        NS = 'N';
+                    }
+                    
+                    this.setActiveAnimationDirection(NS+WE);
+                    
+                }
+                
+                
+                
+                
             };
         }
         
@@ -118,7 +202,7 @@ repository.prototype.get = function(name) {
         */
         
         objects.repository[name].create = function(x,y) {
-            var object = objects.repository[name].clone();
+            var object = this.clone();
             
             // remove pure repository functions
             object.clone = undefined;
@@ -126,9 +210,13 @@ repository.prototype.get = function(name) {
             
             object.x = x;
             object.y = y;
-            object.setActiveAnimation(object.tileset.defaultAnimation);
-            object.animationLoop(); 
+            object.path = []; 
+            object.setActiveAnimation(object.tileset.defaultAnimation, 'NE');
+            object.animationLoop();
+            object.walkLoop();
             objects.add(object);
+            
+            object.self = object;
         };
     } else {
         console.error("objects.loadObject could not load " + URI);
@@ -148,13 +236,15 @@ objects.prototype.add = function(object) {
 };
 
 objects.prototype.find = function(x, y) {
-    console.log(x,y);
+    var array = [];
     
     this.array.forEach(function(object, index) {
-        if (object.x <= x && object.x+200 >= x && object.y <= y && object.y+200 >= y) {
-            console.log(object.x, object.y);
+        if (object.x <= x && object.x+object.width >= x && object.y <= y && object.y+object.height >= y) {
+            array.push(object);
         }
     });
+    
+    return array;
 };
 
 // Initialise the Object objects.prototype.repository
