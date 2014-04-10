@@ -97,6 +97,7 @@ repository.prototype.get = function(name) {
         objects.repository[name].setActiveAnimation = function(animation, direction) {
             if (this.activeAnimation.name !== animation) {
                 this.activeAnimation.name = animation;
+                this.activeAnimation.direction = direction;
                 this.activeAnimation.array = this.tileset.animations[animation][direction];
                 this.activeAnimation.index = 0;
             }
@@ -104,7 +105,10 @@ repository.prototype.get = function(name) {
         
         objects.repository[name].setActiveAnimationDirection = function(direction) {
             this.activeAnimation.array = this.tileset.animations[this.activeAnimation.name][direction];
+            this.activeAnimation.direction = direction;
         };
+        
+        
         
         /*
             Skills
@@ -123,17 +127,21 @@ repository.prototype.get = function(name) {
 
                 if (x < 0) {
                     WE = 'W';
-                } else {
+                } else if (x > 0) {
                     WE = 'E';
+                } else {
+                    WE = '';
                 }
 
                 if (y > 0) {
                     NS = 'S';
-                } else {
+                } else if (y < 0) {
                     NS = 'N';
+                } else {
+                    NS = '';   
                 }
 
-                this.setActiveAnimationDirection(NS+WE);
+                this.setActiveAnimation("walk",NS+WE);
                 
             };
             
@@ -142,6 +150,7 @@ repository.prototype.get = function(name) {
                 setTimeout(this.walkLoop.bind(this),15);
                 
                 if (this.path.length === 0) {
+                    this.setActiveAnimation("rest",this.activeAnimation.direction);
                     return;
                 }
                 
@@ -155,18 +164,26 @@ repository.prototype.get = function(name) {
                     x = 2;
                 } else if (x <= -2){
                     x = -2;
+                } else {
+                    x = 0;
                 }
                 
                 if(y >= 1) {
                     y = 1;
                 } else if (y <= -1){
                     y = -1;
+                } else {
+                    y = 0;    
                 }
                 
                 this.move(x,y);
                 
                 if (-3 < this.x-destination.x && this.x-destination.x < 3 && -2 < this.y-destination.y && this.y-destination.y < 2) {
                     this.path.shift();
+                    
+                    if (this.path.length === 0) {
+                        return;
+                    }
                     
                     destination = this.path[0];
                     x = destination.x - this.x;
@@ -177,14 +194,18 @@ repository.prototype.get = function(name) {
                     
                     if (x < 0) {
                         WE = 'W';
-                    } else {
+                    } else if (x > 0) {
                         WE = 'E';
+                    } else {
+                        WE = '';
                     }
 
                     if (y > 0) {
                         NS = 'S';
-                    } else {
+                    } else if (y < 0) {
                         NS = 'N';
+                    } else {
+                        NS = '';   
                     }
                     
                     this.setActiveAnimationDirection(NS+WE);
