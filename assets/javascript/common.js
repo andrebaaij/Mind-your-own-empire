@@ -36,28 +36,30 @@ common.getJSONFromURI = function(URI) {
 
 };
 
-common.require = function (name){
-    var url = './assets/javascript/' + name + '.js';
+common.require = function (){
+    var scriptsToLoad = [],
+        nScriptsLoaded = 0;
     
-    var script = document.createElement("script");
-    script.type = "text/javascript";
-
-    if (script.readyState){  //IE
-        script.onreadystatechange = function(){
-            if (script.readyState == "loaded" ||
-                    script.readyState == "complete"){
-                script.onreadystatechange = null;
-                if (window[name].initialise) window[name].initialise();
-            }
-        };
-    } else {  //Others
-        script.onload = function(){
-            if (window[name].initialise) window[name].initialise();
-        };
+    // required files
+    for (var i = 0; i < arguments.length-1; ++i) {
+        scriptsToLoad.push(arguments[i]);
     }
-
-    script.src = url;
-    document.getElementsByTagName("head")[0].appendChild(script);
+    
+    var callback = arguments[arguments.length-1];
+    
+    this.loadNext = function() {
+        
+        nScriptsLoaded += 1;
+        
+        if (nScriptsLoaded === scriptsToLoad.length) {
+            callback();
+            return;  
+        }
+        
+        common.resources.scripts.add(scriptsToLoad[nScriptsLoaded], this.loadNext.bind(this));
+    };
+    
+    common.resources.scripts.add(scriptsToLoad[0], this.loadNext.bind(this));
 };
 
 common.checkLineIntersection = function(line1StartX, line1StartY, line1EndX, line1EndY, line2StartX, line2StartY, line2EndX, line2EndY) {
@@ -107,6 +109,8 @@ common.checkLineIntersection = function(line1StartX, line1StartY, line1EndX, lin
 
 function resources(){}
 common.resources = new resources();
+
+// Tilesets
 
 function tilesets(){}
 common.resources.tilesets = new tilesets();
@@ -187,4 +191,37 @@ tilesets.prototype.get = function(name) {
     }
     
     return common.resources.tilesets[name];
+};
+
+// Scripts
+function Scripts() {}
+common.resources.scripts = new Scripts();
+
+function Script() {}
+
+Scripts.prototype.add = function(name, callback) {
+    script = new Script();
+    
+    script.DOM = document.createElement("script");
+    script.DOM.type = "text/javascript";
+    
+    if (script.DOM.readyState){  //IE
+        script.DOM.onreadystatechange = function() {
+            if (script.DOM.readyState == "loaded" ||
+                    script.DOM.readyState == "complete"){
+                script.DOM.onreadystatechange = null;
+                if (window[name].initialise) window[name].initialise();
+                if (callback) callback();
+            }
+        };
+    } else {  //Others
+        script.DOM.onload = function(){
+            if (window[name].initialise) window[name].initialise();
+            if (callback) callback();
+        };
+    }
+
+    script.DOM.src = './assets/javascript/' + name + '.js';
+    
+    document.getElementsByTagName("head")[0].appendChild(script.DOM);
 };

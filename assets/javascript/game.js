@@ -1,13 +1,12 @@
+
+
 var game = {};
 
 game.initialise = function() {
-    common.require('draw');
-    common.require('level');
-    common.require('objects');
-    common.require('userInterface');
-    
     game.gameLoop();
 };
+
+common.require('draw','level','objects','userInterface',game.initialise);
 
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);
