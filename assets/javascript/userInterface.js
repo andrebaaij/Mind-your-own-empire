@@ -176,7 +176,7 @@ userInterface.canvasClickListener = function(e) {
             object.deselect();
         });
         
-        userInterface.variables.objects_selected = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset)
+        userInterface.variables.objects_selected = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
         
         userInterface.variables.objects_selected.forEach(function(object, index) {
             object.select();
@@ -184,15 +184,37 @@ userInterface.canvasClickListener = function(e) {
         
     } 
     if (button === "RIGHT") {
-        if (userInterface.variables.objects_selected) {
-            //array = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset)
-            console.log(userInterface.variables.objects_selected[0]);
-            userInterface.variables.objects_selected[0].walk(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset)
+        
+        if (userInterface.variables.objects_selected.length > 0) {
+            var targetActions = [];
+            
+            array = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+            
+            //Loop through target objects
+            array.forEach(function(targetObject, targetObjectIndex) {
+                userInterface.variables.objects_selected.forEach(function(selectedObject, selectedObjectIndex) {
+                    selectedObject.skills.forEach(function(skill) {
+                       if (targetObject.targetActions.indexOf(skill) !== -1 && targetActions.indexOf(skill) === -1) {
+                          targetActions.push({skill : skill, object : targetObject});
+                       }
+                    });
+                });
+            });            
+            
+            if (targetActions.length > 1) {
+                console.log(targetActions);
+            } else if (targetActions.length === 1) {
+                 userInterface.variables.objects_selected.forEach(function(selectedObject, selectedObjectIndex) {
+                    selectedObject[targetActions[0].skill](targetActions[0].object);
+                });
+            } else {
+                userInterface.variables.objects_selected.forEach(function(selectedObject, selectedObjectIndex) {
+                    console.log(selectedObject);
+                    selectedObject.walk(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+                });
+            }
+            
             
         }
     }
 };
-
-
-
-objects.repository.get("indianMale1").create(10,10)

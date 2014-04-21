@@ -1,5 +1,9 @@
 {
     "tileset" : "tree1",
     "skills" : [],
-    "targetActions" : ["chop"]
+    "targetActions" : ["chop"],
+    "resources" : {
+            "log" : "5"            
+        },
+    "health" : "100"
 }

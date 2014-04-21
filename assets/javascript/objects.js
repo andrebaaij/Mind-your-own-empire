@@ -41,36 +41,31 @@ repository.prototype.get = function(name) {
     var object = common.getJSONFromURI(URI);
     
     if (object !== null) {
-        objects.repository[name] = object;
-        objects.repository[name].tileset = common.resources.tilesets.get(object.tileset);
-        objects.repository[name].width = objects.repository[name].tileset.grid.width;
-        objects.repository[name].height = objects.repository[name].tileset.grid.height;
-        objects.repository[name].activeAnimation = {};
-        objects.repository[name].image = objects.repository[name].tileset;
+        objects.repository[name] = function(){};// = object;
+        objects.repository[name].prototype.tileset = common.resources.tilesets.get(object.tileset);
+        objects.repository[name].prototype.width = common.resources.tilesets.get(object.tileset).grid.width;
+        objects.repository[name].prototype.height = common.resources.tilesets.get(object.tileset).grid.height;
+        objects.repository[name].prototype.image = common.resources.tilesets.get(object.tileset);
+        objects.repository[name].prototype.skills = object.skills;
+        objects.repository[name].prototype.targetActions = object.targetActions;
         
-        objects.repository[name].clone = function() {
-            function GameObject() { }
-            function clone(obj) {
-                GameObject.prototype = obj;
-                return new GameObject();
-            }
-            
-            return clone(this);
-        };
+        objects.repository[name].prototype.defaults = {};
+        objects.repository[name].prototype.defaults.health = object.health;
         
-        objects.repository[name].move = function(x,y) {
+        
+        objects.repository[name].prototype.move = function(x,y) {
             this.x += x;
             this.y += y;
         };
         
         
-        objects.repository[name].select = function(){
+        objects.repository[name].prototype.select = function(){
             if (this.tileset.image_selected) {
                 this.image = this.tileset.image_selected;
             }
         };
 
-        objects.repository[name].deselect = function(){
+        objects.repository[name].prototype.deselect = function(){
             if (this.tileset.image_selected) {
                 this.image = this.tileset;
             }
@@ -78,87 +73,87 @@ repository.prototype.get = function(name) {
         
         /* 
             Animation
-        */
-
-        
-        objects.repository[name].animationLoop = function() {
-            object = objects.repository[name];
-            setTimeout(object.animationLoop,100);
+        */    
+        objects.repository[name].prototype.animationLoop = function() {
+            //console.log(this.animation);
             
-            object.tile = object.activeAnimation.array[object.activeAnimation.index];
+            setTimeout(this.animationLoop.bind(this),100);
             
-            if (object.activeAnimation.index < object.activeAnimation.array.length-1) {
-                object.activeAnimation.index += 1;
+            this.tile = this.animation.array[this.animation.index];
+            
+            if (this.animation.index < this.animation.array.length-1) {
+                this.animation.index += 1;
             } else {
-                object.activeAnimation.index = 0;
+                this.animation.index = 0;
             }
         };
         
-        objects.repository[name].setActiveAnimation = function(animation, direction) {
-            if (this.activeAnimation.name !== animation) {
-                this.activeAnimation.name = animation;
-                this.activeAnimation.direction = direction;
-                this.activeAnimation.array = this.tileset.animations[animation][direction];
-                this.activeAnimation.index = 0;
+        
+        objects.repository[name].prototype.setDirection = function(direction) {
+            this.animation.array = this.tileset.animations[this.animation.name][direction];
+            this.direction = direction;
+        };
+        
+        objects.repository[name].prototype.setAnimation = function(animation) {
+            if (this.animation.name !== animation) {
+                this.animation.name = animation;
+                this.animation.array = this.tileset.animations[animation][this.direction];
+                this.animation.index = 0;
             }
         };
-        
-        objects.repository[name].setActiveAnimationDirection = function(direction) {
-            this.activeAnimation.array = this.tileset.animations[this.activeAnimation.name][direction];
-            this.activeAnimation.direction = direction;
-        };
-        
-        
         
         /*
             Skills
         */
         
-        if(object.skills.indexOf("walk") !== -1) {
-            objects.repository[name].walk = function(x,y) {
-                this.path = level.getPath(this,{x:x, y:y});
-                   
-                var destination = this.path[0];
-                x = destination.x - this.x;
-                y = destination.y - this.y;
-
-                var NS,
-                    WE;
-
-                if (x < 0) {
-                    WE = 'W';
-                } else if (x > 0) {
-                    WE = 'E';
-                } else {
-                    WE = '';
-                }
-
-                if (y > 0) {
-                    NS = 'S';
-                } else if (y < 0) {
-                    NS = 'N';
-                } else {
-                    NS = '';   
-                }
-
-                this.setActiveAnimation("walk",NS+WE);
+        if(object.skills.indexOf("walk") !== -1) {        
+            objects.repository[name].prototype.walk = function(x,y) {
+                self = this;
+                origin = {x : self.x, y : self.y};
                 
+                
+                path = level.getPath(this,{x:x, y:y});
+                
+                path.forEach(function(leg, index, array) {
+                    leg.action = "walk";
+
+                    x = leg.x - origin.x;
+                    y = leg.y - origin.y;
+
+                    var NS,
+                        WE;
+
+                    if (x < 0) {
+                        WE = 'W';
+                    } else if (x > 0) {
+                        WE = 'E';
+                    } else {
+                        WE = '';
+                    }
+
+                    if (y > 0) {
+                        NS = 'S';
+                    } else if (y < 0) {
+                        NS = 'N';
+                    } else {
+                        NS = '';   
+                    }
+                    
+                    origin.x = leg.x;
+                    origin.y = leg.y;
+                    
+                    leg.direction = NS+WE;
+                    
+                    self.actions.push(leg);
+                });
             };
-            
-            objects.repository[name].walkLoop = function() {
-                //self = objects.repository[name];
-                setTimeout(this.walkLoop.bind(this),15);
+        
+            objects.repository[name].prototype.walkLoop = function(action) {
+                this.setDirection(action.direction);
                 
-                if (this.path.length === 0) {
-                    this.setActiveAnimation("rest",this.activeAnimation.direction);
-                    return;
-                }
-                
-                var destination = this.path[0];
+                var destination = action;
                 var x = destination.x - this.x;
                 var y = destination.y - this.y;
-                
-                // 2:1
                 
                 if(x >= 2) {
                     x = 2;
@@ -179,66 +174,101 @@ repository.prototype.get = function(name) {
                 this.move(x,y);
                 
                 if (-3 < this.x-destination.x && this.x-destination.x < 3 && -2 < this.y-destination.y && this.y-destination.y < 2) {
-                    this.path.shift();
-                    
-                    if (this.path.length === 0) {
-                        return;
-                    }
-                    
-                    destination = this.path[0];
-                    x = destination.x - this.x;
-                    y = destination.y - this.y;
-                    
-                    var NS,
-                        WE;
-                    
-                    if (x < 0) {
-                        WE = 'W';
-                    } else if (x > 0) {
-                        WE = 'E';
-                    } else {
-                        WE = '';
-                    }
-
-                    if (y > 0) {
-                        NS = 'S';
-                    } else if (y < 0) {
-                        NS = 'N';
-                    } else {
-                        NS = '';   
-                    }
-                    
-                    this.setActiveAnimationDirection(NS+WE);
-                    
+                    this.actions.shift();
                 }
-                
-                
-                
-                
+
             };
         }
+        
+        objects.repository[name].prototype.restLoop = function() {
+            this.setAnimation("rest");
+        };
+        
+        if(object.skills.indexOf("chop") !== -1) {
+            objects.repository[name].prototype.chop = function(object) {
+                this.walk(object.x, object.y);
+                
+                action = {action:"chop", x : object.x, y : object.y, object: object};
+                
+                this.actions.push(action);
+            };
+            
+            objects.repository[name].prototype.chopLoop = function(action) {
+                
+                if (!action.object.isDestroyed) {
+                    action.object.target_chop(this, 1);
+                } else {
+                    this.actions.shift();
+                }
+            };
+        }
+        
+        if(object.targetActions.indexOf("chop") !== -1) {
+            objects.repository[name].prototype.target_chop = function(object, amount) {
+                this.health -= 10;
+                
+                if (this.health <= 0) {
+                    object.addResources(this.resources); 
+                    this.resources = {};
+                }
+                
+                this.destroy();
+            };
+
+        }
+        
+        objects.repository[name].prototype.loop = function() {
+            setTimeout(this.loop.bind(this),this.loopSpeed);
+            
+            if (this.actions.length > 0) {
+                if (this[this.actions[0].action + "Loop"]) {
+                    this.setAnimation(this.actions[0].action);
+                    this[this.actions[0].action + "Loop"](this.actions[0]);
+                } else {
+                    console.log("Unknow active skill: " + this.activeSkill);
+                    this.actions.shift();
+                }
+            } else {
+                this.restLoop();    
+            }
+        };
         
         /*
             Create
         */
         
-        objects.repository[name].create = function(x,y) {
-            var object = this.clone();
+        objects.repository[name].prototype.initialise = function(x,y) {
+            var object = new objects.repository[name]();
             
-            // remove pure repository functions
-            object.clone = undefined;
-            object.create = undefined;
-            
+            //Initialize the variables:            
             object.x = x;
             object.y = y;
             object.path = []; 
-            object.setActiveAnimation(object.tileset.defaultAnimation, 'NE');
-            object.animationLoop();
-            object.walkLoop();
+            object.animation = {array: []};
+            object.actions = [];
+            
+            object.setAnimation(object.tileset.defaultAnimation);
+            object.setDirection('NE');
+            setTimeout(object.animationLoop.bind(object),100);
+            object.loopSpeed = 10; //milliseconds
+            
+            for (var variable in object.defaults) {
+                object[variable] = object.defaults[variable];
+            }
+            
+            // breathe
+            object.loop();
+            
             objects.add(object);
             
-            object.self = object;
+            return object;
         };
+        
+        objects.repository[name].prototype.destroy = function() {
+            this.isDestroyed = true;
+            delete objects.array[objects.array.indexOf(this)];
+        };
+        
     } else {
         console.error("objects.loadObject could not load " + URI);
         return null;
@@ -248,8 +278,10 @@ repository.prototype.get = function(name) {
 };
 
 objects.prototype.create = function(name, x, y) {
-    var object = repository.prototype.get(name);
-    object.create(x,y);
+    var prototype = objects.repository.get(name);
+    var object = new prototype();
+    object.initialise(x,y);
+    return object;
 };
 
 objects.prototype.add = function(object) {

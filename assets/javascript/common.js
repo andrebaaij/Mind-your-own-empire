@@ -157,7 +157,6 @@ tilesets.prototype.add = function(name) {
     });
     
     if (tilesetObject.image_selected) {
-        console.log(tilesetObject.image_selected)
         var image_selectedURI = './assets/images/tilesets/' + tilesetObject.image_selected;
         common.resources.tilesets[name].image_selected = new Image();
         

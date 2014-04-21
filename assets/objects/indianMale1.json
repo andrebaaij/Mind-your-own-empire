@@ -1,5 +1,5 @@
 {
     "tileset" : "indianMale1",
-    "skills" : ["walk"],
+    "skills" : ["walk","chop"],
     "targetActions" : []
 }
