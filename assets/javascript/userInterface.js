@@ -194,9 +194,17 @@ userInterface.canvasClickListener = function(e) {
             array.forEach(function(targetObject, targetObjectIndex) {
                 userInterface.variables.objects_selected.forEach(function(selectedObject, selectedObjectIndex) {
                     selectedObject.skills.forEach(function(skill) {
-                       if (targetObject.targetActions.indexOf(skill) !== -1 && targetActions.indexOf(skill) === -1) {
-                          targetActions.push({skill : skill, object : targetObject});
-                       }
+                        if (targetObject.targetActions.indexOf(skill) !== -1 && targetActions.indexOf(skill) === -1) {
+                            targetActionAlreadyExists = false;
+                            targetActions.forEach(function(action) {
+                                if (action.skill === skill) {
+                                    targetActionAlreadyExists = true;
+                                }
+                            });
+                            if (!targetActionAlreadyExists) {                       
+                                targetActions.push({skill : skill, object : targetObject});
+                            }
+                        }
                     });
                 });
             });            
