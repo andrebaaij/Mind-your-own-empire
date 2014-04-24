@@ -50,7 +50,15 @@ repository.prototype.get = function(name) {
         objects.repository[name].prototype.targetActions = object.targetActions;
         
         objects.repository[name].prototype.defaults = {};
-        objects.repository[name].prototype.defaults.health = object.health;
+        if (typeof object.health !== 'undefined') {
+            objects.repository[name].prototype.defaults.health = object.health;
+        }
+        
+        if (typeof object.resources !== 'undefined') {
+            objects.repository[name].prototype.defaults.resources = object.resources;
+        }
+        
+        
         
         
         objects.repository[name].prototype.move = function(x,y) {
@@ -68,6 +76,16 @@ repository.prototype.get = function(name) {
         objects.repository[name].prototype.deselect = function(){
             if (this.tileset.image_selected) {
                 this.image = this.tileset;
+            }
+        };
+        
+        objects.repository[name].prototype.addResources = function(resources) {
+            for(var resource in resources) {
+                if (typeof this.resources[resource] !== 'undefined') {
+                    this.resources[resource] += resources[resource];
+                } else {
+                    this.resources[resource] = resources[resource];
+                }
             }
         };
         
@@ -205,16 +223,16 @@ repository.prototype.get = function(name) {
         
         if(object.targetActions.indexOf("chop") !== -1) {
             objects.repository[name].prototype.target_chop = function(object, amount) {
-                this.health -= 10;
+                this.health = this.health-amount;
                 
                 if (this.health <= 0) {
                     object.addResources(this.resources); 
                     this.resources = {};
+                    this.destroy();
                 }
                 
-                this.destroy();
+                
             };
-
         }
         
         objects.repository[name].prototype.loop = function() {
@@ -246,6 +264,7 @@ repository.prototype.get = function(name) {
             object.path = []; 
             object.animation = {array: []};
             object.actions = [];
+            object.resources = {};
             
             object.setAnimation(object.tileset.defaultAnimation);
             object.setDirection('NE');
@@ -266,7 +285,7 @@ repository.prototype.get = function(name) {
         
         objects.repository[name].prototype.destroy = function() {
             this.isDestroyed = true;
-            delete objects.array[objects.array.indexOf(this)];
+            objects.array.splice([objects.array.indexOf(this)],1);
         };
         
     } else {

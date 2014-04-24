@@ -23,7 +23,7 @@ level.getPath = function(object, destination) {
     var lineObject = {},
         lineDestination = {};
     
-    console.log(object);
+    //console.log(object);
     
     lineObject.startX = object.x;
     lineObject.endX = object.x + 2;
@@ -41,15 +41,15 @@ level.getPath = function(object, destination) {
         lineDestination.endY = destination.y + 1;
     }
     
-    console.log(lineObject);
-    console.log(lineDestination);
+    //console.log(lineObject);
+    //console.log(lineDestination);
     
     var intersect = common.checkLineIntersection(lineObject.startX, lineObject.startY, lineObject.endX, lineObject.endY, lineDestination.startX, lineDestination.startY, lineDestination.endX, lineDestination.endY);
     
     paths.push(intersect);
     paths.push(destination);
     
-    console.log(paths);
+    //console.log(paths);
     
     return paths;
 };
