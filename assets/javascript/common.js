@@ -17,7 +17,8 @@
 var common = {};
 
 common.getJSONFromURI = function(URI) {
-
+    console.log(URI);
+    
     var request = new XMLHttpRequest();
     
     //request.addEventListener("progress", updateProgress, false);
@@ -140,7 +141,7 @@ tilesets.prototype.add = function(name) {
         return null;    
     }
     
-    var imageURI = './assets/images/tilesets/' + tilesetObject.image;
+    var imageURI = './assets/images/tilesets/' + name + '.png';
     
     common.resources.tilesets[name] = new tileset();
     common.resources.tilesets[name].addEventListener('load',function(){
@@ -156,8 +157,8 @@ tilesets.prototype.add = function(name) {
         }
     });
     
-    if (tilesetObject.image_selected) {
-        var image_selectedURI = './assets/images/tilesets/' + tilesetObject.image_selected;
+    if (tilesetObject.imageSelected) {
+        var image_selectedURI = './assets/images/tilesets/' +name + 'Selected.png';
         common.resources.tilesets[name].image_selected = new Image();
         
         common.resources.tilesets[name].image_selected.addEventListener('load',function(){
@@ -190,6 +191,49 @@ tilesets.prototype.get = function(name) {
     }
     
     return common.resources.tilesets[name];
+};
+
+// Icons
+
+function icons() {}
+common.resources.icons = new icons();
+
+var icon = Image;
+
+icons.prototype.add = function(name) {
+    if (typeof common.resources.icons[name] !== 'undefined') {
+        console.log("Icon " + name + " has already been loaded");
+        return null;
+    }
+    
+    var imageURI = './assets/images/icons/' + name + '.png';
+    
+    common.resources.icons[name] = new icon();
+    common.resources.icons[name].addEventListener('load',function(){
+        this.nbErrors = 0;
+    });
+    
+    common.resources.icons[name].addEventListener('error',function(){
+        if(this.nbErrors <= 3) {
+            this.nbErrors += 1;
+            this.src = this.src;
+        } else {
+            console.error("tilesets.add could not load image " + imageURI);
+        }
+    });
+    
+    common.resources.icons[name].setAttribute("class","icon");
+    common.resources.icons[name].src = imageURI;
+    
+    return common.resources.icons[name];
+}
+
+icons.prototype.get = function(name) {
+    if(common.resources.icons[name] === undefined) {
+        return common.resources.icons.add(name);
+    }
+    
+    return common.resources.icons[name];
 };
 
 // Scripts

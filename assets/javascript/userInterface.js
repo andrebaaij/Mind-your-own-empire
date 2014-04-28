@@ -12,9 +12,12 @@ userInterface.initialise = function() {
     /* Elements */
     userInterface.elements.canvas = document.getElementById("canvas");
     userInterface.elements.pause = document.getElementById("pause");
+    userInterface.elements.craft = document.getElementById("craft");
+    
     userInterface.elements.pauseContinue = document.getElementById("pauseContinue");
     userInterface.elements.pauseFullscreen = document.getElementById("pauseFullscreen");
     userInterface.elements.menu_pause = document.getElementById("menu_pause");
+    userInterface.elements.menu_craft = document.getElementById("menu_craft");
     
     /* EventListeners assignment*/
     userInterface.elements.canvas.addEventListener('mousemove',userInterface.canvasMoveMouseListener);
@@ -22,7 +25,10 @@ userInterface.initialise = function() {
     userInterface.elements.pauseContinue.addEventListener('click',function() {userInterface.pause("off");});
     userInterface.elements.pauseFullscreen.addEventListener('click',function() {userInterface.fullscreen("toggle");});
     userInterface.elements.menu_pause.addEventListener('mouseover',function() {userInterface.variables.scrollX = 0;userInterface.variables.scrollY = 0;});
+    userInterface.elements.menu_craft.addEventListener('mouseover',function() {userInterface.variables.scrollX = 0;userInterface.variables.scrollY = 0;});
+    
     userInterface.elements.menu_pause.addEventListener('click',function() {userInterface.pause("on");});
+    userInterface.elements.menu_craft.addEventListener('click',function() {userInterface.craft("on");});
     
     window.onblur = function() {userInterface.pause("on");};
     
@@ -48,6 +54,100 @@ userInterface.pause = function(command) {
     }
     
     return userInterface.elements.pause.style.display === "block";
+};
+
+userInterface.craft = function(command) {
+    // Fill the DOM with craftable objects as :
+    
+    /*
+    <div class="item">
+        <img class="icon" src="assets/images/icons/totemPole.png"/>
+        <div>
+            <h1>Totem Pole</h1>
+            <div class="resources">
+                <div class="resource">
+                    <img class="icon" src="assets/images/icons/log.png"> x 35
+                </div>
+            </div>
+        </div>
+    </div>
+    */
+    var object;
+    var node = document.createElement('div');
+            node.setAttribute("class","window");
+    
+    //Loop through all objects in the repository
+    for(objectName in objects.repository) {
+        object = objects.repository[objectName];
+        
+        console.log(object.prototype.craft);
+        
+        // Check if the object can be crafted
+        if (typeof object.prototype.craft !== 'undefined') {
+            // The object can be crafted now add it to the DOM, so that a user can select to craft it.
+            
+            var n = objectName;
+            
+            var item = document.createElement('div');
+                item.setAttribute("class","item");
+                item.addEventListener('click',function(Event) {
+                    // Clear the selected Object list;
+                    userInterface.variables.objects_selected.length = 0;
+                    // Go into build mode by setting the first selected Object as a repository object which has a initialise function.
+                    userInterface.variables.objects_selected.push(objects.repository.get(n));
+                    // Hide the craft menu
+                    userInterface.craft("off");
+                });
+            
+                item.appendChild(object.prototype.icon);
+
+                var div = document.createElement('div');
+                    var name = document.createElement('h1');
+                        name.appendChild(document.createTextNode(objectName));
+                    
+                    div.appendChild(name);
+            
+                    var resources = document.createElement('div');
+                        resources.setAttribute("class","resources");
+            
+                        var objectResource;
+                        for(objectResource in object.prototype.craft) {
+                            var resource = document.createElement('div')
+                                resource.setAttribute("class","resource");
+                                
+                                resource.appendChild(objects.repository[objectResource].icon);
+                                resource.appendChild(document.createTextNode(" x " + object.prototype.craft[objectResource]));
+                        
+                            resources.appendChild(resource);
+                        }
+            
+                     div.appendChild(resources);   
+                        
+                        
+                item.appendChild(div);
+                    
+            
+            node.appendChild(item)
+            
+        }
+        
+    }
+    
+    // Clear previous craft
+    while (userInterface.elements.craft.firstChild) {
+        userInterface.elements.craft.removeChild(userInterface.elements.craft.firstChild);
+    }
+    console.log(node);
+    userInterface.elements.craft.appendChild(node);
+    
+    
+    if (command === "on" ) {
+        userInterface.elements.craft.style.display = "block";
+    } else if (command === "off" ){
+        userInterface.elements.craft.style.display = "none";
+    }
+    
+    return userInterface.elements.craft.style.display === "block";
 };
 
 userInterface.fullscreen = function(command) {
@@ -172,18 +272,29 @@ userInterface.canvasClickListener = function(e) {
     }
     
     if (button === "LEFT") {
+    
+        // If we have one object selected which can be initialised, it means we are in build mode.
+        if (userInterface.variables.objects_selected.length === 1 && typeof userInterface.variables.objects_selected[0].prototype !== 'undefined') {
+            // Build the object
+            console.log('BUILD');
+            userInterface.variables.objects_selected[0].prototype.initialise(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+        }
+        
         objects.list().forEach(function(object, index) {
             object.deselect();
         });
-        
+
         userInterface.variables.objects_selected = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
-        
+
         userInterface.variables.objects_selected.forEach(function(object, index) {
             object.select();
         });
-        
-    } 
-    if (button === "RIGHT") {
+
+    } else if (button === "RIGHT") {
+        // If we have one object selected which can be initialised, it means we are in build mode.
+        if (userInterface.variables.objects_selected.length === 1 && typeof userInterface.variables.objects_selected[0].initialise !== 'undefined') {
+            // Do nothing on right click
+        }
         
         if (userInterface.variables.objects_selected.length > 0) {
             var targetActions = [];
@@ -217,8 +328,9 @@ userInterface.canvasClickListener = function(e) {
                 });
             } else {
                 userInterface.variables.objects_selected.forEach(function(selectedObject, selectedObjectIndex) {
-                    console.log(selectedObject);
-                    selectedObject.walk(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+                    if (selectedObject.walk) {
+                        selectedObject.walk(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+                    }
                 });
             }
             

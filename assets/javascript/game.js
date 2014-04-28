@@ -3,13 +3,19 @@
 var game = {};
 
 game.initialise = function() {
-    objects.create("indianMale1",10,10);
-    objects.create("firTree1",50,50);
-    objects.create("firTree1",100,50);
-    objects.create("firTree1",100,100);
-    objects.create("firTree1",150,50);
-    objects.create("firTree1",150,100);
-    objects.create("firTree1",150,150);
+    // load all objects
+    objects.repository.get("indianMale")
+    objects.repository.get("tree")
+    objects.repository.get("log")
+    objects.repository.get("totemPole")
+    
+    objects.create("indianMale",10,10);
+    objects.create("tree",50,50);
+    objects.create("tree",100,50);
+    objects.create("tree",100,100);
+    objects.create("tree",150,50);
+    objects.create("tree",150,100);
+    objects.create("tree",150,150);
     
     
     

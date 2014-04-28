@@ -42,14 +42,42 @@ repository.prototype.get = function(name) {
     
     if (object !== null) {
         objects.repository[name] = function(){};// = object;
-        objects.repository[name].prototype.tileset = common.resources.tilesets.get(object.tileset);
-        objects.repository[name].prototype.width = common.resources.tilesets.get(object.tileset).grid.width;
-        objects.repository[name].prototype.height = common.resources.tilesets.get(object.tileset).grid.height;
-        objects.repository[name].prototype.image = common.resources.tilesets.get(object.tileset);
-        objects.repository[name].prototype.skills = object.skills;
-        objects.repository[name].prototype.targetActions = object.targetActions;
+        
+        if (object.images) {
+            if (object.images.indexOf("tileset") !== -1) {
+                objects.repository[name].prototype.tileset = common.resources.tilesets.get(name);
+                objects.repository[name].prototype.width = common.resources.tilesets.get(name).grid.width;
+                objects.repository[name].prototype.height = common.resources.tilesets.get(name).grid.height;
+                objects.repository[name].prototype.image = common.resources.tilesets.get(name);
+            }
+            
+            if (object.images.indexOf("icon") !== -1) {
+                objects.repository[name].prototype.icon = common.resources.icons.get(name);
+            }
+        }
+        
+        if (object.skills) {
+            objects.repository[name].prototype.skills = object.skills;
+        }
+        
+        if (object.targetActions) {
+            objects.repository[name].prototype.targetActions = object.targetActions;
+        }
+        
+        if (typeof object.craft !== 'undefined') {
+            objects.repository[name].prototype.craft = object.craft;
+            objects.repository[name].prototype.icon = common.resources.icons.get(name);
+            
+            // Loop through resources and make sure that they are available and have icons.
+            var resource;
+            for(resource in object.craft) {
+                objects.repository.get(resource).icon = common.resources.icons.get(resource);
+                
+            }
+        }
         
         objects.repository[name].prototype.defaults = {};
+        
         if (typeof object.health !== 'undefined') {
             objects.repository[name].prototype.defaults.health = object.health;
         }
@@ -57,9 +85,6 @@ repository.prototype.get = function(name) {
         if (typeof object.resources !== 'undefined') {
             objects.repository[name].prototype.defaults.resources = object.resources;
         }
-        
-        
-        
         
         objects.repository[name].prototype.move = function(x,y) {
             this.x += x;
@@ -124,116 +149,134 @@ repository.prototype.get = function(name) {
             Skills
         */
         
-        if(object.skills.indexOf("walk") !== -1) {        
-            objects.repository[name].prototype.walk = function(x,y) {
-                self = this;
-                origin = {x : self.x, y : self.y};
-                
-                
-                path = level.getPath(this,{x:x, y:y});
-                
-                path.forEach(function(leg, index, array) {
-                    leg.action = "walk";
+        if(object.skills) {
+            if(object.skills.indexOf("walk") !== -1) {        
+                objects.repository[name].prototype.walk = function(x,y) {
+                    self = this;
 
-                    x = leg.x - origin.x;
-                    y = leg.y - origin.y;
-
-                    var NS,
-                        WE;
-
-                    if (x < 0) {
-                        WE = 'W';
-                    } else if (x > 0) {
-                        WE = 'E';
+                    if (this.actions.length > 0) {
+                        origin = {x : self.actions[self.actions.length-1].x, y : self.actions[self.actions.length-1].y};
                     } else {
-                        WE = '';
+                        origin = {x : self.x, y : self.y};
                     }
 
-                    if (y > 0) {
-                        NS = 'S';
-                    } else if (y < 0) {
-                        NS = 'N';
+
+
+                    path = level.getPath(this,{x:x, y:y});
+
+                    path.forEach(function(leg, index, array) {
+                        leg.action = "walk";
+
+                        x = leg.x - origin.x;
+                        y = leg.y - origin.y;
+
+                        var NS,
+                            WE;
+
+                        if (x < 0) {
+                            WE = 'W';
+                        } else if (x > 0) {
+                            WE = 'E';
+                        } else {
+                            WE = '';
+                        }
+
+                        if (y > 0) {
+                            NS = 'S';
+                        } else if (y < 0) {
+                            NS = 'N';
+                        } else {
+                            NS = '';   
+                        }
+
+                        origin.x = leg.x;
+                        origin.y = leg.y;
+
+                        leg.direction = NS+WE;
+
+                        self.actions.push(leg);
+                    });
+                };
+
+                objects.repository[name].prototype.walkLoop = function(action) {
+                    this.setDirection(action.direction);
+
+                    var destination = action;
+                    var x,
+                        y
+
+                    x = destination.x - this.x;
+                    y = destination.y - this.y;
+
+                    if(x >= 2) {
+                        x = 2;
+                    } else if (x <= -2){
+                        x = -2;
                     } else {
-                        NS = '';   
+                        x = 0;
                     }
-                    
-                    origin.x = leg.x;
-                    origin.y = leg.y;
-                    
-                    leg.direction = NS+WE;
-                    
-                    self.actions.push(leg);
-                });
-            };
+
+                    if(y >= 1) {
+                        y = 1;
+                    } else if (y <= -1){
+                        y = -1;
+                    } else {
+                        y = 0;    
+                    }
+
+                    this.move(x,y);
+
+                    if (-3 < this.x-destination.x && this.x-destination.x < 3 && -2 < this.y-destination.y && this.y-destination.y < 2) {
+                        this.actions.shift();
+                    }
+
+                };
+            }
+
+            if(object.skills.indexOf("chop") !== -1) {
+                objects.repository[name].prototype.chop = function(object) {
+                    this.walk(object.x, object.y);
+
+                    action = {action:"chop", x : object.x, y : object.y, object: object};
+
+                    this.actions.push(action);
+                };
+
+                objects.repository[name].prototype.chopLoop = function(action) {
+
+                    if (!action.object.isDestroyed) {
+                        action.object.target_chop(this, 1);
+                    } else {
+                        this.actions.shift();
+                    }
+                };
+            }
+        }
         
-            objects.repository[name].prototype.walkLoop = function(action) {
-                this.setDirection(action.direction);
-                
-                var destination = action;
-                var x = destination.x - this.x;
-                var y = destination.y - this.y;
-                
-                if(x >= 2) {
-                    x = 2;
-                } else if (x <= -2){
-                    x = -2;
-                } else {
-                    x = 0;
-                }
-                
-                if(y >= 1) {
-                    y = 1;
-                } else if (y <= -1){
-                    y = -1;
-                } else {
-                    y = 0;    
-                }
-                
-                this.move(x,y);
-                
-                if (-3 < this.x-destination.x && this.x-destination.x < 3 && -2 < this.y-destination.y && this.y-destination.y < 2) {
-                    this.actions.shift();
-                }
+        
+        /*
+            TargetActions
+        */
+        
+        if(object.targetActions) {
+            if(object.targetActions.indexOf("chop") !== -1) {
+                objects.repository[name].prototype.target_chop = function(object, amount) {
+                    this.health = this.health-amount;
 
-            };
+                    if (this.health <= 0) {
+                        object.addResources(this.resources); 
+                        this.resources = {};
+                        this.destroy();
+                    }
+
+
+                };
+            }
         }
         
         objects.repository[name].prototype.restLoop = function() {
             this.setAnimation("rest");
         };
-        
-        if(object.skills.indexOf("chop") !== -1) {
-            objects.repository[name].prototype.chop = function(object) {
-                this.walk(object.x, object.y);
-                
-                action = {action:"chop", x : object.x, y : object.y, object: object};
-                
-                this.actions.push(action);
-            };
-            
-            objects.repository[name].prototype.chopLoop = function(action) {
-                
-                if (!action.object.isDestroyed) {
-                    action.object.target_chop(this, 1);
-                } else {
-                    this.actions.shift();
-                }
-            };
-        }
-        
-        if(object.targetActions.indexOf("chop") !== -1) {
-            objects.repository[name].prototype.target_chop = function(object, amount) {
-                this.health = this.health-amount;
-                
-                if (this.health <= 0) {
-                    object.addResources(this.resources); 
-                    this.resources = {};
-                    this.destroy();
-                }
-                
-                
-            };
-        }
         
         objects.repository[name].prototype.loop = function() {
             setTimeout(this.loop.bind(this),this.loopSpeed);
@@ -257,6 +300,10 @@ repository.prototype.get = function(name) {
         
         objects.repository[name].prototype.initialise = function(x,y) {
             var object = new objects.repository[name]();
+            
+            //Remove the initialise function.
+            object.initialise = undefined;
+            
             
             //Initialize the variables:            
             object.x = x;

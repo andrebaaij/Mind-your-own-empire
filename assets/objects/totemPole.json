@@ -1,0 +1,7 @@
+{
+    "images" : ["tileset","icon"],
+    "targetActions" : ["dance"],
+    "craft" : {
+            "log" : "15"            
+        }
+}
