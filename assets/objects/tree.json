@@ -1,0 +1,8 @@
+{
+    "images" : ["tileset"],
+    "targetActions" : ["chop"],
+    "resources" : {
+            "log" : "5"            
+        },
+    "health" : "250"
+}

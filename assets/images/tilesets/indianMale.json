@@ -1,6 +1,6 @@
 {
-    "image" : "indianMale1_40_80.png",
-    "image_selected" : "indianMale1_selected_40_80.png",
+    "image" : "indianMale.png",
+    "imageSelected" : "true",
     "grid" : {
         "width" : 44,
         "height" : 80
