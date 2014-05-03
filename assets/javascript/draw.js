@@ -47,8 +47,8 @@ var draw = function(canvas, level, objects) {
 //        }
 //    }
 //    
-    for (var k = tileYOffset - 0.5*tileXOffset - numberOfTilesForHeight ; 
-         k < tileYOffset - 0.5*tileXOffset + numberOfTilesForHeight; 
+    for (var k = tileYOffset - 0.5*tileXOffset - Math.max(numberOfTilesForHeight, numberOfTilesForWidth) ; 
+         k < tileYOffset - 0.5*tileXOffset + Math.max(numberOfTilesForHeight, numberOfTilesForWidth); 
          k++) {
         for (var j = k + tileXOffset - 1; j < numberOfTilesForWidth + k + tileXOffset + 2; j++) {
             var i = k*level.width + j;
