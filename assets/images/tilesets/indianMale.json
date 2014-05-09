@@ -5,6 +5,12 @@
         "width" : 44,
         "height" : 80
     },
+    "collisionBox" : {
+        "lx": 8,
+        "ty": 67,
+        "rx": 28,
+        "by": 77
+    },
     "defaultAnimation" : "walk",
     "animations" : {
         "walk" : {

@@ -1,4 +1,5 @@
 {
     "images" : ["tileset"],
-    "skills" : ["walk","chop"]
+    "skills" : ["walk","chop","craft"],
+    "strength" : "10"
 }

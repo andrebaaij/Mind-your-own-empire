@@ -178,6 +178,7 @@ tilesets.prototype.add = function(name) {
     }
     
     common.resources.tilesets[name].grid = tilesetObject.grid;
+    common.resources.tilesets[name].collisionBox = tilesetObject.collisionBox;
     common.resources.tilesets[name].animations = tilesetObject.animations;
     common.resources.tilesets[name].defaultAnimation = tilesetObject.defaultAnimation;
     common.resources.tilesets[name].src = imageURI;

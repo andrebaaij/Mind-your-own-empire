@@ -5,7 +5,8 @@ userInterface.variables = {
     scrollSpeed : 10,
     scrollX : 0,
     scrollY : 0,
-    objects_selected : []
+    selectedObjects : [],
+    craftObject : null
 };
 
 userInterface.initialise = function() {
@@ -72,7 +73,9 @@ userInterface.craft = function(command) {
         </div>
     </div>
     */
-    var object;
+    var object,
+        objectName;
+    
     var node = document.createElement('div');
             node.setAttribute("class","window");
     
@@ -80,10 +83,8 @@ userInterface.craft = function(command) {
     for(objectName in objects.repository) {
         object = objects.repository[objectName];
         
-        console.log(object.prototype.craft);
-        
         // Check if the object can be crafted
-        if (typeof object.prototype.craft !== 'undefined') {
+        if (typeof object.prototype.craftInformation !== 'undefined') {
             // The object can be crafted now add it to the DOM, so that a user can select to craft it.
             
             var n = objectName;
@@ -92,9 +93,9 @@ userInterface.craft = function(command) {
                 item.setAttribute("class","item");
                 item.addEventListener('click',function(Event) {
                     // Clear the selected Object list;
-                    userInterface.variables.objects_selected.length = 0;
+                    //userInterface.variables.selectedObjects.length = 0;
                     // Go into build mode by setting the first selected Object as a repository object which has a initialise function.
-                    userInterface.variables.objects_selected.push(objects.repository.get(n));
+                    userInterface.variables.craftObject = objects.repository.get(n);
                     // Hide the craft menu
                     userInterface.craft("off");
                 });
@@ -112,7 +113,7 @@ userInterface.craft = function(command) {
             
                         var objectResource;
                         for(objectResource in object.prototype.craft) {
-                            var resource = document.createElement('div')
+                            var resource = document.createElement('div');
                                 resource.setAttribute("class","resource");
                                 
                                 resource.appendChild(objects.repository[objectResource].icon);
@@ -127,7 +128,7 @@ userInterface.craft = function(command) {
                 item.appendChild(div);
                     
             
-            node.appendChild(item)
+            node.appendChild(item);
             
         }
         
@@ -137,7 +138,7 @@ userInterface.craft = function(command) {
     while (userInterface.elements.craft.firstChild) {
         userInterface.elements.craft.removeChild(userInterface.elements.craft.firstChild);
     }
-    console.log(node);
+
     userInterface.elements.craft.appendChild(node);
     
     
@@ -224,6 +225,9 @@ userInterface.canvasMoveMouseListener = function(e) {
     mouseX = posx - rect.left;
     mouseY = posy - rect.top;
     
+    userInterface.variables.mouseX = mouseX;
+    userInterface.variables.mouseY = mouseY;
+    
     if(mouseX < 100) {
         userInterface.variables.scrollX = -1;
     } else if (mouseX > userInterface.elements.canvas.width - 100) {
@@ -242,24 +246,8 @@ userInterface.canvasMoveMouseListener = function(e) {
 };
 
 userInterface.canvasClickListener = function(e) {
-    var rect = userInterface.elements.canvas.getBoundingClientRect();
-
-    var posx = 0;
-	var posy = 0;
-	if (!e) e = window.event;
-	if (e.pageX || e.pageY) {
-		posx = e.pageX;
-		posy = e.pageY;
-	}
-	else if (e.clientX || e.clientY) {
-		posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
-		posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
-	}
-	// posx and posy contain the mouse position relative to the document
-	// Do something with this information
-    
-    mouseX = posx - rect.left;
-    mouseY = posy - rect.top;
+    mouseX = userInterface.variables.mouseX;
+    mouseY = userInterface.variables.mouseY;
     
     if (e.which === null) {
         /* IE case */
@@ -273,37 +261,50 @@ userInterface.canvasClickListener = function(e) {
     
     if (button === "LEFT") {
     
-        // If we have one object selected which can be initialised, it means we are in build mode.
-        if (userInterface.variables.objects_selected.length === 1 && typeof userInterface.variables.objects_selected[0].prototype !== 'undefined') {
+        // If we have one craft object selected it means we are in build mode.
+        if (userInterface.variables.craftObject !== null) {
             // Build the object
-            console.log('BUILD');
-            userInterface.variables.objects_selected[0].prototype.initialise(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+
+            craftedObject = userInterface.variables.craftObject.prototype.initialise(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+            userInterface.variables.craftObject = null;
+             
+            userInterface.variables.selectedObjects.forEach(function(object, index) {
+                if (object.craft) {
+                    object.craft(craftedObject);
+                }
+            });
         }
-        
+
         objects.list().forEach(function(object, index) {
             object.deselect();
         });
 
-        userInterface.variables.objects_selected = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+        userInterface.variables.selectedObjects = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
 
-        userInterface.variables.objects_selected.forEach(function(object, index) {
+        userInterface.variables.selectedObjects.forEach(function(object, index) {
             object.select();
         });
 
     } else if (button === "RIGHT") {
+   
         // If we have one object selected which can be initialised, it means we are in build mode.
-        if (userInterface.variables.objects_selected.length === 1 && typeof userInterface.variables.objects_selected[0].initialise !== 'undefined') {
+        if (userInterface.variables.selectedObjects.length === 1 && typeof userInterface.variables.selectedObjects[0].initialise !== 'undefined') {
             // Do nothing on right click
+            userInterface.variables.craftObject = null;
         }
         
-        if (userInterface.variables.objects_selected.length > 0) {
+        if (userInterface.variables.selectedObjects.length > 0) {
             var targetActions = [];
             
             array = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
             
             //Loop through target objects
             array.forEach(function(targetObject, targetObjectIndex) {
-                userInterface.variables.objects_selected.forEach(function(selectedObject, selectedObjectIndex) {
+                if (!targetObject.targetActions) return;
+                
+                userInterface.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
+                    if (!selectedObject.skills) return;
+                    
                     selectedObject.skills.forEach(function(skill) {
                         if (targetObject.targetActions.indexOf(skill) !== -1 && targetActions.indexOf(skill) === -1) {
                             targetActionAlreadyExists = false;
@@ -323,11 +324,13 @@ userInterface.canvasClickListener = function(e) {
             if (targetActions.length > 1) {
                 console.log(targetActions);
             } else if (targetActions.length === 1) {
-                 userInterface.variables.objects_selected.forEach(function(selectedObject, selectedObjectIndex) {
-                    selectedObject[targetActions[0].skill](targetActions[0].object);
+                userInterface.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
+                     
+                if(!selectedObject[targetActions[0].skill]) return;         
+                selectedObject[targetActions[0].skill](targetActions[0].object);
                 });
             } else {
-                userInterface.variables.objects_selected.forEach(function(selectedObject, selectedObjectIndex) {
+                userInterface.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
                     if (selectedObject.walk) {
                         selectedObject.walk(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
                     }
@@ -338,3 +341,54 @@ userInterface.canvasClickListener = function(e) {
         }
     }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//
+//single_double_click = function(element, single_click_callback, double_click_callback, timeout) {   
+//  return function(){
+//    var clicks = 0, self = this;
+//    element.addEventListener('click',function(event){
+//      clicks++;
+//      if (clicks == 1) {
+//        setTimeout(function(){
+//          if(clicks == 1) {
+//            single_click_callback.call(self, event);
+//          } else {
+//            double_click_callback.call(self, event);
+//          }
+//          clicks = 0;
+//        }, timeout || 300);
+//      }
+//    });
+//  };
+//}
+//
+//
+//var button = document.getElementById('button');
+//   
+//single_double_click(button,
+//                    function () { alert("Try double-clicking me!")},
+//                    function () { alert("Double click detected, I'm hiding") //$(this).hide()
+//})()

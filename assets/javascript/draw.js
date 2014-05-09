@@ -2,7 +2,7 @@
 
 /* jshint loopfunc: true */
 
-var draw = function(canvas, level, objects) {
+var draw = function(canvas, level, objects, craftObject) {
     canvas.context.clearRect(0, 0, canvas.width, canvas.height);
     
     var tileset = level.tilesets[0];
@@ -92,10 +92,44 @@ var draw = function(canvas, level, objects) {
                                    sy * tileheight,
                                    tilewidth,
                                    tileheight,
-                                   Math.round(object.x-canvas.xOffset),
-                                   Math.round(object.y-canvas.yOffset),
+                                   Math.round(object.x-canvas.xOffset - object.center.x),
+                                   Math.round(object.y-canvas.yOffset - object.center.y),
                                    tilewidth,
                                    tileheight
                                 );
     });
+
+    
+    if (craftObject) {
+        var tileset = craftObject.prototype.tileset;
+
+        var tilewidth = tileset.grid.width;
+        var tileheight = tileset.grid.height;
+        var imagewidth = tileset.width;
+        var imageheight = tileset.width;
+
+        var tilesPerRow = imagewidth / tilewidth;
+        var tileIndex = 0;//craftObject.tile;
+
+        var sx = tileIndex % tilesPerRow;
+        var sy = (tileIndex - sx) / tilesPerRow;
+        
+        canvas.context.save();
+        canvas.context.globalAlpha = 0.7;
+        
+        canvas.context.drawImage(craftObject.prototype.image,
+                               sx * tilewidth,
+                               sy * tileheight,
+                               tilewidth,
+                               tileheight,
+                               //Math.round(craftObject.x-canvas.xOffset),
+                               //Math.round(craftObject.y-canvas.yOffset),
+                               userInterface.variables.mouseX - craftObject.prototype.center.x,
+                               userInterface.variables.mouseY - craftObject.prototype.center.y,
+                               tilewidth,
+                               tileheight
+                            );
+        
+        canvas.context.restore();
+    }
 };

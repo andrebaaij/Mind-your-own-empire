@@ -49,6 +49,10 @@ repository.prototype.get = function(name) {
                 objects.repository[name].prototype.width = common.resources.tilesets.get(name).grid.width;
                 objects.repository[name].prototype.height = common.resources.tilesets.get(name).grid.height;
                 objects.repository[name].prototype.image = common.resources.tilesets.get(name);
+                objects.repository[name].prototype.collisionBox = common.resources.tilesets.get(name).collisionBox;
+                console.log(objects.repository[name].prototype.collisionBox);
+                objects.repository[name].prototype.center = {x: (objects.repository[name].prototype.collisionBox.lx + objects.repository[name].prototype.collisionBox.rx ) /2,
+                                                             y: (objects.repository[name].prototype.collisionBox.ty + objects.repository[name].prototype.collisionBox.by ) /2};
             }
             
             if (object.images.indexOf("icon") !== -1) {
@@ -65,7 +69,7 @@ repository.prototype.get = function(name) {
         }
         
         if (typeof object.craft !== 'undefined') {
-            objects.repository[name].prototype.craft = object.craft;
+            objects.repository[name].prototype.craftInformation = object.craft;
             objects.repository[name].prototype.icon = common.resources.icons.get(name);
             
             // Loop through resources and make sure that they are available and have icons.
@@ -162,8 +166,12 @@ repository.prototype.get = function(name) {
 
 
 
-                    path = level.getPath(this,{x:x, y:y});
-
+                    path = level.getPath(origin,{x:x, y:y});
+                    
+                    console.log(path);
+                    
+                    if (typeof path === 'undefined') return;
+                    
                     path.forEach(function(leg, index, array) {
                         leg.action = "walk";
 
@@ -203,7 +211,7 @@ repository.prototype.get = function(name) {
 
                     var destination = action;
                     var x,
-                        y
+                        y;
 
                     x = destination.x - this.x;
                     y = destination.y - this.y;
@@ -223,7 +231,12 @@ repository.prototype.get = function(name) {
                     } else {
                         y = 0;    
                     }
-
+                    
+                    if (x === 0 && y !== 0) {
+                        y = y * 2;
+                    }
+                        
+                    
                     this.move(x,y);
 
                     if (-3 < this.x-destination.x && this.x-destination.x < 3 && -2 < this.y-destination.y && this.y-destination.y < 2) {
@@ -245,10 +258,28 @@ repository.prototype.get = function(name) {
                 objects.repository[name].prototype.chopLoop = function(action) {
 
                     if (!action.object.isDestroyed) {
-                        action.object.target_chop(this, 1);
+                        action.object.targetChop(this, 1);
                     } else {
                         this.actions.shift();
                     }
+                };
+            }
+            
+            /*
+                Craft
+            */
+            
+            if(object.skills.indexOf("craft") !== -1) {
+                objects.repository[name].prototype.craft = function(object) {
+                    this.walk(object.x, object.y);
+
+                    action = {action:"craft", x : object.x, y : object.y, object: object};
+
+                    this.actions.push(action);
+                };
+
+                objects.repository[name].prototype.craftLoop = function(action) {
+                    this.actions.shift();
                 };
             }
         }
@@ -260,7 +291,7 @@ repository.prototype.get = function(name) {
         
         if(object.targetActions) {
             if(object.targetActions.indexOf("chop") !== -1) {
-                objects.repository[name].prototype.target_chop = function(object, amount) {
+                objects.repository[name].prototype.targetChop = function(object, amount) {
                     this.health = this.health-amount;
 
                     if (this.health <= 0) {
@@ -358,7 +389,7 @@ objects.prototype.find = function(x, y) {
     var array = [];
     
     this.array.forEach(function(object, index) {
-        if (object.x <= x && object.x+object.width >= x && object.y <= y && object.y+object.height >= y) {
+        if (object.x - object.center.x <= x && object.x+object.width - object.center.x >= x && object.y - object.center.y <= y && object.y+object.height - object.center.y >= y) {
             array.push(object);
         }
     });

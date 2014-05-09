@@ -4,6 +4,12 @@
         "width" : 128,
         "height" : 128
     },
+    "collisionBox" : {
+        "lx": 49,
+        "ty": 99,
+        "rx": 59,
+        "by": 106
+    },
     "defaultAnimation" : "rest",
     "animations" : {
         "rest" : {
