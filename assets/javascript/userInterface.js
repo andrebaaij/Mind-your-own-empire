@@ -324,10 +324,9 @@ userInterface.canvasClickListener = function(e) {
             if (targetActions.length > 1) {
                 console.log(targetActions);
             } else if (targetActions.length === 1) {
-                userInterface.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
-                     
-                if(!selectedObject[targetActions[0].skill]) return;         
-                selectedObject[targetActions[0].skill](targetActions[0].object);
+                userInterface.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {   
+                    if(!selectedObject[targetActions[0].skill]) return;         
+                    selectedObject[targetActions[0].skill](targetActions[0].object);
                 });
             } else {
                 userInterface.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {

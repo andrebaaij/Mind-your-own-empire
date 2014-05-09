@@ -74,29 +74,58 @@ var draw = function(canvas, level, objects, craftObject) {
     }
     
     objects.forEach(function(object, index, array) {
-            var tileset = object.tileset;
-            
-            var tilewidth = tileset.grid.width;
-            var tileheight = tileset.grid.height;
-            var imagewidth = tileset.width;
-            var imageheight = tileset.width;
+        console.log(object.crafted);
+            if (typeof object.crafted !== 'undefined' && object.crafted < 1) {
+                console.log(object.crafted);
+                var tileset = object.tileset;
 
-            var tilesPerRow = imagewidth / tilewidth;
-            var tileIndex = object.tile;
-            
-            var sx = tileIndex % tilesPerRow;
-            var sy = (tileIndex - sx) / tilesPerRow;
+                var tilewidth = tileset.grid.width;
+                var tileheight = tileset.grid.height;
+                var imagewidth = tileset.width;
+
+                var tilesPerRow = imagewidth / tilewidth;
+                var tileIndex = object.tile;
+
+                var sx = tileIndex % tilesPerRow;
+                var sy = (tileIndex - sx) / tilesPerRow;
+
+                canvas.context.drawImage(object.image,
+                                       sx * tilewidth,
+                                       sy * tileheight + tileheight * (1-object.crafted),
+                                       tilewidth,
+                                       Math.round(tileheight*object.crafted),
+                                       Math.round(object.x-canvas.xOffset - object.center.x),
+                                       Math.round(object.y-canvas.yOffset - object.center.y) + tileheight * (1-object.crafted),
+                                       tilewidth,
+                                       Math.round(tileheight*object.crafted)
+                                    );
+                
+                
+            } else {
         
-            canvas.context.drawImage(object.image,
-                                   sx * tilewidth,
-                                   sy * tileheight,
-                                   tilewidth,
-                                   tileheight,
-                                   Math.round(object.x-canvas.xOffset - object.center.x),
-                                   Math.round(object.y-canvas.yOffset - object.center.y),
-                                   tilewidth,
-                                   tileheight
-                                );
+                var tileset = object.tileset;
+
+                var tilewidth = tileset.grid.width;
+                var tileheight = tileset.grid.height;
+                var imagewidth = tileset.width;
+
+                var tilesPerRow = imagewidth / tilewidth;
+                var tileIndex = object.tile;
+
+                var sx = tileIndex % tilesPerRow;
+                var sy = (tileIndex - sx) / tilesPerRow;
+
+                canvas.context.drawImage(object.image,
+                                       sx * tilewidth,
+                                       sy * tileheight,
+                                       tilewidth,
+                                       tileheight,
+                                       Math.round(object.x-canvas.xOffset - object.center.x),
+                                       Math.round(object.y-canvas.yOffset - object.center.y),
+                                       tilewidth,
+                                       tileheight
+                                    );
+            }
     });
 
     

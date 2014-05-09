@@ -60,6 +60,8 @@ repository.prototype.get = function(name) {
             }
         }
         
+        objects.repository[name].prototype.defaults = {};
+        
         if (object.skills) {
             objects.repository[name].prototype.skills = object.skills;
         }
@@ -71,6 +73,7 @@ repository.prototype.get = function(name) {
         if (typeof object.craft !== 'undefined') {
             objects.repository[name].prototype.craftInformation = object.craft;
             objects.repository[name].prototype.icon = common.resources.icons.get(name);
+            objects.repository[name].prototype.defaults.crafted = 0.00;
             
             // Loop through resources and make sure that they are available and have icons.
             var resource;
@@ -80,7 +83,7 @@ repository.prototype.get = function(name) {
             }
         }
         
-        objects.repository[name].prototype.defaults = {};
+        
         
         if (typeof object.health !== 'undefined') {
             objects.repository[name].prototype.defaults.health = object.health;
@@ -122,8 +125,6 @@ repository.prototype.get = function(name) {
             Animation
         */    
         objects.repository[name].prototype.animationLoop = function() {
-            //console.log(this.animation);
-            
             setTimeout(this.animationLoop.bind(this),100);
             
             this.tile = this.animation.array[this.animation.index];
@@ -279,7 +280,13 @@ repository.prototype.get = function(name) {
                 };
 
                 objects.repository[name].prototype.craftLoop = function(action) {
-                    this.actions.shift();
+                    if (action.object.crafted >= 1) {
+                        action.object.crafted = 1;
+                        this.actions.shift();
+                        return;
+                    }
+                    
+                    action.object.crafted += 0.01;
                 };
             }
         }
