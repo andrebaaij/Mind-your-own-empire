@@ -74,9 +74,7 @@ var draw = function(canvas, level, objects, craftObject) {
     }
     
     objects.forEach(function(object, index, array) {
-        console.log(object.crafted);
             if (typeof object.crafted !== 'undefined' && object.crafted < 1) {
-                console.log(object.crafted);
                 var tileset = object.tileset;
 
                 var tilewidth = tileset.grid.width;

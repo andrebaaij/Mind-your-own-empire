@@ -29,7 +29,15 @@ userInterface.initialise = function() {
     userInterface.elements.menu_craft.addEventListener('mouseover',function() {userInterface.variables.scrollX = 0;userInterface.variables.scrollY = 0;});
     
     userInterface.elements.menu_pause.addEventListener('click',function() {userInterface.pause("on");});
-    userInterface.elements.menu_craft.addEventListener('click',function() {userInterface.craft("on");});
+    userInterface.elements.menu_craft.addEventListener('click',function() {
+        // Turn the crafting ui on when the class of the menu_craft button is not off
+        if(userInterface.elements.menu_craft.getAttribute("class") === "item off") return;
+        userInterface.craft("on");
+    });
+    
+    userInterface.elements.craft.addEventListener('click',function() {
+        userInterface.craft("off");
+    });
     
     window.onblur = function() {userInterface.pause("on");};
     
@@ -246,6 +254,9 @@ userInterface.canvasMoveMouseListener = function(e) {
 };
 
 userInterface.canvasClickListener = function(e) {
+    // Reset all flags that will be evaluated later
+    var aSelectedObjectCanCraft = false;
+    
     mouseX = userInterface.variables.mouseX;
     mouseY = userInterface.variables.mouseY;
     
@@ -273,6 +284,8 @@ userInterface.canvasClickListener = function(e) {
                     object.craft(craftedObject);
                 }
             });
+            
+            return;
         }
 
         objects.list().forEach(function(object, index) {
@@ -283,8 +296,21 @@ userInterface.canvasClickListener = function(e) {
 
         userInterface.variables.selectedObjects.forEach(function(object, index) {
             object.select();
+            
+            console.log(object);
+            
+            // If one of the objects can craft, turn the flag aSelectedObjectCanCraft to true;
+            if (object.skills && object.skills.indexOf("craft") !== -1) {
+                aSelectedObjectCanCraft = true;
+            }
         });
-
+        
+        // if aSelectedObjectCanCraft equals true, make the 
+        if (aSelectedObjectCanCraft) {
+            userInterface.elements.menu_craft.setAttribute("class","item");
+        } else {
+            userInterface.elements.menu_craft.setAttribute("class","item off");
+        }
     } else if (button === "RIGHT") {
    
         // If we have one object selected which can be initialised, it means we are in build mode.

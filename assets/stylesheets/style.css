@@ -110,6 +110,10 @@ body {
     background-color: rgba(0,0,0,0.5); 
 }
 
+.side.menu .item.off{
+    background-color: rgba(0,0,0,0.5); 
+}
+
 .side.menu .item:hover .child{
     display: block;
 }
@@ -159,6 +163,7 @@ body {
 .game.menu .item:hover{
     background-color: #59564C; 
 }
+
 
 .game.menu .item:hover .child{
     display: block;

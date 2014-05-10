@@ -286,7 +286,7 @@ repository.prototype.get = function(name) {
                         return;
                     }
                     
-                    action.object.crafted += 0.01;
+                    action.object.crafted += 0.001;
                 };
             }
         }
