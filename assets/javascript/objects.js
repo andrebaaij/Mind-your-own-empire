@@ -114,9 +114,9 @@ repository.prototype.get = function(name) {
         objects.repository[name].prototype.addResources = function(resources) {
             for(var resource in resources) {
                 if (typeof this.resources[resource] !== 'undefined') {
-                    this.resources[resource] += resources[resource];
+                    this.resources[resource] += parseInt(resources[resource]);
                 } else {
-                    this.resources[resource] = resources[resource];
+                    this.resources[resource] = parseInt(resources[resource]);
                 }
             }
         };

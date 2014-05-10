@@ -248,6 +248,14 @@ body {
     background-color: #2E2D29;
 }
 
+#game .craft .window .item.off {
+    opacity: 0.3;
+}
+
+#game .craft .window .item.off:hover {
+    background-color: transparent;
+}
+
 #game .craft .window .icon {
     float:left;
 }

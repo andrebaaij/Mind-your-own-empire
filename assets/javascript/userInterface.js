@@ -6,6 +6,7 @@ userInterface.variables = {
     scrollX : 0,
     scrollY : 0,
     selectedObjects : [],
+    resourcesFromSelectedObjects : {},
     craftObject : null
 };
 
@@ -81,6 +82,9 @@ userInterface.craft = function(command) {
         </div>
     </div>
     */
+    
+    userInterface.recalculateResources();
+    
     var object,
         objectName;
     
@@ -98,11 +102,31 @@ userInterface.craft = function(command) {
             var n = objectName;
             
             var item = document.createElement('div');
-                item.setAttribute("class","item");
+                //If there are not enough resources, turn the item "off"
+                var enoughResources = true;
+                
+                console.log(object.prototype);
+            
+                var craftResource;
+                for(craftResource in object.prototype.craftInformation) {
+                    console.log(userInterface.variables.resourcesFromSelectedObjects);
+                    console.log(object.prototype.craftInformation[craftResource]);
+                    
+                    if(!userInterface.variables.resourcesFromSelectedObjects[craftResource] || userInterface.variables.resourcesFromSelectedObjects[craftResource] < object.prototype.craftInformation[craftResource]) {
+                        enoughResources = false;
+                    }
+                }
+                
+                if (enoughResources)  {
+                    item.setAttribute("class","item");
+                } else {
+                    item.setAttribute("class","item off");
+                }
+            
                 item.addEventListener('click',function(Event) {
-                    // Clear the selected Object list;
-                    //userInterface.variables.selectedObjects.length = 0;
-                    // Go into build mode by setting the first selected Object as a repository object which has a initialise function.
+                    // If the item is "off", not enough resources are available, thus return;
+                    if (item.getAttribute("class") === 'item off') return;
+                    
                     userInterface.variables.craftObject = objects.repository.get(n);
                     // Hide the craft menu
                     userInterface.craft("off");
@@ -120,12 +144,12 @@ userInterface.craft = function(command) {
                         resources.setAttribute("class","resources");
             
                         var objectResource;
-                        for(objectResource in object.prototype.craft) {
+                        for(objectResource in object.prototype.craftInformation) {
                             var resource = document.createElement('div');
                                 resource.setAttribute("class","resource");
                                 
                                 resource.appendChild(objects.repository[objectResource].icon);
-                                resource.appendChild(document.createTextNode(" x " + object.prototype.craft[objectResource]));
+                                resource.appendChild(document.createTextNode(" x " + object.prototype.craftInformation[objectResource]));
                         
                             resources.appendChild(resource);
                         }
@@ -254,9 +278,6 @@ userInterface.canvasMoveMouseListener = function(e) {
 };
 
 userInterface.canvasClickListener = function(e) {
-    // Reset all flags that will be evaluated later
-    var aSelectedObjectCanCraft = false;
-    
     mouseX = userInterface.variables.mouseX;
     mouseY = userInterface.variables.mouseY;
     
@@ -271,7 +292,10 @@ userInterface.canvasClickListener = function(e) {
     }
     
     if (button === "LEFT") {
-    
+        // Reset all flags that will be evaluated later
+        var aSelectedObjectCanCraft = false,
+            resourcesFromSelectedObjects = {};
+        
         // If we have one craft object selected it means we are in build mode.
         if (userInterface.variables.craftObject !== null) {
             // Build the object
@@ -302,7 +326,17 @@ userInterface.canvasClickListener = function(e) {
             // If one of the objects can craft, turn the flag aSelectedObjectCanCraft to true;
             if (object.skills && object.skills.indexOf("craft") !== -1) {
                 aSelectedObjectCanCraft = true;
+                
+                if (object.resources) {
+                    var resource;
+                    for (resource in object.resources) {
+                        if (resourcesFromSelectedObjects[resource]) resourcesFromSelectedObjects[resource] += object.resources[resource];
+                        else resourcesFromSelectedObjects[resource] = object.resources[resource];
+                    }
+                }
             }
+            
+            userInterface.variables.resourcesFromSelectedObjects = resourcesFromSelectedObjects;
         });
         
         // if aSelectedObjectCanCraft equals true, make the 
@@ -369,7 +403,26 @@ userInterface.canvasClickListener = function(e) {
 
 
 
+userInterface.recalculateResources = function() {
+    var resourcesFromSelectedObjects = {};
+    
+    userInterface.variables.selectedObjects.forEach(function(object, index) {
+        object.select();
 
+        // If one of the objects can craft, turn the flag aSelectedObjectCanCraft to true;
+        if (object.skills && object.skills.indexOf("craft") !== -1) {
+            if (object.resources) {
+                var resource;
+                for (resource in object.resources) {
+                    if (resourcesFromSelectedObjects[resource]) resourcesFromSelectedObjects[resource] += object.resources[resource];
+                    else resourcesFromSelectedObjects[resource] = object.resources[resource];
+                }
+            }
+        }
+
+        userInterface.variables.resourcesFromSelectedObjects = resourcesFromSelectedObjects;
+    });
+};
 
 
 
