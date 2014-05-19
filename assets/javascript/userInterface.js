@@ -299,13 +299,15 @@ userInterface.canvasClickListener = function(e) {
         // If we have one craft object selected it means we are in build mode.
         if (userInterface.variables.craftObject !== null) {
             // Build the object
-
             craftedObject = userInterface.variables.craftObject.prototype.initialise(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
             userInterface.variables.craftObject = null;
-             
+            
+            var resources = craftedObject.craftInformation; 
+            console.log(craftedObject);
             userInterface.variables.selectedObjects.forEach(function(object, index) {
                 if (object.craft) {
                     object.craft(craftedObject);
+                    resources = object.removeResources(resources);
                 }
             });
             
@@ -320,8 +322,6 @@ userInterface.canvasClickListener = function(e) {
 
         userInterface.variables.selectedObjects.forEach(function(object, index) {
             object.select();
-            
-            console.log(object);
             
             // If one of the objects can craft, turn the flag aSelectedObjectCanCraft to true;
             if (object.skills && object.skills.indexOf("craft") !== -1) {
