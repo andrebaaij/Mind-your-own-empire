@@ -104,14 +104,9 @@ userInterface.craft = function(command) {
             var item = document.createElement('div');
                 //If there are not enough resources, turn the item "off"
                 var enoughResources = true;
-                
-                console.log(object.prototype);
             
                 var craftResource;
                 for(craftResource in object.prototype.craftInformation) {
-                    console.log(userInterface.variables.resourcesFromSelectedObjects);
-                    console.log(object.prototype.craftInformation[craftResource]);
-                    
                     if(!userInterface.variables.resourcesFromSelectedObjects[craftResource] || userInterface.variables.resourcesFromSelectedObjects[craftResource] < object.prototype.craftInformation[craftResource]) {
                         enoughResources = false;
                     }
@@ -302,8 +297,12 @@ userInterface.canvasClickListener = function(e) {
             craftedObject = userInterface.variables.craftObject.prototype.initialise(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
             userInterface.variables.craftObject = null;
             
-            var resources = craftedObject.craftInformation; 
-            console.log(craftedObject);
+            var resources = {};
+            
+            for(var resource in craftedObject.craftInformation) {
+                resources[resource] = craftedObject.craftInformation[resource];
+            }
+
             userInterface.variables.selectedObjects.forEach(function(object, index) {
                 if (object.craft) {
                     object.craft(craftedObject);

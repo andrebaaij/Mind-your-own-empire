@@ -108,12 +108,8 @@ objects.prototype.functions.walk = function(x,y) {
     } else {
         origin = {x : self.x, y : self.y};
     }
-
-
-
+    
     path = level.getPath(origin,{x:x, y:y});
-
-    console.log(path);
 
     if (typeof path === 'undefined') return;
 
@@ -320,7 +316,6 @@ repository.prototype.get = function(name) {
             objects.repository[name].prototype.height = common.resources.tilesets.get(name).grid.height;
             objects.repository[name].prototype.image = common.resources.tilesets.get(name);
             objects.repository[name].prototype.collisionBox = common.resources.tilesets.get(name).collisionBox;
-            console.log(objects.repository[name].prototype.collisionBox);
             objects.repository[name].prototype.center = {x: (objects.repository[name].prototype.collisionBox.lx + objects.repository[name].prototype.collisionBox.rx ) /2,
                                                          y: (objects.repository[name].prototype.collisionBox.ty + objects.repository[name].prototype.collisionBox.by ) /2};
         }
