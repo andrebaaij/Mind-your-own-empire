@@ -73,6 +73,11 @@ var draw = function(canvas, level, objects, craftObject) {
         }
     }
     
+    objects.sort(function (a,b) {
+        var result = (a.y < b.y) ? -1 : (a.y > b.y) ? 1 : 0;
+        return result;
+    });
+    
     objects.forEach(function(object, index, array) {
             if (typeof object.crafted !== 'undefined' && object.crafted < 1) {
                 var tileset = object.tileset;
