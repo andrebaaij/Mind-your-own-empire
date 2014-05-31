@@ -102,6 +102,7 @@ level.printPath = function (node) {
         //console.log("(" + left + "," + right + ") -> (" + x + "," + y + ")");
         node = node.previousNodeOnShortestPath;
         if (node === null) {
+            array.pop();
             return array.reverse();
             //break;
         }
@@ -123,6 +124,7 @@ level.getPath2 = function(object, destination) {
     right = Math.floor((destination.y*tilewidth + destination.x*tileheight)/(tilewidth*tileheight));
     var destionationIndex = this.definition.width * left + right;
     
+    var layer = this.get().layers[0];
     var visitedNotes = [];
     
     var currentPosition = this.makeNode(index,null,0);
@@ -135,6 +137,7 @@ level.getPath2 = function(object, destination) {
         while (neighbours.length > 0) {
             var neighbour = neighbours.pop();
             if (neighbour.index >= 0 && visitedNotes[neighbour.index] === undefined) {
+                if (layer.data[neighbour.index] < 15) {
                 visitedNotes[neighbour.index] = 1;
                 if (neighbour.index == destionationIndex) {
                     //console.log(neighbour.distance);
@@ -142,6 +145,7 @@ level.getPath2 = function(object, destination) {
                     return this.printPath(this.makeNode(neighbour.index, firstNode, neighbour.distance));
                 }
                 this.addNode(this.makeNode(neighbour.index, firstNode, neighbour.distance));
+                }
             }
         }
         firstNode.next.previous = null;
