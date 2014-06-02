@@ -2,14 +2,14 @@
     "image" : "block.png",
     "imageSelected" : "true",
     "grid" : {
-        "width" : 32,
-        "height" : 64
+        "width" : 16,
+        "height" : 32
     },
     "collisionBox" : {
-        "lx": 0,
-        "ty": 46,
-        "rx": 32,
-        "by": 64
+        "lx": 1,
+        "ty": 25,
+        "rx": 16,
+        "by": 31
     },
     "defaultAnimation" : "rest",
     "animations" : {
