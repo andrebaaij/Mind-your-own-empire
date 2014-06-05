@@ -2,7 +2,7 @@
 
 /* jshint loopfunc: true */
 
-var draw = function(canvas, level, objects, craftObject) {
+var draw = function (canvas, level, objects, craftObject) {
     canvas.context.clearRect(0, 0, canvas.width, canvas.height);
     
     var tileset = level.tilesets[0];

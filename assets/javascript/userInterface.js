@@ -10,7 +10,7 @@ userInterface.variables = {
     craftObject : null
 };
 
-userInterface.initialise = function() {
+userInterface.initialise = function () {
     /* Elements */
     userInterface.elements.canvas = document.getElementById("canvas");
     userInterface.elements.pause = document.getElementById("pause");
@@ -22,25 +22,25 @@ userInterface.initialise = function() {
     userInterface.elements.menu_craft = document.getElementById("menu_craft");
     
     /* EventListeners assignment*/
-    userInterface.elements.canvas.addEventListener('mousemove',userInterface.canvasMoveMouseListener);
-    userInterface.elements.canvas.addEventListener('mouseup',userInterface.canvasClickListener);
-    userInterface.elements.pauseContinue.addEventListener('click',function() {userInterface.pause("off");});
-    userInterface.elements.pauseFullscreen.addEventListener('click',function() {userInterface.fullscreen("toggle");});
-    userInterface.elements.menu_pause.addEventListener('mouseover',function() {userInterface.variables.scrollX = 0;userInterface.variables.scrollY = 0;});
-    userInterface.elements.menu_craft.addEventListener('mouseover',function() {userInterface.variables.scrollX = 0;userInterface.variables.scrollY = 0;});
+    userInterface.elements.canvas.addEventListener('mousemove', userInterface.canvasMoveMouseListener);
+    userInterface.elements.canvas.addEventListener('mouseup', userInterface.canvasClickListener);
+    userInterface.elements.pauseContinue.addEventListener('click', function () {userInterface.pause("off"); });
+    userInterface.elements.pauseFullscreen.addEventListener('click', function () {userInterface.fullscreen("toggle"); });
+    userInterface.elements.menu_pause.addEventListener('mouseover', function () {userInterface.variables.scrollX = 0; userInterface.variables.scrollY = 0; });
+    userInterface.elements.menu_craft.addEventListener('mouseover', function () {userInterface.variables.scrollX = 0; userInterface.variables.scrollY = 0; });
     
-    userInterface.elements.menu_pause.addEventListener('click',function() {userInterface.pause("on");});
-    userInterface.elements.menu_craft.addEventListener('click',function() {
+    userInterface.elements.menu_pause.addEventListener('click', function () {userInterface.pause("on"); });
+    userInterface.elements.menu_craft.addEventListener('click', function () {
         // Turn the crafting ui on when the class of the menu_craft button is not off
-        if(userInterface.elements.menu_craft.getAttribute("class") === "item off") return;
+        if (userInterface.elements.menu_craft.getAttribute("class") === "item off") { return; }
         userInterface.craft("on");
     });
     
-    userInterface.elements.craft.addEventListener('click',function() {
+    userInterface.elements.craft.addEventListener('click', function () {
         userInterface.craft("off");
     });
     
-    window.onblur = function() {userInterface.pause("on");};
+    window.onblur = function () {userInterface.pause("on"); };
     
     /* Loops */
     userInterface.scrollLoop();
@@ -185,7 +185,7 @@ userInterface.fullscreen = function(command) {
         var p = 0, m, t;
         while (p < pfx.length && !obj[m]) {
             m = method;
-            if (pfx[p] == "") {
+            if (pfx[p] === "") {
                 m = m.substr(0,1).toLowerCase() + m.substr(1);
             }
             m = pfx[p] + m;
