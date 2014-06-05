@@ -1,0 +1,26 @@
+{
+    "image" : "mind.png",
+    "grid" : {
+        "width" : 144,
+        "height" : 144
+    },
+    "collisionBox" : {
+        "lx": 1,
+        "ty": 80,
+        "rx": 143,
+        "by": 143
+    },
+    "defaultAnimation" : "rest",
+    "animations" : {
+        "rest" : {
+            "SE" : [0],
+            "SW" : [0],
+            "NW" : [0],
+            "NE" : [0],
+            "E"  : [0],
+            "W"  : [0],
+            "N"  : [0],
+            "S"  : [0]
+        }
+    }
+}

@@ -18,6 +18,7 @@ game.initialise = function() {
     //objects.create("tree",250,250);
     
     objects.create("block",250,250);
+    objects.create("mind",500,500);
     objects.create("tower",500,1000);
     game.gameLoop();
 };
