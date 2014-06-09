@@ -227,7 +227,7 @@ icons.prototype.add = function(name) {
     common.resources.icons[name].src = imageURI;
     
     return common.resources.icons[name];
-}
+};
 
 icons.prototype.get = function(name) {
     if(common.resources.icons[name] === undefined) {
@@ -268,4 +268,41 @@ Scripts.prototype.add = function(name, callback) {
     script.DOM.src = './assets/javascript/' + name + '.js';
     
     document.getElementsByTagName("head")[0].appendChild(script.DOM);
+};
+
+/*
+
+    Game engine specific functions
+
+*/
+
+
+common.getGridFromScreen = function(level, canvas, x, y) {
+    x = x + canvas.xOffset - level.tilewidth/2;
+    y = y + canvas.yOffset;
+   
+    var gx = Math.floor((x / (level.tilewidth) + y / (level.tileheight)));
+    var gy = Math.floor((y / (level.tileheight) - x / (level.tilewidth)));
+    
+    if (gx < 0) gx = 0;
+    else if (gx >= level.width) gx = level.width-1;
+
+    if (gy < 0) gy = 0;
+    else if (gy >= level.height) gy = level.height-1;
+    
+    gx = parseInt(gx,10);
+    gy = parseInt(gy,10);
+    i = gx + (gy * level.width);
+    
+    return { x : parseInt(gx,10), y : parseInt(gy,10), index : i};
+    
+};
+
+
+// WARNING: This function is not tested yet
+// TODO: test this function
+common.getScreenFromGrid = function(level, canvas, x, y) {
+    var sx = Math.round(canvas.xOffset) + ((parseInt(x,10) - parseInt(y,10)) * (level.tilewidth / 2));
+    var sy = Math.round(canvas.yOffset) + ((parseInt(x,10) + parseInt(y,10)) * (level.tileheight / 2));
+    return { x : sx, y : sy};
 };
