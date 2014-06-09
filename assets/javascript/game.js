@@ -5,9 +5,9 @@ var game = {};
 game.initialise = function() {
     // load all objects
 
-    objects.create("block",250,250);
-    objects.create("mind",500,500);
-    objects.create("tower",500,1000);
+    objects.create("block",1,1);
+    objects.create("mind",5,5);
+    objects.create("tower",10,10);
     game.gameLoop();
 };
 

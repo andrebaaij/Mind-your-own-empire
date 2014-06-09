@@ -415,9 +415,11 @@ repository.prototype.get = function(name) {
 };
 
 objects.prototype.create = function(name, x, y) {
+    var position = common.getScreenFromGrid(level.get(), userInterface.elements.canvas, x, y);
+    
     var prototype = objects.repository.get(name);
     var object = new prototype();
-    object.initialise(x,y);
+    object.initialise(position.x,position.y);
     return object;
 };
 
