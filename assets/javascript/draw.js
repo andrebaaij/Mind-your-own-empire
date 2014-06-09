@@ -2,7 +2,18 @@
 
 /* jshint loopfunc: true */
 
-var draw = function (canvas, level, objects, craftObject) {
+var draw = {};
+
+
+draw.initialise = function () {
+    this.gameTiles = common.resources.tilesets.get('gameTiles');
+};
+
+draw.drawTile = function(tileset, index, x, y) {
+    
+};
+
+draw.draw = function (canvas, level, objects, craftObject) {
     canvas.context.clearRect(0, 0, canvas.width, canvas.height);
     
     var tileset = level.tilesets[0];
@@ -23,30 +34,7 @@ var draw = function (canvas, level, objects, craftObject) {
     var numberOfTilesForWidth = Math.ceil(canvas.width/tilewidth) * 2;
     
     var layer = level.layers[0];
-//    for (var k = tileYOffset - Math.floor(tileXOffset/2) - numberOfTilesForHeight ; k < tileYOffset - Math.floor(tileXOffset/2) + numberOfTilesForHeight  ; k++) {
-//        for (var j = k-1+tileXOffset ; j < numberOfTilesForWidth + k + tileXOffset + 1 ; j++) {
-//            var i = k*level.width + j;
-//            if (i < 0) {
-//                continue;
-//            }
-//            var tileIndex = layer.data[i] - 1;
-//            var sx = tileIndex % tilesPerRow;
-//            var sy = (tileIndex - sx) / tilesPerRow;
-//            var cx = i % layer.width;
-//            var cy = (i - cx) / layer.height;
-//            canvas.context.drawImage(plaatje,
-//                                   sx * tilewidth,
-//                                   sy * tileheight,
-//                                   tilewidth,
-//                                   tileheight,
-//                                   Math.round(0.5*(cx-cy)*tilewidth-0.5*(canvas.xOffset)*tilewidth),
-//                                   Math.round(0.5*(cx+cy)*tileheight-(canvas.yOffset)*tileheight),
-//                                   tilewidth,
-//                                   tileheight
-//                                );
-//        }
-//    }
-//    
+
     for (var k = tileYOffset - 0.5*tileXOffset - Math.max(numberOfTilesForHeight, numberOfTilesForWidth) ; 
          k < tileYOffset - 0.5*tileXOffset + Math.max(numberOfTilesForHeight, numberOfTilesForWidth); 
          k++) {
@@ -72,6 +60,47 @@ var draw = function (canvas, level, objects, craftObject) {
                                 );
         }
     }
+    
+    // Draw selection box:
+    
+    tileset = this.gameTiles;
+    
+    tilewidth = tileset.grid.width;
+    tileheight = tileset.grid.height;
+    imagewidth = tileset.width;
+    imageheight = tileset.height;
+    tilesPerRow = imagewidth / tilewidth;
+    
+    plaatje = tileset;
+
+    var x = userInterface.variables.mouseX + canvas.xOffset;
+        
+    var y = userInterface.variables.mouseY + canvas.yOffset;
+    
+    //var left = Math.floor((y*tilewidth - x*tileheight)/(tilewidth*tileheight));
+    //var right = Math.floor((y*tilewidth + x*tileheight)/(tilewidth*tileheight));
+    var i = common.getGridFromScreen(level, canvas, userInterface.variables.mouseX, userInterface.variables.mouseY).index;//level.width * left + right;
+    
+    //console.log(userInterface.variables.mouseX)
+    //console.log(userInterface.variables.mouseY)
+    //console.log(common.getGridFromScreen(this, canvas, userInterface.variables.mouseX, userInterface.variables.mouseY))
+
+    var tileIndex = 0;
+    var sx = tileIndex % tilesPerRow;
+    var sy = (tileIndex - sx) / tilesPerRow;
+    var cx = i % layer.width;
+    var cy = (i - cx) / layer.height;
+    
+    canvas.context.drawImage(plaatje,
+                       sx * tilewidth,
+                       sy * tileheight,
+                       tilewidth,
+                       tileheight,
+                       Math.round(0.5*(cx-cy)*tilewidth-canvas.xOffset),
+                       Math.round(0.5*(cx+cy)*tileheight-canvas.yOffset),
+                       tilewidth,
+                       tileheight
+                    );
     
     objects.sort(function (a,b) {
         var result = (a.y < b.y) ? -1 : (a.y > b.y) ? 1 : 0;
