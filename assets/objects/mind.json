@@ -1,4 +1,7 @@
 {
     "images" : ["tileset"],
-    "targetActions" : []
+    "targetActions" : [],
+    "defaults" : {
+        "communicationRadius" : 30    
+    }
 }

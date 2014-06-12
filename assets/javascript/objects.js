@@ -275,6 +275,7 @@ objects.prototype.functions.initialise = function(x,y) {
     object.loopSpeed = 10; //milliseconds
 
     for (var variable in object.defaults) {
+        console.log(variable);
         object[variable] = object.defaults[variable];
     }
 
@@ -324,8 +325,13 @@ repository.prototype.get = function(name) {
             objects.repository[name].prototype.icon = common.resources.icons.get(name);
         }
     }
-
-    objects.repository[name].prototype.defaults = {};
+    
+    if (object.defaults) {
+        objects.repository[name].prototype.defaults = object.defaults;
+    } else {
+        objects.repository[name].prototype.defaults = {}  
+    }
+    
     objects.repository[name].prototype.name = name;
     
     if (object.skills) {

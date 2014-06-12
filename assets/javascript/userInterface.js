@@ -400,8 +400,6 @@ userInterface.canvasClickListener = function(e) {
     }
 };
 
-
-
 userInterface.recalculateResources = function() {
     var resourcesFromSelectedObjects = {};
     
