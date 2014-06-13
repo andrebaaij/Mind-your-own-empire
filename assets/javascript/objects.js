@@ -278,12 +278,16 @@ objects.prototype.functions.initialise = function(x,y) {
         console.log(variable);
         object[variable] = object.defaults[variable];
     }
-
+    
+    object.emitter = new Emitter(0,0, settings.mine);
+    
     // breathe
     object.loop();
 
     objects.add(object);
 
+    
+    
     return object;
 };
 

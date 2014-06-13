@@ -11,7 +11,7 @@ game.initialise = function() {
     game.gameLoop();
 };
 
-common.require('draw','level','objects','userInterface',game.initialise);
+common.require('draw','level','objects','userInterface','particle',game.initialise);
 
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);

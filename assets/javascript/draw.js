@@ -77,14 +77,8 @@ draw.draw = function (canvas, level, objects, craftObject) {
         
     var y = userInterface.variables.mouseY + canvas.yOffset;
     
-    //var left = Math.floor((y*tilewidth - x*tileheight)/(tilewidth*tileheight));
-    //var right = Math.floor((y*tilewidth + x*tileheight)/(tilewidth*tileheight));
     var i = common.getGridFromScreen(level, canvas, userInterface.variables.mouseX, userInterface.variables.mouseY).index;//level.width * left + right;
     
-    //console.log(userInterface.variables.mouseX)
-    //console.log(userInterface.variables.mouseY)
-    //console.log(common.getGridFromScreen(this, canvas, userInterface.variables.mouseX, userInterface.variables.mouseY))
-
     var tileIndex = 0;
     var sx = tileIndex % tilesPerRow;
     var sy = (tileIndex - sx) / tilesPerRow;
@@ -147,6 +141,8 @@ draw.draw = function (canvas, level, objects, craftObject) {
                 var sx = tileIndex % tilesPerRow;
                 var sy = (tileIndex - sx) / tilesPerRow;
 
+                object.emitter.update(canvas, Math.round(object.x-canvas.xOffset), Math.round(object.y-canvas.yOffset));
+                
                 canvas.context.drawImage(object.image,
                                        sx * tilewidth,
                                        sy * tileheight,
@@ -193,4 +189,6 @@ draw.draw = function (canvas, level, objects, craftObject) {
         
         canvas.context.restore();
     }
+    
+    
 };
