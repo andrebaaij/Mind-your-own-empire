@@ -1,6 +1,10 @@
 
 
-var game = {};
+var game = {
+   variables : {
+       pause : false
+   }
+};
 
 game.initialise = function() {
     // load all objects
@@ -15,6 +19,9 @@ common.require('draw','level','objects','userInterface','particle',game.initiali
 
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);
-    draw.draw(userInterface.elements.canvas, level.get(), objects.list(), userInterface.variables.craftObject);
+    
+    if (!game.variables.pause) {
+        draw.draw(userInterface.elements.canvas, level.get(), objects.list(), userInterface.variables.craftObject);
+    }
 };
 

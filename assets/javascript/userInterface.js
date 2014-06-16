@@ -59,8 +59,10 @@ userInterface.setVariable = function(name, value) {
 userInterface.pause = function(command) {
     if (command === "on" ) {
         userInterface.elements.pause.style.display = "block";
+        game.variables.pause = true;
     } else if (command === "off" ){
         userInterface.elements.pause.style.display = "none";
+        game.variables.pause = false;
     }
     
     return userInterface.elements.pause.style.display === "block";

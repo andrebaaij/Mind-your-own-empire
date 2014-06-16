@@ -250,7 +250,11 @@ objects.prototype.functions.restLoop = function() {
 
 objects.prototype.functions.loop = function() {
     setTimeout(this.loop.bind(this),this.loopSpeed);
-
+    
+    if (game.variables.pause) {
+        return;    
+    }
+    
     if (this.actions.length > 0) {
         if (this[this.actions[0].action + "Loop"]) {
             this.setAnimation(this.actions[0].action);
