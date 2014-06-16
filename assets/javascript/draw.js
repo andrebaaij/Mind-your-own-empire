@@ -141,7 +141,9 @@ draw.draw = function (canvas, level, objects, craftObject) {
                 var sx = tileIndex % tilesPerRow;
                 var sy = (tileIndex - sx) / tilesPerRow;
 
-                object.emitter.update(canvas, Math.round(object.x-canvas.xOffset), Math.round(object.y-canvas.yOffset));
+                if (object.emitter) {
+                    object.emitter.update(canvas, Math.round(object.x-canvas.xOffset), Math.round(object.y-canvas.yOffset));
+                }
                 
                 canvas.context.drawImage(object.image,
                                        sx * tilewidth,

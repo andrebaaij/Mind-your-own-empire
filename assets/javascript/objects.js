@@ -34,6 +34,8 @@ objects.prototype.functions = {};
 objects.prototype.functions.move = function(x,y) {
     this.x += x;
     this.y += y;
+    
+    this.grid = common.getGridFromCoordinates(this.x, this.y);
 };
 
 objects.prototype.functions.select = function(){
@@ -97,6 +99,12 @@ objects.prototype.functions.setAnimation = function(animation) {
         this.animation.name = animation;
         this.animation.array = this.tileset.animations[animation][this.direction];
         this.animation.index = 0;
+
+        if (this.tileset.animations[animation].emitter) {
+            this.emitter = new Emitter(0,0, this.tileset.animations[animation].emitter);
+        } else {
+            this.emitter = null;    
+        }
     }
 };
 
@@ -181,6 +189,8 @@ objects.prototype.functions.walkLoop = function(action) {
     this.move(x,y);
 
     if (-3 < this.x-destination.x && this.x-destination.x < 3 && -2 < this.y-destination.y && this.y-destination.y < 2) {
+        this.x = destination.x;
+        this.y = destination.y;
         this.actions.shift();
     }
 
@@ -256,30 +266,32 @@ objects.prototype.functions.loop = function() {
 
 objects.prototype.functions.initialise = function(x,y) {
     var object = new objects.repository[this.name]();
-
+    
+    var position = common.getCoordinatesFromGrid(x, y);
+    
     //Remove the initialise function.
     object.initialise = undefined;
 
 
     //Initialize the variables:            
-    object.x = x;
-    object.y = y;
+    object.x = position.x;
+    object.y = position.y;
+    
     object.path = []; 
     object.animation = {array: []};
     object.actions = [];
-    object.resources = {};
+    object.resources = {};             
 
+    object.grid = {x: x, y: y};
+    
     object.setAnimation(object.tileset.defaultAnimation);
     object.setDirection('NE');
     setTimeout(object.animationLoop.bind(object),100);
     object.loopSpeed = 10; //milliseconds
 
     for (var variable in object.defaults) {
-        console.log(variable);
         object[variable] = object.defaults[variable];
     }
-    
-    object.emitter = new Emitter(0,0, settings.mine);
     
     // breathe
     object.loop();
@@ -425,11 +437,12 @@ repository.prototype.get = function(name) {
 };
 
 objects.prototype.create = function(name, x, y) {
-    var position = common.getScreenFromGrid(level.get(), userInterface.elements.canvas, x, y);
+    
     
     var prototype = objects.repository.get(name);
     var object = new prototype();
-    object.initialise(position.x,position.y);
+    object.initialise(x,y);
+    
     return object;
 };
 
@@ -439,9 +452,9 @@ objects.prototype.add = function(object) {
 
 objects.prototype.find = function(x, y) {
     var array = [];
-    
+
     this.array.forEach(function(object, index) {
-        if (object.x - object.center.x <= x && object.x+object.width - object.center.x >= x && object.y - object.center.y <= y && object.y+object.height - object.center.y >= y) {
+        if (object.grid.x === x && object.grid.y === y) {
             array.push(object);
         }
     });

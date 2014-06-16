@@ -96,10 +96,10 @@ level.printPath = function (node) {
     while (true) {
         var right = node.index % this.definition.width;
         var left = (node.index - right) / this.definition.width;
-        var x = 0.5*tilewidth*(right - left);
+        var x = 0.5*tilewidth*(right - left)+ tilewidth*0.5;
         var y = 0.5*tileheight*(1+left+right);
         array.push({x:x, y:y});
-        //console.log("(" + left + "," + right + ") -> (" + x + "," + y + ")");
+
         node = node.previousNodeOnShortestPath;
         if (node === null) {
             array.pop();
@@ -120,9 +120,13 @@ level.getPath2 = function(object, destination) {
     var right = Math.floor((object.y*tilewidth + object.x*tileheight)/(tilewidth*tileheight));
     var index = this.definition.width * left + right;
     
+    var coordinates = common.getGridFromCoordinates(destination.x, destination.y);
+    
     left = Math.floor((destination.y*tilewidth - destination.x*tileheight)/(tilewidth*tileheight));
     right = Math.floor((destination.y*tilewidth + destination.x*tileheight)/(tilewidth*tileheight));
-    var destionationIndex = this.definition.width * left + right;
+    var destinationIndex = this.definition.width * left + right;
+    
+    destinationIndex = coordinates.index;
     
     var layer = this.get().layers[0];
     var visitedNotes = [];
@@ -132,16 +136,14 @@ level.getPath2 = function(object, destination) {
     firstNode = currentPosition;
     currentNode = currentPosition;
     
-    while (visitedNotes[destionationIndex] === undefined) {
+    while (visitedNotes[destinationIndex] === undefined) {
         var neighbours = this.getNeighbours(firstNode.index, firstNode.distance);
         while (neighbours.length > 0) {
             var neighbour = neighbours.pop();
             if (neighbour.index >= 0 && visitedNotes[neighbour.index] === undefined) {
                 if (layer.data[neighbour.index] < 15) {
                 visitedNotes[neighbour.index] = 1;
-                if (neighbour.index == destionationIndex) {
-                    //console.log(neighbour.distance);
-                    console.log("klaar");
+                if (neighbour.index == destinationIndex) {
                     return this.printPath(this.makeNode(neighbour.index, firstNode, neighbour.distance));
                 }
                 this.addNode(this.makeNode(neighbour.index, firstNode, neighbour.distance));
@@ -151,61 +153,10 @@ level.getPath2 = function(object, destination) {
         firstNode.next.previous = null;
         firstNode = firstNode.next;
     }
-    
-    
-    
-//    var i = 0;
-//    while (i<10000) {
-//        this.addNode(this.makeNode(1+i,12+i%10));
-//        i = i + 1;
-//    }
-    //this.addNode(this.makeNode(2,18));
-    //this.addNode(this.makeNode(4,15));
-    
-    //console.log(firstNode.next.next.next.distance);
-    
-    // linked list met ontdekte maar nog niet bezochte paden. Eerste en laatstgebruikte onthouden.
-    // array list met bezochte paden
-    // listitem bevat vorige nog niet bezochte pad, vorige in het pad, afstand tot startpunt, index mbt veld.
-    
-    //{x:x, y:y}
 };
 
 level.getPath = function(object, destination) {
     var paths = this.getPath2(object, destination);
-
-//    var array = [];
-//    
-//    var lineObject = {},
-//        lineDestination = {};
-//    
-//    //console.log(object);
-//    
-//    lineObject.startX = object.x;
-//    lineObject.endX = object.x + 2;
-//    lineDestination.startX = destination.x;
-//    lineDestination.endX = destination.x - 2;
-//    
-//    lineObject.startY = object.y;
-//    lineDestination.startY = destination.y;
-//    
-//    if (destination.y < object.y) {
-//        lineObject.endY = object.y - 1;
-//        lineDestination.endY = destination.y - 1;
-//    } else {
-//        lineObject.endY = object.y + 1;
-//        lineDestination.endY = destination.y + 1;
-//    }
-//    
-//    //console.log(lineObject);
-//    //console.log(lineDestination);
-//    
-//    var intersect = common.checkLineIntersection(lineObject.startX, lineObject.startY, lineObject.endX, lineObject.endY, lineDestination.startX, lineDestination.startY, lineDestination.endX, lineDestination.endY);
-//    
-//    paths.push(intersect);
-//    paths.push(destination);
-    
-    //console.log(paths);
     
     return paths;
 };

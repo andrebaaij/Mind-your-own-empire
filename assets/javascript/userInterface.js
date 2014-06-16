@@ -317,7 +317,9 @@ userInterface.canvasClickListener = function(e) {
             object.deselect();
         });
 
-        userInterface.variables.selectedObjects = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+        var grid = common.getGridFromScreen(level.get(), userInterface.elements.canvas, mouseX, mouseY)
+        
+        userInterface.variables.selectedObjects = objects.find(grid.x, grid.y);
 
         userInterface.variables.selectedObjects.forEach(function(object, index) {
             object.select();

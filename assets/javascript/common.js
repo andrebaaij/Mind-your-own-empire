@@ -298,11 +298,41 @@ common.getGridFromScreen = function(level, canvas, x, y) {
     
 };
 
+common.getGridFromCoordinates = function(x, y) {
+    var levelDefinition = level.get();
+    
+    x = x - levelDefinition.tilewidth/2;
+   
+    var gx = Math.floor((x / (levelDefinition.tilewidth) + y / (levelDefinition.tileheight)));
+    var gy = Math.floor((y / (levelDefinition.tileheight) - x / (levelDefinition.tilewidth)));
+    
+    if (gx < 0) gx = 0;
+    else if (gx >= levelDefinition.width) gx = levelDefinition.width-1;
+
+    if (gy < 0) gy = 0;
+    else if (gy >= levelDefinition.height) gy = levelDefinition.height-1;
+    
+    gx = parseInt(gx,10);
+    gy = parseInt(gy,10);
+    
+    i = gx + (gy * levelDefinition.width);
+    
+    return { x : parseInt(gx,10), y : parseInt(gy,10), index : i};
+    
+};
+
 
 // WARNING: This function is not tested yet
 // TODO: test this function
 common.getScreenFromGrid = function(level, canvas, x, y) {
     var sx = Math.round(canvas.xOffset) + ((parseInt(x,10) - parseInt(y,10)) * (level.tilewidth / 2));
     var sy = Math.round(canvas.yOffset) + ((parseInt(x,10) + parseInt(y,10)) * (level.tileheight / 2));
+    return { x : sx, y : sy};
+};
+
+common.getCoordinatesFromGrid = function(x, y) {
+    var levelDefinition = level.get();
+    var sx = ((parseInt(x,10) - parseInt(y,10)) * (levelDefinition.tilewidth / 2)) + levelDefinition.tilewidth/2;
+    var sy = ((parseInt(x,10) + parseInt(y,10)) * (levelDefinition.tileheight / 2)) + levelDefinition.tileheight/2;
     return { x : sx, y : sy};
 };

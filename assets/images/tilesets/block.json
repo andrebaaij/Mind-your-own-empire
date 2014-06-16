@@ -31,7 +31,40 @@
             "E"  : [0],
             "W"  : [0],
             "N"  : [0],
-            "S"  : [0]
+            "S"  : [0],
+            "emitter": {
+                "emission_rate": 1,
+                "min_life": 2.7,
+                "life_range": 0,
+                "min_angle": 85,
+                "angle_range": 20,
+                "min_speed": 5,
+                "speed_range": 5,
+                "min_size": 1,
+                "size_range": 2,
+                "start_colours": [
+                    [50, 50, 50, 0.8],
+                    [60, 60, 60, 0.8],
+                    [70, 70, 70, 0.8]
+                ],
+                "end_colours": [
+                    [80, 80, 80, 0.8],
+                    [90, 90, 90, 0.8],
+                    [100, 100, 100, 0.8]
+                ],
+                "gravity": {
+                    "x": 0,
+                    "y": 0
+                },
+                "min_position": {
+                    "x": -5,
+                    "y": 0
+                },
+                "position_range": {
+                    "x": 10,
+                    "y": 0
+                }
+            }
         }
     }
 }
