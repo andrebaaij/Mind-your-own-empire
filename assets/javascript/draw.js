@@ -13,7 +13,7 @@ draw.drawTile = function(tileset, index, x, y) {
     
 };
 
-draw.draw = function (canvas, level, objects, craftObject) {
+draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     canvas.context.clearRect(0, 0, canvas.width, canvas.height);
     
     var tileset = level.tilesets[0];
@@ -74,27 +74,33 @@ draw.draw = function (canvas, level, objects, craftObject) {
     plaatje = tileset;
 
     var x = userInterface.variables.mouseX + canvas.xOffset;
-        
     var y = userInterface.variables.mouseY + canvas.yOffset;
-    
-    var i = common.getGridFromScreen(level, canvas, userInterface.variables.mouseX, userInterface.variables.mouseY).index;//level.width * left + right;
     
     var tileIndex = 0;
     var sx = tileIndex % tilesPerRow;
     var sy = (tileIndex - sx) / tilesPerRow;
-    var cx = i % layer.width;
-    var cy = (i - cx) / layer.height;
     
-    canvas.context.drawImage(plaatje,
-                       sx * tilewidth,
-                       sy * tileheight,
-                       tilewidth,
-                       tileheight,
-                       Math.round(0.5*(cx-cy)*tilewidth-canvas.xOffset),
-                       Math.round(0.5*(cx+cy)*tileheight-canvas.yOffset),
-                       tilewidth,
-                       tileheight
-                    );
+    for (x = selectGrid.lx; x <= selectGrid.rx; x++) {
+        for (y = selectGrid.ty; y <= selectGrid.by; y++) {
+            var i = y*level.width + x;
+            
+            var cx = i % layer.width;
+            var cy = (i - cx) / layer.height;
+
+            canvas.context.drawImage(plaatje,
+                               sx * tilewidth,
+                               sy * tileheight,
+                               tilewidth,
+                               tileheight,
+                               Math.round(0.5*(cx-cy)*tilewidth-canvas.xOffset),
+                               Math.round(0.5*(cx+cy)*tileheight-canvas.yOffset),
+                               tilewidth,
+                               tileheight
+                            );
+        }
+    }
+    
+
     
     objects.sort(function (a,b) {
         var result = (a.y < b.y) ? -1 : (a.y > b.y) ? 1 : 0;

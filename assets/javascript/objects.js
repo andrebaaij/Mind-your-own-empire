@@ -454,11 +454,11 @@ objects.prototype.add = function(object) {
     this.array.push(object);
 };
 
-objects.prototype.find = function(x, y) {
+objects.prototype.find = function(lx, ty, rx, by) {    
     var array = [];
 
     this.array.forEach(function(object, index) {
-        if (object.grid.x === x && object.grid.y === y) {
+        if (lx <= object.grid.x && object.grid.x <= rx && ty <= object.grid.y && object.grid.y <= by) {
             array.push(object);
         }
     });

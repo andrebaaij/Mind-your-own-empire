@@ -21,7 +21,7 @@ game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);
     
     if (!game.variables.pause) {
-        draw.draw(userInterface.elements.canvas, level.get(), objects.list(), userInterface.variables.craftObject);
+        draw.draw(userInterface.elements.canvas, level.get(), objects.list(), userInterface.variables.craftObject, userInterface.variables.selectGrid);
     }
 };
 

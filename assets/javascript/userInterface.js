@@ -7,7 +7,14 @@ userInterface.variables = {
     scrollY : 0,
     selectedObjects : [],
     resourcesFromSelectedObjects : {},
-    craftObject : null
+    craftObject : null,
+    selectGrid : {
+        ty : null,
+        by : null,
+        lx : null,
+        rx : null
+    },
+    mouseDown : false
 };
 
 userInterface.initialise = function () {
@@ -23,6 +30,7 @@ userInterface.initialise = function () {
     
     /* EventListeners assignment*/
     userInterface.elements.canvas.addEventListener('mousemove', userInterface.canvasMoveMouseListener);
+    userInterface.elements.canvas.addEventListener('mousedown', userInterface.canvasMouseDownListener);
     userInterface.elements.canvas.addEventListener('mouseup', userInterface.canvasClickListener);
     userInterface.elements.pauseContinue.addEventListener('click', function () {userInterface.pause("off"); });
     userInterface.elements.pauseFullscreen.addEventListener('click', function () {userInterface.fullscreen("toggle"); });
@@ -40,7 +48,7 @@ userInterface.initialise = function () {
         userInterface.craft("off");
     });
     
-    window.onblur = function () {userInterface.pause("on"); };
+    window.onblur = function () {userInterface.variables.mouseDown = false; userInterface.pause("on"); };
     
     /* Loops */
     userInterface.scrollLoop();
@@ -257,6 +265,24 @@ userInterface.canvasMoveMouseListener = function(e) {
     userInterface.variables.mouseX = mouseX;
     userInterface.variables.mouseY = mouseY;
     
+    
+    var x = mouseX + userInterface.elements.canvas.xOffset,
+        y = mouseY + userInterface.elements.canvas.yOffset;
+    
+    var grid = common.getGridFromCoordinates(x, y);      
+    
+    if (userInterface.variables.mouseDown) {
+        userInterface.variables.selectGrid.by = Math.max(userInterface.variables.selectGrid.by,userInterface.variables.selectGrid.ty,grid.y);
+        userInterface.variables.selectGrid.ty = Math.min(userInterface.variables.selectGrid.ty,userInterface.variables.selectGrid.by,grid.y);
+        userInterface.variables.selectGrid.lx = Math.min(userInterface.variables.selectGrid.lx,userInterface.variables.selectGrid.rx,grid.x);
+        userInterface.variables.selectGrid.rx = Math.max(userInterface.variables.selectGrid.lx,userInterface.variables.selectGrid.rx,grid.x);
+    } else {
+        userInterface.variables.selectGrid.ty = grid.y;
+        userInterface.variables.selectGrid.by = grid.y;
+        userInterface.variables.selectGrid.lx = grid.x;
+        userInterface.variables.selectGrid.rx = grid.x;
+    }
+    
     if(mouseX < 100) {
         userInterface.variables.scrollX = -1;
     } else if (mouseX > userInterface.elements.canvas.width - 100) {
@@ -274,7 +300,39 @@ userInterface.canvasMoveMouseListener = function(e) {
     }
 };
 
+userInterface.canvasMouseDownListener = function(e) {
+    if (!userInterface.variables.mouseDown) {
+        var rect = userInterface.elements.canvas.getBoundingClientRect();
+
+        var posx = 0;
+        var posy = 0;
+        if (!e) e = window.event;
+        if (e.pageX || e.pageY) {
+            posx = e.pageX;
+            posy = e.pageY;
+        }
+        else if (e.clientX || e.clientY) {
+            posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+            posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+        }
+        // posx and posy contain the mouse position relative to the document
+        // Do something with this information
+
+        mouseX = posx - rect.left;
+        mouseY = posy - rect.top;
+        
+        var grid = common.getGridFromCoordinates(mouseX, mouseY);   
+        
+        //userInterface.variables.selectGrid.lx = grid.x;
+        //userInterface.variables.selectGrid.ty = grid.y;
+
+        userInterface.variables.mouseDown = true;
+    }
+};
+
 userInterface.canvasClickListener = function(e) {
+    userInterface.variables.mouseDown = false;
+    
     mouseX = userInterface.variables.mouseX;
     mouseY = userInterface.variables.mouseY;
     
@@ -318,10 +376,10 @@ userInterface.canvasClickListener = function(e) {
         objects.list().forEach(function(object, index) {
             object.deselect();
         });
-
-        var grid = common.getGridFromScreen(level.get(), userInterface.elements.canvas, mouseX, mouseY)
         
-        userInterface.variables.selectedObjects = objects.find(grid.x, grid.y);
+        //console.log("lx:" + userInterface.variables.selectGrid.lx + ",ty:" + userInterface.variables.selectGrid.ty + ",rx:" + userInterface.variables.selectGrid.rx + ",by:"+ userInterface.variables.selectGrid.by)
+  
+        userInterface.variables.selectedObjects = objects.find(userInterface.variables.selectGrid.lx,userInterface.variables.selectGrid.ty, userInterface.variables.selectGrid.rx, userInterface.variables.selectGrid.by);
 
         userInterface.variables.selectedObjects.forEach(function(object, index) {
             object.select();
