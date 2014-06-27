@@ -272,8 +272,15 @@ userInterface.canvasMoveMouseListener = function(e) {
     var grid = common.getGridFromCoordinates(x, y);      
     
     if (userInterface.variables.mouseDown) {
-        userInterface.variables.selectGrid.by = Math.max(userInterface.variables.selectGrid.by,userInterface.variables.selectGrid.ty,grid.y);
-        userInterface.variables.selectGrid.ty = Math.min(userInterface.variables.selectGrid.ty,userInterface.variables.selectGrid.by,grid.y);
+        
+        if (userInterface.variables.selectGrid.ty > grid.y) {
+            userInterface.variables.selectGrid.by = userInterface.variables.selectGrid.y;
+            userInterface.variables.selectGrid.ty = grid.y;
+        } else {
+            userInterface.variables.selectGrid.by = grid.y;
+            //userInterface.variables.selectGrid.ty = Math.min(userInterface.variables.selectGrid.ty,userInterface.variables.selectGrid.by,grid.y);
+        }
+        
         userInterface.variables.selectGrid.lx = Math.min(userInterface.variables.selectGrid.lx,userInterface.variables.selectGrid.rx,grid.x);
         userInterface.variables.selectGrid.rx = Math.max(userInterface.variables.selectGrid.lx,userInterface.variables.selectGrid.rx,grid.x);
     } else {
@@ -323,8 +330,8 @@ userInterface.canvasMouseDownListener = function(e) {
         
         var grid = common.getGridFromCoordinates(mouseX, mouseY);   
         
-        //userInterface.variables.selectGrid.lx = grid.x;
-        //userInterface.variables.selectGrid.ty = grid.y;
+        userInterface.variables.selectGrid.x = grid.x;
+        userInterface.variables.selectGrid.y = grid.y;
 
         userInterface.variables.mouseDown = true;
     }
