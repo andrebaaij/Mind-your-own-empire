@@ -121,6 +121,7 @@ tileset.prototype.grid = {
     width : null,
     height : null
 };
+tileset.prototype.tilesPerRow = 0;
 tileset.prototype.nbErrors = 0;
 tileset.prototype.animations = null;
 tileset.prototype.image_selected = null;
@@ -146,6 +147,7 @@ tilesets.prototype.add = function(name) {
     common.resources.tilesets[name] = new tileset();
     common.resources.tilesets[name].addEventListener('load',function(){
         this.nbErrors = 0;
+        this.tilesPerRow = this.width / this.grid.width;
     });
     
     common.resources.tilesets[name].addEventListener('error',function(){
@@ -182,7 +184,6 @@ tilesets.prototype.add = function(name) {
     common.resources.tilesets[name].animations = tilesetObject.animations;
     common.resources.tilesets[name].defaultAnimation = tilesetObject.defaultAnimation;
     common.resources.tilesets[name].src = imageURI;
-    
     return common.resources.tilesets[name];
 };
 

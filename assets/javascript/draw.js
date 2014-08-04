@@ -14,18 +14,16 @@ draw.drawTile = function(tileset, index, x, y) {
 };
 
 draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
+    // Clear canvas
     canvas.context.clearRect(0, 0, canvas.width, canvas.height);
     
-    var tileset = level.tilesets[0];
-    
-    var tilewidth = tileset.tilewidth;
-    var tileheight = tileset.tileheight;
-    var imagewidth = tileset.imagewidth;
-    var imageheight = tileset.imageheight;
-    
-    var tilesPerRow = imagewidth / tilewidth;
-    
-    var plaatje = common.resources.tilesets.get(tileset.name);
+    // Get tileset from level
+    var tileset_tiles = common.resources.tilesets.get(level.tilesets[0].name);
+       
+    // Assign tileset data to variables for easy use.
+    var tilewidth = tileset_tiles.grid.width;
+    var tileheight = tileset_tiles.grid.height;
+    var tilesPerRow = tileset_tiles.tilesPerRow;
     
     var tileXOffset = Math.floor(canvas.xOffset/tilewidth)*2;
     var tileYOffset = Math.floor(canvas.yOffset/tileheight);
@@ -48,7 +46,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             var sy = (tileIndex - sx) / tilesPerRow;
             var cx = i % layer.width;
             var cy = (i - cx) / layer.height;
-            canvas.context.drawImage(plaatje,
+            
+            canvas.context.drawImage(tileset_tiles,
                                    sx * tilewidth,
                                    sy * tileheight,
                                    tilewidth,
@@ -58,6 +57,23 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                                    tilewidth,
                                    tileheight
                                 );
+            
+            var tileIndex = level.layers[1].data[i];
+            var sx = tileIndex % tilesPerRow;
+            var sy = (tileIndex - sx) / tilesPerRow;
+            var cx = i % layer.width;
+            var cy = (i - cx) / layer.height;
+            
+            canvas.context.drawImage(this.gameTiles,
+                       sx * tilewidth,
+                       sy * tileheight,
+                       tilewidth,
+                       tileheight,
+                       Math.round(0.5*(cx-cy)*tilewidth-canvas.xOffset),
+                       Math.round(0.5*(cx+cy)*tileheight-canvas.yOffset),
+                       tilewidth,
+                       tileheight
+                    );
         }
     }
     
@@ -70,8 +86,6 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     imagewidth = tileset.width;
     imageheight = tileset.height;
     tilesPerRow = imagewidth / tilewidth;
-    
-    plaatje = tileset;
 
     var x = userInterface.variables.mouseX + canvas.xOffset;
     var y = userInterface.variables.mouseY + canvas.yOffset;
@@ -87,7 +101,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             var cx = i % layer.width;
             var cy = (i - cx) / layer.height;
 
-            canvas.context.drawImage(plaatje,
+            canvas.context.drawImage(tileset,
                                sx * tilewidth,
                                sy * tileheight,
                                tilewidth,
@@ -197,6 +211,4 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
         
         canvas.context.restore();
     }
-    
-    
 };

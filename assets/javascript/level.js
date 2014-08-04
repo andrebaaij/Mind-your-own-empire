@@ -160,3 +160,19 @@ level.getPath = function(object, destination) {
     
     return paths;
 };
+
+level.calculatefog = function() {
+    var objects = game.getObjects();
+    var fogOfWar = level.definition.layers[1];
+    fogOfWar.data = Array.apply(null, new Array(fogOfWar.width * fogOfWar.height)).map(Number.prototype.valueOf,2);
+    objects.forEach(function(object, index) {
+        if (typeof object.communicationRadius !== 'undefined') {
+            for(var x = object.grid.x - object.communicationRadius; x <= object.grid.x + object.communicationRadius; x++) {
+                for(y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {
+                    fogOfWar.data[y*fogOfWar.width+x] = 3;
+                }
+            }
+            
+        }
+    });
+};
