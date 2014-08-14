@@ -21,6 +21,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     var tileset_tiles = common.resources.tilesets.get(level.tilesets[0].name);
        
     // Assign tileset data to variables for easy use.
+    var chunkSize = game.settings.chunkSize;
+    
     var tilewidth = tileset_tiles.grid.width;
     var tileheight = tileset_tiles.grid.height;
     var tilesPerRow = tileset_tiles.tilesPerRow;
@@ -30,52 +32,74 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     
     var numberOfTilesForHeight = Math.ceil(canvas.height/tileheight);
     var numberOfTilesForWidth = Math.ceil(canvas.width/tilewidth) * 2;
+ 
+    var numberOfChunksForHeight = Math.ceil(numberOfTilesForHeight/chunkSize);
+    var numberOfChunksForWidth = Math.ceil(numberOfTilesForWidth/chunkSize);
     
     var layer = level.layers[0];
-
-    for (var k = tileYOffset - 0.5*tileXOffset - Math.max(numberOfTilesForHeight, numberOfTilesForWidth) ; 
-         k < tileYOffset - 0.5*tileXOffset + Math.max(numberOfTilesForHeight, numberOfTilesForWidth); 
-         k++) {
-        for (var j = k + tileXOffset - 1; j < numberOfTilesForWidth + k + tileXOffset + 2; j++) {
-            var i = k*level.width + j;
-            if (i < 0) {
-                continue;
-            }
-            var tileIndex = layer.data[i] - 1;
-            var sx = tileIndex % tilesPerRow;
-            var sy = (tileIndex - sx) / tilesPerRow;
-            var cx = i % layer.width;
-            var cy = (i - cx) / layer.height;
+    
+//    for (var y = Math.floor(tileYOffset/chunkSize); y <= Math.floor(tileYOffset/chunkSize) + numberOfChunksForHeight; y++) {
+//        for (var x = Math.floor(tileXOffset/chunkSize); x <= Math.floor(tileXOffset/chunkSize) + numberOfChunksForWidth; x++) {
+    for (var y = 0; y <= 2; y++) {
+        for (var x = 0; x <= 2; x++) {
+//            if (y < 0 || x < 0 || x > layer.width/chunkSize || y > layer.height/chunkSize) {
+//                return;    
+//            }
             
-            canvas.context.drawImage(tileset_tiles,
-                                   sx * tilewidth,
-                                   sy * tileheight,
-                                   tilewidth,
-                                   tileheight,
-                                   Math.round(0.5*(cx-cy)*tilewidth-canvas.xOffset),
-                                   Math.round(0.5*(cx+cy)*tileheight-canvas.yOffset),
-                                   tilewidth,
-                                   tileheight
-                                );
+            //console.log('x:'+ x + 'y:' + y);
+            chunk = game.getChunk(layer, x, y);
             
-            var tileIndex = level.layers[1].data[i];
-            var sx = tileIndex % tilesPerRow;
-            var sy = (tileIndex - sx) / tilesPerRow;
-            var cx = i % layer.width;
-            var cy = (i - cx) / layer.height;
             
-            canvas.context.drawImage(this.gameTiles,
-                       sx * tilewidth,
-                       sy * tileheight,
-                       tilewidth,
-                       tileheight,
-                       Math.round(0.5*(cx-cy)*tilewidth-canvas.xOffset),
-                       Math.round(0.5*(cx+cy)*tileheight-canvas.yOffset),
-                       tilewidth,
-                       tileheight
-                    );
+            
+            canvas.context.drawImage(chunk,
+                     ((x-y)*chunkSize*tilewidth/2) - (chunkSize*tilewidth/2) + (tilewidth / 2) - canvas.xOffset,
+                     ((y+x)*chunkSize*tileheight/2) - canvas.yOffset);
         }
     }
+    
+//    for (var k = tileYOffset - 0.5*tileXOffset - Math.max(numberOfTilesForHeight, numberOfTilesForWidth) ; 
+//         k < tileYOffset - 0.5*tileXOffset + Math.max(numberOfTilesForHeight, numberOfTilesForWidth); 
+//         k++) {
+//        for (var j = k + tileXOffset - 1; j < numberOfTilesForWidth + k + tileXOffset + 2; j++) {
+//            var i = k*level.width + j;
+//            if (i < 0) {
+//                continue;
+//            }
+//            var tileIndex = layer.data[i] - 1;
+//            var sx = tileIndex % tilesPerRow;
+//            var sy = (tileIndex - sx) / tilesPerRow;
+//            var cx = i % layer.width;
+//            var cy = (i - cx) / layer.height;
+//            
+//            canvas.context.drawImage(tileset_tiles,
+//                                   sx * tilewidth,
+//                                   sy * tileheight,
+//                                   tilewidth,
+//                                   tileheight,
+//                                   Math.round(0.5*(cx-cy)*tilewidth-canvas.xOffset),
+//                                   Math.round(0.5*(cx+cy)*tileheight-canvas.yOffset),
+//                                   tilewidth,
+//                                   tileheight
+//                                );
+            
+//            var tileIndex = level.layers[1].data[i];
+//            var sx = tileIndex % tilesPerRow;
+//            var sy = (tileIndex - sx) / tilesPerRow;
+//            var cx = i % layer.width;
+//            var cy = (i - cx) / layer.height;
+//            
+//            canvas.context.drawImage(this.gameTiles,
+//                       sx * tilewidth,
+//                       sy * tileheight,
+//                       tilewidth,
+//                       tileheight,
+//                       Math.round(0.5*(cx-cy)*tilewidth-canvas.xOffset),
+//                       Math.round(0.5*(cx+cy)*tileheight-canvas.yOffset),
+//                       tilewidth,
+//                       tileheight
+//                    );
+//        }
+//    }
     
     // Draw selection box:
     

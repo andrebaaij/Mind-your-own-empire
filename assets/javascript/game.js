@@ -13,29 +13,35 @@ game.initialise = function() {
     objects.create("mind",5,5);
     objects.create("tower",10,10);
     
+        //Level
+    game.calculatefog = level.calculatefog;
+    game.getChunk = level.chunks.get;
+   // game.getObjects = objects.list;
+    
     level.calculatefog();
     
+    game.settings = {
+        chunkSize: 10    
+    };
+    
     game.gameLoop();
+    
+
 };
 
-common.require('draw','level','objects','userInterface','particle',game.initialise);
+common.require('level','objects','userInterface','draw','particle',game.initialise);
 
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);
-    level.calculatefog();
     if (!game.variables.pause) {
         draw.draw(userInterface.elements.canvas, level.get(), objects.list(), userInterface.variables.craftObject, userInterface.variables.selectGrid);
     }
 };
 
-
-
-
-
 //Interfaces
-
 
 //Objects
 game.getObjects = function() {
     return objects.list();
 };
+

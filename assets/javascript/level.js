@@ -2,7 +2,9 @@
 
 /* jshint loopfunc: true */
 
-var level = {};
+var level = {
+    settings : {}
+};
 var firstNode = {};
 var currentNode = {};
 
@@ -13,6 +15,12 @@ level.initialise = function() {
 level.load = function (jsonFilename) {
     var URI = "./assets/maps/" + jsonFilename;
     this.definition = common.getJSONFromURI(URI);
+    
+    this.settings.tile = {
+        width : this.definition.tilewidth,
+        height : this.definition.tileheight
+    };
+    
 };
 
 level.get = function() {
@@ -161,7 +169,7 @@ level.getPath = function(object, destination) {
     return paths;
 };
 
-level.calculatefog = function() {
+level.calculatefog = function(log) {
     var objects = game.getObjects();
     var fogOfWar = level.definition.layers[1];
     fogOfWar.data = Array.apply(null, new Array(fogOfWar.width * fogOfWar.height)).map(Number.prototype.valueOf,2);
@@ -169,10 +177,111 @@ level.calculatefog = function() {
         if (typeof object.communicationRadius !== 'undefined') {
             for(var x = object.grid.x - object.communicationRadius; x <= object.grid.x + object.communicationRadius; x++) {
                 for(y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {
+                    if (x < 0 || x > fogOfWar.width || y < 0 || y > fogOfWar.height)
+                        return;
+                    
                     fogOfWar.data[y*fogOfWar.width+x] = 3;
+                    
+                    if (log === 1) {
+                        console.log(y) 
+                        console.log(y*fogOfWar.width) 
+                        console.log(y*fogOfWar.width+x)   
+                    }
                 }
             }
             
         }
     });
+};
+
+level.chunks = [];
+
+level.chunks.render = function(layer, chunkX, chunkY) {
+    //console.log(chunkX);
+    //console.log(chunkY);
+    
+    
+    /*
+        For performance reasons, we are splitting the level into chunks, the chunksize is set by game.settings.chunkSize
+    
+    */
+    
+    var chunkSize = game.settings.chunkSize;
+    
+    chunk = document.createElement('canvas'); // Create a new canvas, with a render chunk we can just dispose of any pre-existing chunk and create a new canvas element
+    chunk.context = chunk.getContext("2d");
+    
+    chunk.width = chunkSize * level.settings.tile.width; 
+    chunk.height = chunkSize * level.settings.tile.height;
+    
+    // Get tileset from level
+    var tileset_tiles = common.resources.tilesets.get(level.definition.tilesets[0].name);
+       
+    // Assign tileset data to variables for easy use.
+    var tileWidth = level.settings.tile.width;
+    var tileHeight = level.settings.tile.height;
+    var tilesPerRow = tileset_tiles.tilesPerRow;
+    
+    var numberOfTilesForHeight = Math.ceil(canvas.height/tileHeight);
+    var numberOfTilesForWidth = Math.ceil(canvas.width/tileWidth) * 2;
+
+    for (var y = chunkY*chunkSize; y < (chunkY*chunkSize) + chunkSize; y++) {
+        for (var x = chunkX*chunkSize; x < (chunkX*chunkSize) + chunkSize; x++) { 
+            var i = (y*layer.width + x);
+            if (i < 0) {
+                continue;
+            }
+            
+            
+            
+            var tileIndex = layer.data[i] - 1;
+            var sx = tileIndex % tilesPerRow;
+            var sy = (tileIndex - sx) / tilesPerRow;
+            
+            var cy = i - (chunkY * chunkSize * layer.width);
+            var cx = (cy - (Math.floor(cy / layer.width) * layer.width + chunkX * chunkSize));
+            cy = Math.floor(cy / layer.width);
+            //var cx = chunkI % chunkSize;
+            console.log(i+":"+cy);
+            //cy = (cy - cx) / chunkSize;
+            
+//          //  var cx = i % layer.width;
+//          //  var cy = (i - cx) / layer.height;
+            
+            
+            
+            chunk.context.drawImage(tileset_tiles,
+                                   sx * tileWidth,
+                                   sy * tileHeight,
+                                   tileWidth,
+                                   tileHeight,
+                                   //((chunkX+chunkY+1) * chunkSize * tileWidth / 2) + Math.round(0.5*(cx-cy)*tileWidth) - (tileWidth / 2),
+                                   //((((chunkX-chunkY) * chunkSize) * tileHeight) / 2) + Math.round(0.5*(cx+cy)*tileHeight),
+                                   (chunkSize * tileWidth / 2) + Math.round(0.5*(cx-cy)*tileWidth) - (tileWidth / 2),
+                                   Math.round(0.5*(cx+cy)*tileHeight),
+                                   tileWidth,
+                                   tileHeight
+                                );
+        }
+    }
+    
+    if (!level.chunks[chunkX]) level.chunks[chunkX] = [];
+    if (!level.chunks[chunkX][chunkY]) level.chunks[chunkX][chunkY] = {};
+
+    level.chunks[chunkX][chunkY][layer.name] = chunk;
+    
+    //console.log(chunk.toDataURL());
+    
+    return chunk;
+};
+
+level.chunks.get = function(layer, chunkX, chunkY) {
+    //console.log(level.chunks[chunkX]);
+    
+    if (level.chunks[chunkX] && level.chunks[chunkX][chunkY] && level.chunks[chunkX][chunkY][layer.name]) {
+        return level.chunks.render(layer, chunkX, chunkY);
+        //return level.chunks[chunkX][chunkY][layer.name];
+    } else {
+        return level.chunks.render(layer, chunkX, chunkY);
+    }
 };

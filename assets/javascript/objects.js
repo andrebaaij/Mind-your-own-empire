@@ -36,6 +36,8 @@ objects.prototype.functions.move = function(x,y) {
     this.y += y;
     
     this.grid = common.getGridFromCoordinates(this.x, this.y);
+    
+    game.calculatefog();
 };
 
 objects.prototype.functions.select = function(){
