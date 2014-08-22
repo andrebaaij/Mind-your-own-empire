@@ -19,14 +19,23 @@
 */
 
 
-/* global Image,document,window,setTimeout,console,XMLHttpRequest,common */
+/* global Image,document,window,setTimeout,console,XMLHttpRequest,common,game */
 
 function objects() {
     this.array = [];
 }
 
+objects.initialise = function() {
+    //Interfaces
+    game.objectsRepository = objects.repository;
+    game.getObjects = objects.list;
+    game.findObject = objects.find;    
+};
+
+
+
 objects.prototype.list = function() {
-    return this.array;
+    return objects.array;
 };
 
 objects.prototype.functions = {};
@@ -111,7 +120,8 @@ objects.prototype.functions.setAnimation = function(animation) {
 };
 
 objects.prototype.functions.walk = function(x,y) {
-    self = this;
+    var self = this,
+        origin;
 
     if (this.actions.length > 0) {
         origin = {x : self.actions[self.actions.length-1].x, y : self.actions[self.actions.length-1].y};
@@ -119,7 +129,7 @@ objects.prototype.functions.walk = function(x,y) {
         origin = {x : self.x, y : self.y};
     }
     
-    path = level.getPath(origin,{x:x, y:y});
+    var path = game.getPath(origin,{x:x, y:y});
 
     if (typeof path === 'undefined') return;
 
@@ -201,7 +211,7 @@ objects.prototype.functions.walkLoop = function(action) {
 objects.prototype.functions.chop = function(object) {
     this.walk(object.x, object.y);
 
-    action = {action:"chop", x : object.x, y : object.y, object: object};
+    var action = {action:"chop", x : object.x, y : object.y, object: object};
 
     this.actions.push(action);
 };
@@ -217,7 +227,7 @@ objects.prototype.functions.chopLoop = function(action) {
 objects.prototype.functions.craft = function(object) {
     this.walk(object.x, object.y);
 
-    action = {action:"craft", x : object.x, y : object.y, object: object};
+    var action = {action:"craft", x : object.x, y : object.y, object: object};
 
     this.actions.push(action);
 };
@@ -351,7 +361,7 @@ repository.prototype.get = function(name) {
     if (object.defaults) {
         objects.repository[name].prototype.defaults = object.defaults;
     } else {
-        objects.repository[name].prototype.defaults = {}  
+        objects.repository[name].prototype.defaults = {}; 
     }
     
     objects.repository[name].prototype.name = name;
@@ -459,7 +469,7 @@ objects.prototype.add = function(object) {
 objects.prototype.find = function(lx, ty, rx, by) {    
     var array = [];
 
-    this.array.forEach(function(object, index) {
+    objects.array.forEach(function(object, index) {
         if (lx <= object.grid.x && object.grid.x <= rx && ty <= object.grid.y && object.grid.y <= by) {
             array.push(object);
         }

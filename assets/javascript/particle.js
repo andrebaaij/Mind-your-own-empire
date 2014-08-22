@@ -232,8 +232,8 @@ Emitter.prototype.update = function(canvas, x, y) {
             Math.round(particle.colour[2]) + ',' +
             particle.colour[3] + ')';
 
-        var x = this.pos.x + particle.pos.x;
-        var y = this.pos.y + particle.pos.y;
+        x = this.pos.x + particle.pos.x;
+        y = this.pos.y + particle.pos.y;
 
         canvas.context.beginPath();
         canvas.context.arc(x, y, particle.size, 0, Math.PI * 2);

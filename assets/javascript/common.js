@@ -1,11 +1,9 @@
 /*
-    
-
     Styleguide: https://github.com/airbnb/javascript
 */
 
 
-/* global Image,document,window,setTimeout,console,XMLHttpRequest */
+/* global Image,document,window,setTimeout,console,XMLHttpRequest,game */
 
 
 /*
@@ -17,12 +15,8 @@
 var common = {};
 
 common.getJSONFromURI = function(URI) {
-    console.log(URI);
-    
     var request = new XMLHttpRequest();
     
-    //request.addEventListener("progress", updateProgress, false);
-    //request.addEventListener("load", transferComplete, false);
     request.addEventListener("error", function() {console.error("common.getJSONFromURI could not get " + URI);}, false);
     request.addEventListener("abort", function() {console.error("common.getJSONFromURI could not get " + URI);}, false);
     
@@ -125,7 +119,7 @@ tileset.prototype.tilesPerRow = 0;
 tileset.prototype.nbErrors = 0;
 tileset.prototype.animations = null;
 tileset.prototype.image_selected = null;
-
+tileset.prototype.isLoaded = false;
 
 tilesets.prototype.add = function(name) {
     if (typeof common.resources.tilesets[name] !== 'undefined') {
@@ -146,6 +140,7 @@ tilesets.prototype.add = function(name) {
     
     common.resources.tilesets[name] = new tileset();
     common.resources.tilesets[name].addEventListener('load',function(){
+        this.isLoaded = true;
         this.nbErrors = 0;
         this.tilesPerRow = this.width / this.grid.width;
     });
@@ -164,7 +159,9 @@ tilesets.prototype.add = function(name) {
         common.resources.tilesets[name].image_selected = new Image();
         
         common.resources.tilesets[name].image_selected.addEventListener('load',function(){
+            this.isLoaded = true;
             this.nbErrors = 0;
+            this.tilesPerRow = this.width / this.grid.width;
         });
         
         common.resources.tilesets[name].image_selected.addEventListener('error',function(){
@@ -245,7 +242,7 @@ common.resources.scripts = new Scripts();
 function Script() {}
 
 Scripts.prototype.add = function(name, callback) {
-    script = new Script();
+    var script = new Script();
     
     script.DOM = document.createElement("script");
     script.DOM.type = "text/javascript";
@@ -293,14 +290,14 @@ common.getGridFromScreen = function(level, canvas, x, y) {
     
     gx = parseInt(gx,10);
     gy = parseInt(gy,10);
-    i = gx + (gy * level.width);
+    var i = gx + (gy * level.width);
     
     return { x : parseInt(gx,10), y : parseInt(gy,10), index : i};
     
 };
 
 common.getGridFromCoordinates = function(x, y) {
-    var levelDefinition = level.get();
+    var levelDefinition = game.getLevel();
     
     x = x - levelDefinition.tilewidth/2;
    
@@ -316,7 +313,7 @@ common.getGridFromCoordinates = function(x, y) {
     gx = parseInt(gx,10);
     gy = parseInt(gy,10);
     
-    i = gx + (gy * levelDefinition.width);
+    var i = gx + (gy * levelDefinition.width);
     
     return { x : parseInt(gx,10), y : parseInt(gy,10), index : i};
     
@@ -332,7 +329,7 @@ common.getScreenFromGrid = function(level, canvas, x, y) {
 };
 
 common.getCoordinatesFromGrid = function(x, y) {
-    var levelDefinition = level.get();
+    var levelDefinition = game.getLevel();
     var sx = ((parseInt(x,10) - parseInt(y,10)) * (levelDefinition.tilewidth / 2)) + levelDefinition.tilewidth/2;
     var sy = ((parseInt(x,10) + parseInt(y,10)) * (levelDefinition.tileheight / 2)) + levelDefinition.tileheight/2;
     return { x : sx, y : sy};

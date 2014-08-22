@@ -1,21 +1,21 @@
+/* global Image,document,window,setTimeout,console,XMLHttpRequest,requestAnimationFrame,common,game */
+
 var userInterface = {};
 userInterface.elements = {};
 
-userInterface.variables = {
-    scrollSpeed : 10,
-    scrollX : 0,
-    scrollY : 0,
-    selectedObjects : [],
-    resourcesFromSelectedObjects : {},
-    craftObject : null,
-    selectGrid : {
+game.variables.scrollSpeed = 10;
+game.variables.scrollX = 0;
+game.variables.scrollY = 0;
+game.variables.selectedObjects = [];
+game.variables.resourcesFromSelectedObjects = {};
+game.variables.craftObject = null;
+game.variables.selectGrid = {
         ty : null,
         by : null,
         lx : null,
         rx : null
-    },
-    mouseDown : false
-};
+    };
+game.variables.mouseDown = false;
 
 userInterface.initialise = function () {
     /* Elements */
@@ -34,8 +34,8 @@ userInterface.initialise = function () {
     userInterface.elements.canvas.addEventListener('mouseup', userInterface.canvasClickListener);
     userInterface.elements.pauseContinue.addEventListener('click', function () {userInterface.pause("off"); });
     userInterface.elements.pauseFullscreen.addEventListener('click', function () {userInterface.fullscreen("toggle"); });
-    userInterface.elements.menu_pause.addEventListener('mouseover', function () {userInterface.variables.scrollX = 0; userInterface.variables.scrollY = 0; });
-    userInterface.elements.menu_craft.addEventListener('mouseover', function () {userInterface.variables.scrollX = 0; userInterface.variables.scrollY = 0; });
+    userInterface.elements.menu_pause.addEventListener('mouseover', function () {game.variables.scrollX = 0; game.variables.scrollY = 0; });
+    userInterface.elements.menu_craft.addEventListener('mouseover', function () {game.variables.scrollX = 0; game.variables.scrollY = 0; });
     
     userInterface.elements.menu_pause.addEventListener('click', function () {userInterface.pause("on"); });
     userInterface.elements.menu_craft.addEventListener('click', function () {
@@ -48,20 +48,20 @@ userInterface.initialise = function () {
         userInterface.craft("off");
     });
     
-    window.onblur = function () {userInterface.variables.mouseDown = false; userInterface.pause("on"); };
+    window.onblur = function () {game.variables.mouseDown = false; userInterface.pause("on"); };
     
     /* Loops */
     userInterface.scrollLoop();
     
     /* initialise */
-    userInterface.elements.canvas.context = canvas.getContext("2d");
+    userInterface.elements.canvas.context = userInterface.elements.canvas.getContext("2d");
     userInterface.elements.canvas.xOffset = 0;
     userInterface.elements.canvas.yOffset = 0;
     window.onresize();
 };
 
 userInterface.setVariable = function(name, value) {
-    userInterface.variables[name] = value;
+    game.variables[name] = value;
 };
 
 userInterface.pause = function(command) {
@@ -102,8 +102,8 @@ userInterface.craft = function(command) {
             node.setAttribute("class","window");
     
     //Loop through all objects in the repository
-    for(objectName in objects.repository) {
-        object = objects.repository[objectName];
+    for(objectName in game.objectsRepository) {
+        object = game.objectsRepository[objectName];
         
         // Check if the object can be crafted
         if (typeof object.prototype.craftInformation !== 'undefined') {
@@ -117,7 +117,7 @@ userInterface.craft = function(command) {
             
                 var craftResource;
                 for(craftResource in object.prototype.craftInformation) {
-                    if(!userInterface.variables.resourcesFromSelectedObjects[craftResource] || userInterface.variables.resourcesFromSelectedObjects[craftResource] < object.prototype.craftInformation[craftResource]) {
+                    if(!game.variables.resourcesFromSelectedObjects[craftResource] || game.variables.resourcesFromSelectedObjects[craftResource] < object.prototype.craftInformation[craftResource]) {
                         enoughResources = false;
                     }
                 }
@@ -132,7 +132,7 @@ userInterface.craft = function(command) {
                     // If the item is "off", not enough resources are available, thus return;
                     if (item.getAttribute("class") === 'item off') return;
                     
-                    userInterface.variables.craftObject = objects.repository.get(n);
+                    game.variables.craftObject = game.objectsRepository.get(n);
                     // Hide the craft menu
                     userInterface.craft("off");
                 });
@@ -153,7 +153,7 @@ userInterface.craft = function(command) {
                             var resource = document.createElement('div');
                                 resource.setAttribute("class","resource");
                                 
-                                resource.appendChild(objects.repository[objectResource].icon);
+                                resource.appendChild(game.objectsRepository[objectResource].icon);
                                 resource.appendChild(document.createTextNode(" x " + object.prototype.craftInformation[objectResource]));
                         
                             resources.appendChild(resource);
@@ -227,12 +227,12 @@ userInterface.fullscreen = function(command) {
 userInterface.scrollLoop = function() {
     requestAnimationFrame(userInterface.scrollLoop);
     
-    if ((!userInterface.variables.scrollX && !userInterface.variables.scrollY) || userInterface.pause()) {
+    if ((!game.variables.scrollX && !game.variables.scrollY) || userInterface.pause()) {
         return;    
     }
     
-    userInterface.elements.canvas.xOffset += (userInterface.variables.scrollSpeed * userInterface.variables.scrollX);
-    userInterface.elements.canvas.yOffset += (userInterface.variables.scrollSpeed * userInterface.variables.scrollY);
+    userInterface.elements.canvas.xOffset += (game.variables.scrollSpeed * game.variables.scrollX);
+    userInterface.elements.canvas.yOffset += (game.variables.scrollSpeed * game.variables.scrollY);
 };
 
 /* EventListeners */
@@ -259,11 +259,11 @@ userInterface.canvasMoveMouseListener = function(e) {
 	// posx and posy contain the mouse position relative to the document
 	// Do something with this information
     
-    mouseX = posx - rect.left;
-    mouseY = posy - rect.top;
+    var mouseX = posx - rect.left;
+    var mouseY = posy - rect.top;
     
-    userInterface.variables.mouseX = mouseX;
-    userInterface.variables.mouseY = mouseY;
+    game.variables.mouseX = mouseX;
+    game.variables.mouseY = mouseY;
     
     
     var x = mouseX + userInterface.elements.canvas.xOffset,
@@ -271,44 +271,44 @@ userInterface.canvasMoveMouseListener = function(e) {
     
     var grid = common.getGridFromCoordinates(x, y);      
     
-    if (userInterface.variables.mouseDown) {
+    if (game.variables.mouseDown) {
         
-        if (userInterface.variables.selectGrid.ty > grid.y) {
-            userInterface.variables.selectGrid.by = userInterface.variables.selectGrid.y;
-            userInterface.variables.selectGrid.ty = grid.y;
+        if (game.variables.selectGrid.ty > grid.y) {
+            game.variables.selectGrid.by = game.variables.selectGrid.y;
+            game.variables.selectGrid.ty = grid.y;
         } else {
-            userInterface.variables.selectGrid.by = grid.y;
-            //userInterface.variables.selectGrid.ty = Math.min(userInterface.variables.selectGrid.ty,userInterface.variables.selectGrid.by,grid.y);
+            game.variables.selectGrid.by = grid.y;
+            //game.variables.selectGrid.ty = Math.min(game.variables.selectGrid.ty,game.variables.selectGrid.by,grid.y);
         }
         
-        userInterface.variables.selectGrid.lx = Math.min(userInterface.variables.selectGrid.lx,userInterface.variables.selectGrid.rx,grid.x);
-        userInterface.variables.selectGrid.rx = Math.max(userInterface.variables.selectGrid.lx,userInterface.variables.selectGrid.rx,grid.x);
+        game.variables.selectGrid.lx = Math.min(game.variables.selectGrid.lx,game.variables.selectGrid.rx,grid.x);
+        game.variables.selectGrid.rx = Math.max(game.variables.selectGrid.lx,game.variables.selectGrid.rx,grid.x);
     } else {
-        userInterface.variables.selectGrid.ty = grid.y;
-        userInterface.variables.selectGrid.by = grid.y;
-        userInterface.variables.selectGrid.lx = grid.x;
-        userInterface.variables.selectGrid.rx = grid.x;
+        game.variables.selectGrid.ty = grid.y;
+        game.variables.selectGrid.by = grid.y;
+        game.variables.selectGrid.lx = grid.x;
+        game.variables.selectGrid.rx = grid.x;
     }
     
     if(mouseX < 100) {
-        userInterface.variables.scrollX = -1;
+        game.variables.scrollX = -1;
     } else if (mouseX > userInterface.elements.canvas.width - 100) {
-        userInterface.variables.scrollX = 1;
+        game.variables.scrollX = 1;
     } else {
-        userInterface.variables.scrollX = 0;
+        game.variables.scrollX = 0;
     }
     
     if (mouseY < 100) {
-        userInterface.variables.scrollY = -1;
+        game.variables.scrollY = -1;
     } else if (mouseY > userInterface.elements.canvas.height - 100) {
-        userInterface.variables.scrollY = 1;
+        game.variables.scrollY = 1;
     } else {
-        userInterface.variables.scrollY = 0;
+        game.variables.scrollY = 0;
     }
 };
 
 userInterface.canvasMouseDownListener = function(e) {
-    if (!userInterface.variables.mouseDown) {
+    if (!game.variables.mouseDown) {
         var rect = userInterface.elements.canvas.getBoundingClientRect();
 
         var posx = 0;
@@ -325,23 +325,25 @@ userInterface.canvasMouseDownListener = function(e) {
         // posx and posy contain the mouse position relative to the document
         // Do something with this information
 
-        mouseX = posx - rect.left;
-        mouseY = posy - rect.top;
+        var mouseX = posx - rect.left;
+        var mouseY = posy - rect.top;
         
         var grid = common.getGridFromCoordinates(mouseX, mouseY);   
         
-        userInterface.variables.selectGrid.x = grid.x;
-        userInterface.variables.selectGrid.y = grid.y;
+        game.variables.selectGrid.x = grid.x;
+        game.variables.selectGrid.y = grid.y;
 
-        userInterface.variables.mouseDown = true;
+        game.variables.mouseDown = true;
     }
 };
 
 userInterface.canvasClickListener = function(e) {
-    userInterface.variables.mouseDown = false;
+    var button;
     
-    mouseX = userInterface.variables.mouseX;
-    mouseY = userInterface.variables.mouseY;
+    game.variables.mouseDown = false;
+    
+    var mouseX = game.variables.mouseX;
+    var mouseY = game.variables.mouseY;
     
     if (e.which === null) {
         /* IE case */
@@ -359,10 +361,10 @@ userInterface.canvasClickListener = function(e) {
             resourcesFromSelectedObjects = {};
         
         // If we have one craft object selected it means we are in build mode.
-        if (userInterface.variables.craftObject !== null) {
+        if (game.variables.craftObject !== null) {
             // Build the object
-            craftedObject = userInterface.variables.craftObject.prototype.initialise(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
-            userInterface.variables.craftObject = null;
+            var craftedObject = game.variables.craftObject.prototype.initialise(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+            game.variables.craftObject = null;
             
             var resources = {};
             
@@ -370,7 +372,7 @@ userInterface.canvasClickListener = function(e) {
                 resources[resource] = craftedObject.craftInformation[resource];
             }
 
-            userInterface.variables.selectedObjects.forEach(function(object, index) {
+            game.variables.selectedObjects.forEach(function(object, index) {
                 if (object.craft) {
                     object.craft(craftedObject);
                     resources = object.removeResources(resources);
@@ -380,15 +382,15 @@ userInterface.canvasClickListener = function(e) {
             return;
         }
 
-        objects.list().forEach(function(object, index) {
+        game.getObjects().forEach(function(object, index) {
             object.deselect();
         });
         
-        //console.log("lx:" + userInterface.variables.selectGrid.lx + ",ty:" + userInterface.variables.selectGrid.ty + ",rx:" + userInterface.variables.selectGrid.rx + ",by:"+ userInterface.variables.selectGrid.by)
+        //console.log("lx:" + game.variables.selectGrid.lx + ",ty:" + game.variables.selectGrid.ty + ",rx:" + game.variables.selectGrid.rx + ",by:"+ game.variables.selectGrid.by)
   
-        userInterface.variables.selectedObjects = objects.find(userInterface.variables.selectGrid.lx,userInterface.variables.selectGrid.ty, userInterface.variables.selectGrid.rx, userInterface.variables.selectGrid.by);
+        game.variables.selectedObjects = game.findObject(game.variables.selectGrid.lx,game.variables.selectGrid.ty, game.variables.selectGrid.rx, game.variables.selectGrid.by);
 
-        userInterface.variables.selectedObjects.forEach(function(object, index) {
+        game.variables.selectedObjects.forEach(function(object, index) {
             object.select();
             
             // If one of the objects can craft, turn the flag aSelectedObjectCanCraft to true;
@@ -404,7 +406,7 @@ userInterface.canvasClickListener = function(e) {
                 }
             }
             
-            userInterface.variables.resourcesFromSelectedObjects = resourcesFromSelectedObjects;
+            game.variables.resourcesFromSelectedObjects = resourcesFromSelectedObjects;
         });
         
         // if aSelectedObjectCanCraft equals true, make the 
@@ -416,26 +418,26 @@ userInterface.canvasClickListener = function(e) {
     } else if (button === "RIGHT") {
    
         // If we have one object selected which can be initialised, it means we are in build mode.
-        if (userInterface.variables.selectedObjects.length === 1 && typeof userInterface.variables.selectedObjects[0].initialise !== 'undefined') {
+        if (game.variables.selectedObjects.length === 1 && typeof game.variables.selectedObjects[0].initialise !== 'undefined') {
             // Do nothing on right click
-            userInterface.variables.craftObject = null;
+            game.variables.craftObject = null;
         }
         
-        if (userInterface.variables.selectedObjects.length > 0) {
+        if (game.variables.selectedObjects.length > 0) {
             var targetActions = [];
             
-            array = objects.find(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+            var array = game.findObject(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
             
             //Loop through target objects
             array.forEach(function(targetObject, targetObjectIndex) {
                 if (!targetObject.targetActions) return;
                 
-                userInterface.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
+                game.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
                     if (!selectedObject.skills) return;
                     
                     selectedObject.skills.forEach(function(skill) {
                         if (targetObject.targetActions.indexOf(skill) !== -1 && targetActions.indexOf(skill) === -1) {
-                            targetActionAlreadyExists = false;
+                            var targetActionAlreadyExists = false;
                             targetActions.forEach(function(action) {
                                 if (action.skill === skill) {
                                     targetActionAlreadyExists = true;
@@ -452,12 +454,12 @@ userInterface.canvasClickListener = function(e) {
             if (targetActions.length > 1) {
                 console.log(targetActions);
             } else if (targetActions.length === 1) {
-                userInterface.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {   
+                game.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {   
                     if(!selectedObject[targetActions[0].skill]) return;         
                     selectedObject[targetActions[0].skill](targetActions[0].object);
                 });
             } else {
-                userInterface.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
+                game.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
                     if (selectedObject.walk) {
                         selectedObject.walk(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
                     }
@@ -472,7 +474,7 @@ userInterface.canvasClickListener = function(e) {
 userInterface.recalculateResources = function() {
     var resourcesFromSelectedObjects = {};
     
-    userInterface.variables.selectedObjects.forEach(function(object, index) {
+    game.variables.selectedObjects.forEach(function(object, index) {
         object.select();
 
         // If one of the objects can craft, turn the flag aSelectedObjectCanCraft to true;
@@ -486,6 +488,6 @@ userInterface.recalculateResources = function() {
             }
         }
 
-        userInterface.variables.resourcesFromSelectedObjects = resourcesFromSelectedObjects;
+        game.variables.resourcesFromSelectedObjects = resourcesFromSelectedObjects;
     });
 };
