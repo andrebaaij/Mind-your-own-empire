@@ -14,11 +14,10 @@ game.initialise = function() {
     objects.create("mind",5,5);
     objects.create("tower",10,10);
     
-    //level.calculatefog();
     game.gameLoop();
 };
 
-common.require('level','objects','userInterface','draw','particle',game.initialise);
+common.require('objects','level','userInterface','draw','particle',game.initialise);
 
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);

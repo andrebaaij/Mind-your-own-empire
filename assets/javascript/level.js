@@ -14,18 +14,37 @@ level.initialise = function() {
     game.calculatefog = level.calculatefog;
     game.getChunk = level.chunks.get;
     game.getLevel = level.get;
-    game.getPath = level.getPath;  
+    game.getPath = level.getPath;
 };
 
 level.load = function (jsonFilename) {
     var URI = "./assets/maps/" + jsonFilename;
     this.definition = common.getJSONFromURI(URI);
     
+    //Add a layer with history of walked tiles.
+    
+    var historyLayer = {
+         data:Array.apply(null, new Array(level.definition.width * level.definition.height)).map(Number.prototype.valueOf,2),
+         height:level.definition.height,
+         name:"history",
+         type:"historylayer",
+         visible:true,
+         width:level.definition.width,
+         x:0,
+         y:0
+        };
+    
+    this.definition.layers.push(historyLayer);
+    
+    level.layers = {};
+    level.layers.history = historyLayer;
+    
     game.variables.tile = {
         width : this.definition.tilewidth,
         height : this.definition.tileheight
     };
     
+    level.calculatefog();
 };
 
 level.get = function() {
@@ -171,22 +190,62 @@ level.getPath = function(object, destination) {
     }
 };
 
-level.calculatefog = function(log) {
+level.calculatefog = function() {
+    
+    
+    console.log(this);
     var objects = game.getObjects();
     var fogOfWar = level.definition.layers[1];
-    fogOfWar.data = Array.apply(null, new Array(fogOfWar.width * fogOfWar.height)).map(Number.prototype.valueOf,2);
+    data = Array.apply(null, new Array(fogOfWar.width * fogOfWar.height)).map(Number.prototype.valueOf,2);
     objects.forEach(function(object, index) {
         if (typeof object.communicationRadius !== 'undefined') {
             for(var x = object.grid.x - object.communicationRadius; x <= object.grid.x + object.communicationRadius; x++) {
                 for(var y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {
-                    if (x < 0 || x > fogOfWar.width || y < 0 || y > fogOfWar.height)
-                        return;
-                    fogOfWar.data[y*fogOfWar.width+x] = 3; 
+                    if (x < 0 || x > fogOfWar.width || y < 0 || y > fogOfWar.height) 
+                        break;
+                    
+                    data[y*fogOfWar.width+x] = -1;
+                    level.layers.history.data[y*fogOfWar.width+x] = 1;
                 }
             }
             
         }
     });
+    
+    alteredChunks = [];
+    
+    data.forEach(function(tile,index) {
+        
+        
+        if(tile == 2) {
+            tile = level.layers.history.data[index];
+            data[index] = level.layers.history.data[index];
+        }
+        
+        if(fogOfWar.data[index] !== tile) {
+            y = Math.floor(index / fogOfWar.width);
+            x = index - fogOfWar.height * y;
+            
+            chunkX = Math.floor(x/game.variables.chunk.size);
+            chunkY = Math.floor(y/game.variables.chunk.size);
+            
+            if (!alteredChunks[chunkX]) {
+               alteredChunks[chunkX] = [];
+            }
+            
+            alteredChunks[chunkX][chunkY] = true;
+        }
+    });
+    
+    fogOfWar.data = data;
+
+    alteredChunks.forEach(function(x, xIndex) {
+        x.forEach(function(y,yIndex) {
+            level.chunks.render(fogOfWar,xIndex,yIndex);
+        });
+    });
+    
+    
 };
 
 level.chunks = [];
@@ -206,7 +265,7 @@ level.chunks.render = function(layer, chunkX, chunkY) {
     chunk.height = chunkSize * game.variables.tile.height;
     
     // Get tileset from level
-    var tileset_tiles = common.resources.tilesets.get(level.definition.tilesets[0].name);
+    var tileset_tiles = common.resources.tilesets.get(layer.properties.tileset);
     
     // Sometimes the tileset is not loaded yet, then we don't have any images to draw the chunk,
     // so we can safely return and retry it later.
@@ -230,9 +289,11 @@ level.chunks.render = function(layer, chunkX, chunkY) {
                 continue;
             }
             
-            
-            
             var tileIndex = layer.data[i] - 1;
+            if (tileIndex < 0) {
+                continue;    
+            }
+            
             var sx = tileIndex % tilesPerRow;
             var sy = (tileIndex - sx) / tilesPerRow;
             

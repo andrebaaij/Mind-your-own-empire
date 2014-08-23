@@ -25,15 +25,6 @@ function objects() {
     this.array = [];
 }
 
-objects.initialise = function() {
-    //Interfaces
-    game.objectsRepository = objects.repository;
-    game.getObjects = objects.list;
-    game.findObject = objects.find;    
-};
-
-
-
 objects.prototype.list = function() {
     return objects.array;
 };
@@ -93,6 +84,8 @@ objects.prototype.functions.animationLoop = function() {
 
     this.tile = this.animation.array[this.animation.index];
 
+
+    
     if (this.animation.index < this.animation.array.length-1) {
         this.animation.index += 1;
     } else {
@@ -101,6 +94,8 @@ objects.prototype.functions.animationLoop = function() {
 };
 
 objects.prototype.functions.setDirection = function(direction) {
+    if(!direction) direction = 'NE';
+    
     this.animation.array = this.tileset.animations[this.animation.name][direction];
     this.direction = direction;
 };
@@ -483,3 +478,10 @@ objects.prototype.repository = new repository();
 
 // Initialise the Object objects
 objects = new objects();
+
+objects.initialise = function() {
+    //Interfaces
+    game.objectsRepository = objects.repository;
+    game.getObjects = objects.list;
+    game.findObject = objects.find;    
+};
