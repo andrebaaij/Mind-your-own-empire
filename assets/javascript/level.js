@@ -202,10 +202,10 @@ level.calculatefog = function() {
             for(var x = object.grid.x - object.communicationRadius; x <= object.grid.x + object.communicationRadius; x++) {
                 for(var y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {
                     if (x < 0 || x > fogOfWar.width || y < 0 || y > fogOfWar.height) 
-                        break;
+                        continue;
                     
                     data[y*fogOfWar.width+x] = -1;
-                    level.layers.history.data[y*fogOfWar.width+x] = 1;
+                    level.layers.history.data[y*fogOfWar.width+x] = 3;
                 }
             }
             

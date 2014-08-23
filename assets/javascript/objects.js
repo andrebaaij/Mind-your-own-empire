@@ -448,11 +448,11 @@ repository.prototype.get = function(name) {
 };
 
 objects.prototype.create = function(name, x, y) {
-    
-    
     var prototype = objects.repository.get(name);
     var object = new prototype();
     object.initialise(x,y);
+
+    game.calculatefog();
     
     return object;
 };
