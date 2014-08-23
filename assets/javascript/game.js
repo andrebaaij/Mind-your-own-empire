@@ -22,6 +22,10 @@ common.require('objects','level','userInterface','draw','particle',game.initiali
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);
     if (!game.variables.pause) {
-        draw.draw(userInterface.elements.canvas, level.get(), objects.list(), game.variables.craftObject, game.variables.selectGrid);
+        game.draw();
     }
+};
+
+game.draw = function() {
+    draw.draw(userInterface.elements.canvas, level.get(), objects.list(), game.variables.craftObject, game.variables.selectGrid);    
 };

@@ -137,7 +137,6 @@ level.printPath = function (node) {
         if (node === null) {
             array.pop();
             return array.reverse();
-            //break;
         }
     }
     return array.reverse;

@@ -31,14 +31,14 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     var numberOfTilesForHeight = Math.ceil(canvas.height/tileheight);
     var numberOfTilesForWidth = Math.ceil(canvas.width/tilewidth) * 2;
  
-    var numberOfChunksForHeight = Math.ceil(numberOfTilesForHeight/chunkSize);
-    var numberOfChunksForWidth = Math.ceil(numberOfTilesForWidth/chunkSize);
+    var numberOfChunksForHeight = Math.ceil(numberOfTilesForHeight/chunkSize) + 1;
+    var numberOfChunksForWidth = Math.ceil(numberOfTilesForWidth/chunkSize) + 1;
     
     for (var l in level.layers) {
         var layer = level.layers[l];
         
         if (layer.type !== 'tilelayer') {
-            break;    
+            continue;    
         }
         
         for (y = 0; y <= numberOfChunksForWidth; y++) {

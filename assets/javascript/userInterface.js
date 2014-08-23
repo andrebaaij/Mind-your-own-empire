@@ -240,6 +240,10 @@ userInterface.scrollLoop = function() {
 window.onresize = function() {
     userInterface.elements.canvas.width = window.innerWidth;
     userInterface.elements.canvas.height = window.innerHeight;
+    
+    if (game.variables.pause) {
+        game.draw();
+    }
 };
 
 userInterface.canvasMoveMouseListener = function(e) {
