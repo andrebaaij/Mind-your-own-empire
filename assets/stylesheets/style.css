@@ -12,7 +12,7 @@
 
 body {
 	font-family: 'Roboto', Arial, Geneva, sans-serif;
-    background-color: #6d2d2b;
+    background-color: #1C1635;
 }
 
 .wrapper {
@@ -104,6 +104,7 @@ body {
     line-height: 50px;
     color: #fff;
     background-color: #3c3a33;
+    font-size: 20px;
 }
 
 .side.menu .item:hover{

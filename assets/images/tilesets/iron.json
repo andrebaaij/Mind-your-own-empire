@@ -1,0 +1,8 @@
+{
+    "image" : "iron.png",
+    "grid" : {
+        "width" : 64,
+        "height" : 32
+    },
+    "animations" : {}
+}

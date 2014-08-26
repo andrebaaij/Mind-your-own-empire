@@ -17,6 +17,8 @@ level.initialise = function() {
     game.getPath = level.getPath;
 };
 
+
+
 level.load = function (jsonFilename) {
     var URI = "./assets/maps/" + jsonFilename;
     this.definition = common.getJSONFromURI(URI);
@@ -24,27 +26,47 @@ level.load = function (jsonFilename) {
     //Add a layer with history of walked tiles.
     
     var historyLayer = {
-         data:Array.apply(null, new Array(level.definition.width * level.definition.height)).map(Number.prototype.valueOf,2),
-         height:level.definition.height,
-         name:"history",
-         type:"historylayer",
-         visible:true,
-         width:level.definition.width,
-         x:0,
-         y:0
-        };
+        data:Array.apply(null, new Array(level.definition.width * level.definition.height)).map(Number.prototype.valueOf,2),
+        height:level.definition.height,
+        name:"history",
+        type:"historylayer",
+        visible:true,
+        width:level.definition.width,
+        x:0,
+        y:0
+    };
     
     this.definition.layers.push(historyLayer);
     
     level.layers = {};
-    level.layers.history = historyLayer;
+    
+    level.definition.layers.forEach(function(layer, index) {
+        level.layers[layer.name] = layer;
+    });
     
     game.variables.tile = {
         width : this.definition.tilewidth,
         height : this.definition.tileheight
     };
     
+
+    //generate resources
+    for (var i = 0; i < level.definition.width*level.definition.height; i++) {
+        y = Math.floor(i / level.definition.width);
+        x = i - level.definition.width * y;
+        
+        level.layers.iron.data[i] = level.noise(x,y,0.5,0.2);
+    }
+    
     level.calculatefog();
+};
+
+level.noise = function (x, y, chunkPercentage, tilePercentage) {
+    n = Perlin.noise(x/20,y/20, game.variables.seed);
+    n = Math.cos(n*5);
+    r = Math.round(n * 10);
+    
+    return r;
 };
 
 level.get = function() {
@@ -162,7 +184,7 @@ level.getPath = function(object, destination) {
     
     destinationIndex = coordinates.index;
     
-    var layer = self.get().layers[0];
+    var layer = level.layers.background;
     var visitedNotes = [];
     
     var currentPosition = self.makeNode(index,null,0);
@@ -190,11 +212,8 @@ level.getPath = function(object, destination) {
 };
 
 level.calculatefog = function() {
-    
-    
-    console.log(this);
     var objects = game.getObjects();
-    var fogOfWar = level.definition.layers[1];
+    var fogOfWar = level.layers.fog;
     data = Array.apply(null, new Array(fogOfWar.width * fogOfWar.height)).map(Number.prototype.valueOf,2);
     objects.forEach(function(object, index) {
         if (typeof object.communicationRadius !== 'undefined') {
@@ -223,7 +242,7 @@ level.calculatefog = function() {
         
         if(fogOfWar.data[index] !== tile) {
             y = Math.floor(index / fogOfWar.width);
-            x = index - fogOfWar.height * y;
+            x = index - fogOfWar.width * y;
             
             chunkX = Math.floor(x/game.variables.chunk.size);
             chunkY = Math.floor(y/game.variables.chunk.size);

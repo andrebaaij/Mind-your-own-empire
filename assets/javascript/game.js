@@ -5,19 +5,23 @@ var game = {
        pause : false,
        chunk : {
           size : 10  
-       }
+       },
+       seed : 15646984163
    }
 };
 
 game.initialise = function() {    
+    objects.create("block",0,1);
     objects.create("block",1,1);
+    objects.create("block",2,1);
+    
     objects.create("mind",5,5);
     objects.create("tower",10,10);
     
     game.gameLoop();
 };
 
-common.require('objects','level','userInterface','draw','particle',game.initialise);
+common.require('objects','perlin','level','userInterface','draw','particle',game.initialise);
 
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);

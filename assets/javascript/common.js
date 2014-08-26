@@ -252,13 +252,13 @@ Scripts.prototype.add = function(name, callback) {
             if (script.DOM.readyState == "loaded" ||
                     script.DOM.readyState == "complete"){
                 script.DOM.onreadystatechange = null;
-                if (window[name].initialise) window[name].initialise();
+                if (window[name] && window[name].initialise) window[name].initialise();
                 if (callback) callback();
             }
         };
     } else {  //Others
         script.DOM.onload = function(){
-            if (window[name].initialise) window[name].initialise();
+            if (window[name] && window[name].initialise) window[name].initialise();
             if (callback) callback();
         };
     }

@@ -37,7 +37,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     for (var l in level.layers) {
         var layer = level.layers[l];
         
-        if (layer.type !== 'tilelayer') {
+        if (layer.type !== 'tilelayer' || layer.visible === false) {
             continue;    
         }
         
