@@ -96,6 +96,30 @@ common.checkLineIntersection = function(line1StartX, line1StartY, line1EndX, lin
     return result;
 };
 
+// attach the .equals method to Array's prototype to call it on any array
+Array.prototype.equals = function (array) {
+    // if the other array is a falsy value, return
+    if (!array)
+        return false;
+
+    // compare lengths - can save a lot of time 
+    if (this.length != array.length)
+        return false;
+
+    for (var i = 0, l=this.length; i < l; i++) {
+        // Check if we have nested arrays
+        if (this[i] instanceof Array && array[i] instanceof Array) {
+            // recurse into the nested arrays
+            if (!this[i].equals(array[i]))
+                return false;       
+        }           
+        else if (this[i] != array[i]) { 
+            // Warning - two different object instances will never be equal: {x:20} != {x:20}
+            return false;   
+        }           
+    }       
+    return true;
+};
 /*
 
     Resources
@@ -275,48 +299,57 @@ Scripts.prototype.add = function(name, callback) {
 */
 
 
-common.getGridFromScreen = function(level, canvas, x, y) {
-    x = x + canvas.xOffset - level.tilewidth/2;
+common.getGridFromScreen = function(canvas, x, y) {
+    var tileWidth = game.variables.tile.width;
+    var tileHeight = game.variables.tile.height;
+    
+    x = x + canvas.xOffset - tileWidth/2;
     y = y + canvas.yOffset;
    
-    var gx = Math.floor((x / (level.tilewidth) + y / (level.tileheight)));
-    var gy = Math.floor((y / (level.tileheight) - x / (level.tilewidth)));
+    var gx = Math.floor(x / tileWidth  + y / tileHeight);
+    var gy = Math.floor(y / tileHeight - x / tileWidth);
     
-    if (gx < 0) gx = 0;
-    else if (gx >= level.width) gx = level.width-1;
-
-    if (gy < 0) gy = 0;
-    else if (gy >= level.height) gy = level.height-1;
+    var chunkX = Math.floor(gx/game.variables.chunk.size);
+    var chunkY = Math.floor(gy/game.variables.chunk.size);
     
-    gx = parseInt(gx,10);
-    gy = parseInt(gy,10);
-    var i = gx + (gy * level.width);
-    
-    return { x : parseInt(gx,10), y : parseInt(gy,10), index : i};
+    var i = (gx - chunkX * game.variables.chunk.size) + ((gy - chunkY * game.variables.chunk.size) * game.variables.chunk.size);
+    return {
+        chunk : {
+            x : chunkX,
+            y : chunkY
+        },
+        x : gx,
+        y : gy,
+        i : i
+    };
     
 };
 
 common.getGridFromCoordinates = function(x, y) {
-    var levelDefinition = game.getLevel();
+    var tileWidth = game.variables.tile.width;
+    var tileHeight = game.variables.tile.height;
     
-    x = x - levelDefinition.tilewidth/2;
+    x = x - tileWidth/2;
    
-    var gx = Math.floor((x / (levelDefinition.tilewidth) + y / (levelDefinition.tileheight)));
-    var gy = Math.floor((y / (levelDefinition.tileheight) - x / (levelDefinition.tilewidth)));
-    
-    if (gx < 0) gx = 0;
-    else if (gx >= levelDefinition.width) gx = levelDefinition.width-1;
-
-    if (gy < 0) gy = 0;
-    else if (gy >= levelDefinition.height) gy = levelDefinition.height-1;
+    var gx = Math.floor(x / tileWidth + y / tileHeight);
+    var gy = Math.floor(y / tileHeight - x / tileWidth);
     
     gx = parseInt(gx,10);
     gy = parseInt(gy,10);
     
-    var i = gx + (gy * levelDefinition.width);
+    var chunkX = Math.floor(gx/game.variables.chunk.size);
+    var chunkY = Math.floor(gy/game.variables.chunk.size);
     
-    return { x : parseInt(gx,10), y : parseInt(gy,10), index : i};
-    
+    var i = (gx - chunkX * game.variables.chunk.size) + ((gy - chunkY * game.variables.chunk.size) * game.variables.chunk.size);
+    return {
+        chunk : {
+            x : chunkX,
+            y : chunkY
+        },
+        x : gx,
+        y : gy,
+        i : i
+    };
 };
 
 
@@ -329,8 +362,10 @@ common.getScreenFromGrid = function(level, canvas, x, y) {
 };
 
 common.getCoordinatesFromGrid = function(x, y) {
-    var levelDefinition = game.getLevel();
-    var sx = ((parseInt(x,10) - parseInt(y,10)) * (levelDefinition.tilewidth / 2)) + levelDefinition.tilewidth/2;
-    var sy = ((parseInt(x,10) + parseInt(y,10)) * (levelDefinition.tileheight / 2)) + levelDefinition.tileheight/2;
+    var tileWidth = game.variables.tile.width;
+    var tileHeight = game.variables.tile.height;
+    
+    var sx = ((parseInt(x,10) - parseInt(y,10)) * (tileWidth / 2)) + tileWidth/2;
+    var sy = ((parseInt(x,10) + parseInt(y,10)) * (tileHeight / 2)) + tileHeight/2;
     return { x : sx, y : sy};
 };

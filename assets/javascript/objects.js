@@ -35,9 +35,13 @@ objects.prototype.functions.move = function(x,y) {
     this.x += x;
     this.y += y;
     
-    this.grid = common.getGridFromCoordinates(this.x, this.y);
+    var grid = common.getGridFromCoordinates(this.x, this.y);
     
-    game.calculatefog();
+    if (this.grid.x !== grid.x || this.grid.y !== grid.y) {
+        game.calculatefog();
+    }
+    
+    this.grid = grid;
 };
 
 objects.prototype.functions.select = function(){
@@ -323,7 +327,6 @@ function repository() {}
 
 repository.prototype.get = function(name) {
     if (typeof objects.repository[name] !== 'undefined') {
-        console.log("Object " + name + " is already available!");
         return objects.repository[name];
     }
     var URI = './assets/objects/' + name + '.json';
@@ -462,6 +465,9 @@ objects.prototype.add = function(object) {
 };
 
 objects.prototype.find = function(lx, ty, rx, by) {    
+    //console.log(lx, ty, rx, by);
+    
+    
     var array = [];
 
     objects.array.forEach(function(object, index) {

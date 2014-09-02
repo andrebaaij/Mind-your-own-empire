@@ -12,13 +12,15 @@ var game = {
 
 game.initialise = function() {    
     objects.create("block",0,1);
-    objects.create("block",1,1);
-    objects.create("block",2,1);
+    //objects.create("block",1,1);
+    //objects.create("block",2,1);
     
     objects.create("mind",5,5);
-    objects.create("tower",10,10);
+    //objects.create("tower",10,10);
     
     game.gameLoop();
+    //setInterval(function () {game.gameLoop();}, 2000);
+    
 };
 
 common.require('objects','perlin','level','userInterface','draw','particle',game.initialise);
@@ -31,5 +33,5 @@ game.gameLoop = function() {
 };
 
 game.draw = function() {
-    draw.draw(userInterface.elements.canvas, level.get(), objects.list(), game.variables.craftObject, game.variables.selectGrid);    
+    draw.draw(userInterface.elements.canvas, level, objects.list(), game.variables.craftObject, game.variables.selectGrid);    
 };

@@ -17,57 +17,262 @@ level.initialise = function() {
     game.getPath = level.getPath;
 };
 
-
-
 level.load = function (jsonFilename) {
-    var URI = "./assets/maps/" + jsonFilename;
-    this.definition = common.getJSONFromURI(URI);
+//    var URI = "./assets/maps/" + jsonFilename;
+//    this.definition = common.getJSONFromURI(URI);
+//    
+//    //Add a layer with history of walked tiles.
+//    
+//    var historyLayer = {
+//        data:Array.apply(null, new Array(level.definition.width * level.definition.height)).map(Number.prototype.valueOf,2),
+//        height:level.definition.height,
+//        name:"history",
+//        type:"historylayer",
+//        visible:true,
+//        width:level.definition.width,
+//        x:0,
+//        y:0
+//    };
+//    
+//    this.definition.layers.push(historyLayer);
+//    
+//    level.layers = {};
+//    level.definition.layers.forEach(function(layer, index) {
+//        level.layers[layer.name] = layer;
+//    });
+//    
+//    game.variables.tile = {
+//        width : this.definition.tilewidth,
+//        height : this.definition.tileheight
+//    };
+//    
+//    //fill resources layer
+//    level.layers.resources.data = Array.apply(null, new Array(level.definition.width * level.definition.height)).map(Number.prototype.valueOf,4);
+//
+//    //generate iron resources
+//    for (var i = 0; i < level.definition.width*level.definition.height; i++) {
+//        y = Math.floor(i / level.definition.width);
+//        x = i - level.definition.width * y;
+//        
+//        var n = Perlin.noise(x/20,y/20, game.variables.seed);
+//        n = Math.cos(n*5);
+//        
+//        var d = Math.round(n * 10)
+//        
+//        level.layers.iron.data[i] = d <= 0 ? 1 : d + 1;
+//    }
+//    
+//    level.calculatefog();
     
-    //Add a layer with history of walked tiles.
     
-    var historyLayer = {
-        data:Array.apply(null, new Array(level.definition.width * level.definition.height)).map(Number.prototype.valueOf,2),
-        height:level.definition.height,
-        name:"history",
-        type:"historylayer",
-        visible:true,
-        width:level.definition.width,
-        x:0,
-        y:0
-    };
     
-    this.definition.layers.push(historyLayer);
-    
-    level.layers = {};
-    
-    level.definition.layers.forEach(function(layer, index) {
-        level.layers[layer.name] = layer;
-    });
     
     game.variables.tile = {
-        width : this.definition.tilewidth,
-        height : this.definition.tileheight
+        width : 64,
+        height : 32
     };
     
+    
+    
+    level.chunks = [];
+    
+    // Layers
+    level.layers = {};
+    
+    level.layers.background = {
+        name : "background",
+        type : "tile",
+        visible : true,
+        tileset : common.resources.tilesets.get("tiles"),
+        size : game.variables.chunk.size,
+        data : [],
+        generate : function(x, y) {
+            return 0;
+        }
+    };
+    level.layers.history = {
+        name : "history",
+        type : "data",
+        visible : false,
+        tileset : common.resources.tilesets.get("gameTiles"),
+        size : game.variables.chunk.size,
+        data : [],
+        generate : function(x, y) {
+            return 1;
+        }
+    };
+    level.layers.calculateFog = {
+        name : "calculateFog",
+        type : "data",
+        visible : false,
+        tileset : common.resources.tilesets.get("gameTiles"),
+        size : game.variables.chunk.size,
+        data : [],
+        generate : function(x, y) {
+            return 1;
+        }
+    };
+    level.layers.resources = {
+        name : "resources",
+        type : "tile",
+        visible : false,
+        tileset : common.resources.tilesets.get("gameTiles"),
+        size : game.variables.chunk.size,
+        data : [],
+        generate : function(x, y) {
+            return 1;
+        }
+    };
+    level.layers.resources.layers = {};
+    level.layers.resources.layers.iron = {
+        name : "resources_iron",
+        type : "tile",
+        visible : true,
+        tileset : common.resources.tilesets.get("iron"),
+        size : game.variables.chunk.size,
+        data : [],
+        generate : function(x, y) {
+            return 1;
+        }
+    };
+    level.layers.selection = {
+        name : "selection",
+        type : "selection",
+        visible : true,
+        size : game.variables.chunk.size
+    };
+    level.layers.objects = {
+        name : "objects",
+        type : "objects",
+        visible : true,
+        size : game.variables.chunk.size
+    };
+    level.layers.fog = {
+        name : "fog",
+        type : "tile",
+        visible : true,
+        tileset : common.resources.tilesets.get("gameTiles"),
+        size : game.variables.chunk.size,
+        data : [],
+        generate : function(x, y) {
+            return 1;
+        }
+    };
+};
 
-    //generate resources
-    for (var i = 0; i < level.definition.width*level.definition.height; i++) {
-        y = Math.floor(i / level.definition.width);
-        x = i - level.definition.width * y;
-        
-        level.layers.iron.data[i] = level.noise(x,y,0.5,0.2);
+level.chunk = function(x, y){
+    var _self = this;
+    
+    _self.x = x;
+    _self.y = y;
+    
+    _self.size = game.variables.chunk.size;
+    
+    _self.layers = {};
+};
+
+level.chunk.prototype.generate = function() {
+    var _self = this;
+};
+
+level.chunk.prototype.getLayer = function(layer) {
+    var _self = this;
+    
+    if (_self.layers[layer.name]) {
+        if (_self.layers[layer.name].canvas === null && layer.type === 'tile') {
+            _self.drawLayer(_self.layers[layer.name]);
+        }
+        return _self.layers[layer.name];    
+    } else {
+        return _self.createLayer(layer);
     }
     
-    level.calculatefog();
 };
 
-level.noise = function (x, y, chunkPercentage, tilePercentage) {
-    n = Perlin.noise(x/20,y/20, game.variables.seed);
-    n = Math.cos(n*5);
-    r = Math.round(n * 10);
+level.chunk.prototype.createLayer = function(layer) {
+    var _self = this;
     
-    return r;
+    _self.layers[layer.name] = {
+        data : [],
+        tileset : layer.tileset
+    };
+    
+    var chunkSize = _self.size;
+    var chunkX = _self.x;
+    var chunkY = _self.y;
+    
+    // GENERATE
+    if (layer.generate) {
+        for (var y = 0; y < chunkSize; y++) {
+            for (var x = 0; x < chunkSize; x++) { 
+                var i = (y * _self.size + x);
+                _self.layers[layer.name].data[i] = layer.generate(x, y);
+            }
+        }
+    }
+    
+    if (layer.type === 'tile') {
+        _self.drawLayer(_self.layers[layer.name]);
+    }
+    
+    return _self.layers[layer.name];
 };
+
+level.chunk.prototype.drawLayer = function(layer) { 
+    var _self = this;
+    
+    var canvasLayer = document.createElement('canvas'); // Create a new canvas, with a render chunk we can just dispose of any pre-existing chunk and create a new canvas element
+    canvasLayer.context = canvasLayer.getContext("2d");
+     
+    canvasLayer.width = _self.size * game.variables.tile.width; 
+    canvasLayer.height = _self.size * game.variables.tile.height;
+    
+    // Sometimes the tileset is not loaded yet, then we don't have any images to draw the chunk,
+    // so we can safely return and retry it later.
+    
+
+    if (!layer.tileset.isLoaded) {
+        layer.canvas = null;
+        return null;
+    }
+    
+    // Assign tileset data to variables for easy use.
+    var tileWidth = game.variables.tile.width;
+    var tileHeight = game.variables.tile.height;
+    
+    for (var i = 0; i < _self.size * _self.size; i++) {
+        var x = i % _self.size;
+        var y = Math.floor(i / _self.size);
+        
+        var sx = layer.data[i] % layer.tileset.tilesPerRow;
+        var sy = (layer.data[i] - sx) / layer.tileset.tilesPerRow;
+
+        canvasLayer.context.drawImage(layer.tileset,
+                               sx * tileWidth,
+                               sy * tileHeight,
+                               tileWidth,
+                               tileHeight,
+                               (_self.size * tileWidth / 2) + Math.round(0.5*(x-y)*tileWidth) - (tileWidth / 2),
+                               Math.round(0.5*(x+y)*tileHeight),
+                               tileWidth,
+                               tileHeight
+                            );
+    }   
+    
+    layer.canvas = canvasLayer;
+
+    return canvasLayer;
+};
+
+level.getChunk = function(x, y) {
+    if(level.chunks[x] && level.chunks[x][y]) {
+        return level.chunks[x][y];
+    } else {
+        if (!level.chunks[x]) level.chunks[x] = [];
+        level.chunks[x][y] = new level.chunk(x, y);
+        return level.chunks[x][y];
+    }
+}
 
 level.get = function() {
     var self = level.definition;
@@ -165,9 +370,11 @@ level.printPath = function (node) {
 };
 
 level.getPath = function(object, destination) {
-    var self = level;
+    var _self = level;
     
-    var tileset = self.definition.tilesets[0];
+    return [destination];
+    
+    var tileset = _self.definition.tilesets[0];
     
     var tilewidth = tileset.tilewidth;
     var tileheight = tileset.tileheight;
@@ -180,29 +387,29 @@ level.getPath = function(object, destination) {
     
     left = Math.floor((destination.y*tilewidth - destination.x*tileheight)/(tilewidth*tileheight));
     right = Math.floor((destination.y*tilewidth + destination.x*tileheight)/(tilewidth*tileheight));
-    var destinationIndex = self.definition.width * left + right;
+    var destinationIndex = _self.definition.width * left + right;
     
     destinationIndex = coordinates.index;
     
     var layer = level.layers.background;
     var visitedNotes = [];
     
-    var currentPosition = self.makeNode(index,null,0);
+    var currentPosition = _self.makeNode(index,null,0);
     visitedNotes[index] = 1;
     firstNode = currentPosition;
     currentNode = currentPosition;
     
     while (visitedNotes[destinationIndex] === undefined) {
-        var neighbours = self.getNeighbours(firstNode.index, firstNode.distance);
+        var neighbours = _self.getNeighbours(firstNode.index, firstNode.distance);
         while (neighbours.length > 0) {
             var neighbour = neighbours.pop();
             if (neighbour.index >= 0 && visitedNotes[neighbour.index] === undefined) {
                 if (layer.data[neighbour.index] < 15) {
                 visitedNotes[neighbour.index] = 1;
                 if (neighbour.index == destinationIndex) {
-                    return self.printPath(self.makeNode(neighbour.index, firstNode, neighbour.distance));
+                    return _self.printPath(_self.makeNode(neighbour.index, firstNode, neighbour.distance));
                 }
-                self.addNode(self.makeNode(neighbour.index, firstNode, neighbour.distance));
+                _self.addNode(_self.makeNode(neighbour.index, firstNode, neighbour.distance));
                 }
             }
         }
@@ -212,138 +419,74 @@ level.getPath = function(object, destination) {
 };
 
 level.calculatefog = function() {
-    var objects = game.getObjects();
-    var fogOfWar = level.layers.fog;
-    data = Array.apply(null, new Array(fogOfWar.width * fogOfWar.height)).map(Number.prototype.valueOf,2);
-    objects.forEach(function(object, index) {
-        if (typeof object.communicationRadius !== 'undefined') {
+    var arrObjects = game.getObjects();
+    var handledObjects = [];
+    var objectsBeingHandled = [];
+
+    arrObjects.forEach(function(object, index) {
+        if (object.name === 'mind') {
+            objectsBeingHandled.push(object);
+           
+        }
+    
+    });
+    
+    var thereAreNewObjectsToBeHandled = true;
+    
+    while(thereAreNewObjectsToBeHandled) {
+        thereAreNewObjectsToBeHandled = false;
+        
+        objectsBeingHandled.forEach(function(object, index) {
+
             for(var x = object.grid.x - object.communicationRadius; x <= object.grid.x + object.communicationRadius; x++) {
-                for(var y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {
-                    if (x < 0 || x > fogOfWar.width || y < 0 || y > fogOfWar.height) 
-                        continue;
+                for(var y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {        
+                    var chunkX = Math.floor(x / game.variables.chunk.size);
+                    var chunkY = Math.floor(y / game.variables.chunk.size);
+
+                    var dx = x % game.variables.chunk.size;
+                    var dy = y % game.variables.chunk.size;
                     
-                    data[y*fogOfWar.width+x] = -1;
-                    level.layers.history.data[y*fogOfWar.width+x] = 3;
+                    if (dx < 0) dx = game.variables.chunk.size + dx;
+                    if (dy < 0) dy = game.variables.chunk.size + dy;
+                    
+                    level.getChunk(chunkX, chunkY).getLayer(level.layers.calculateFog).data[dy * game.variables.chunk.size + dx] = -1;
+                    level.getChunk(chunkX, chunkY).getLayer(level.layers.history).data[dy * game.variables.chunk.size + dx] = 3;
                 }
             }
             
-        }
-    });
-    
-    alteredChunks = [];
-    
-    data.forEach(function(tile,index) {
-        
-        
-        if(tile == 2) {
-            tile = level.layers.history.data[index];
-            data[index] = level.layers.history.data[index];
-        }
-        
-        if(fogOfWar.data[index] !== tile) {
-            y = Math.floor(index / fogOfWar.width);
-            x = index - fogOfWar.width * y;
             
-            chunkX = Math.floor(x/game.variables.chunk.size);
-            chunkY = Math.floor(y/game.variables.chunk.size);
+            var objectsWithinCommunicationRadius = game.findObject(object.grid.x - object.communicationRadius,
+                                          object.grid.y - object.communicationRadius, 
+                                          object.grid.x + object.communicationRadius,
+                                          object.grid.y + object.communicationRadius);
             
-            if (!alteredChunks[chunkX]) {
-               alteredChunks[chunkX] = [];
-            }
-            
-            alteredChunks[chunkX][chunkY] = true;
-        }
-    });
-    
-    fogOfWar.data = data;
+            objectsWithinCommunicationRadius.forEach(function(objectWithinCommunicationRadius, index) {                
+                if (handledObjects.indexOf(objectWithinCommunicationRadius) === -1 && objectsBeingHandled.indexOf(objectWithinCommunicationRadius) === -1 ) {
+                    objectsBeingHandled.push(objectWithinCommunicationRadius);
+                    thereAreNewObjectsToBeHandled = true;
 
-    alteredChunks.forEach(function(x, xIndex) {
-        x.forEach(function(y,yIndex) {
-            level.chunks.render(fogOfWar,xIndex,yIndex);
+                }
+            });
+
+            handledObjects.push(object);
+            delete objectsBeingHandled[index];
         });
-    });
-    
-    
-};
-
-level.chunks = [];
-
-level.chunks.render = function(layer, chunkX, chunkY) {
-    /*
-        For performance reasons, we are splitting the level into chunks, the chunksize is set by game.variables.chunkSize
-    
-    */
-    
-    var chunkSize = game.variables.chunk.size;
-    
-    var chunk = document.createElement('canvas'); // Create a new canvas, with a render chunk we can just dispose of any pre-existing chunk and create a new canvas element
-    chunk.context = chunk.getContext("2d");
-    
-    chunk.width = chunkSize * game.variables.tile.width; 
-    chunk.height = chunkSize * game.variables.tile.height;
-    
-    // Get tileset from level
-    var tileset_tiles = common.resources.tilesets.get(layer.properties.tileset);
-    
-    // Sometimes the tileset is not loaded yet, then we don't have any images to draw the chunk,
-    // so we can safely return and retry it later.
-    if (!tileset_tiles.isLoaded) {
-        return null;
     }
     
     
-    // Assign tileset data to variables for easy use.
-    var tileWidth = game.variables.tile.width;
-    var tileHeight = game.variables.tile.height;
-    var tilesPerRow = tileset_tiles.tilesPerRow;
-    
-    var numberOfTilesForHeight = Math.ceil(chunk.height/tileHeight);
-    var numberOfTilesForWidth = Math.ceil(chunk.width/tileWidth) * 2;
-
-    for (var y = chunkY*chunkSize; y < (chunkY*chunkSize) + chunkSize; y++) {
-        for (var x = chunkX*chunkSize; x < (chunkX*chunkSize) + chunkSize; x++) { 
-            var i = (y*layer.width + x);
-            if (i < 0) {
-                continue;
+    for(var x in level.chunks) {    
+        if ((!isNaN(parseFloat(x)) && isFinite(x))) {
+            for (var y in level.chunks[x]) {
+                if ((!isNaN(parseFloat(y)) && isFinite(y))) {
+                    var chunk = level.chunks[x][y];
+                    if (!chunk.getLayer(level.layers.calculateFog).data.equals(chunk.getLayer(level.layers.fog).data)) {
+                        chunk.getLayer(level.layers.fog).data.forEach(function(n, i, array) {
+                            array[i] = chunk.getLayer(level.layers.calculateFog).data[i];
+                        });
+                        chunk.drawLayer(chunk.getLayer(level.layers.fog));
+                    }
+                }
             }
-            
-            var tileIndex = layer.data[i] - 1;
-            if (tileIndex < 0) {
-                continue;    
-            }
-            
-            var sx = tileIndex % tilesPerRow;
-            var sy = (tileIndex - sx) / tilesPerRow;
-            
-            var cy = i - (chunkY * chunkSize * layer.width);
-            var cx = (cy - (Math.floor(cy / layer.width) * layer.width + chunkX * chunkSize));
-            cy = Math.floor(cy / layer.width);           
-            
-            chunk.context.drawImage(tileset_tiles,
-                                   sx * tileWidth,
-                                   sy * tileHeight,
-                                   tileWidth,
-                                   tileHeight,
-                                   (chunkSize * tileWidth / 2) + Math.round(0.5*(cx-cy)*tileWidth) - (tileWidth / 2),
-                                   Math.round(0.5*(cx+cy)*tileHeight),
-                                   tileWidth,
-                                   tileHeight
-                                );
         }
-    }
-    
-    if (!level.chunks[chunkX]) level.chunks[chunkX] = [];
-    if (!level.chunks[chunkX][chunkY]) level.chunks[chunkX][chunkY] = {};
-
-    level.chunks[chunkX][chunkY][layer.name] = chunk;
-    
-    return chunk;
-};
-
-level.chunks.get = function(layer, chunkX, chunkY) {
-    if (level.chunks[chunkX] && level.chunks[chunkX][chunkY] && level.chunks[chunkX][chunkY][layer.name]) {
-        return level.chunks[chunkX][chunkY][layer.name];
-    } else {
-        return level.chunks.render(layer, chunkX, chunkY);
-    }
+    } 
 };

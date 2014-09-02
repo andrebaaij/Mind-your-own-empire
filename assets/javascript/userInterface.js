@@ -276,17 +276,14 @@ userInterface.canvasMoveMouseListener = function(e) {
     var grid = common.getGridFromCoordinates(x, y);      
     
     if (game.variables.mouseDown) {
-        
         if (game.variables.selectGrid.ty > grid.y) {
             game.variables.selectGrid.by = game.variables.selectGrid.y;
             game.variables.selectGrid.ty = grid.y;
         } else {
             game.variables.selectGrid.by = grid.y;
-            //game.variables.selectGrid.ty = Math.min(game.variables.selectGrid.ty,game.variables.selectGrid.by,grid.y);
         }
-        
-        game.variables.selectGrid.lx = Math.min(game.variables.selectGrid.lx,game.variables.selectGrid.rx,grid.x);
-        game.variables.selectGrid.rx = Math.max(game.variables.selectGrid.lx,game.variables.selectGrid.rx,grid.x);
+        //game.variables.selectGrid.lx = Math.min(game.variables.selectGrid.lx,game.variables.selectGrid.rx,grid.x);
+        //game.variables.selectGrid.rx = Math.max(game.variables.selectGrid.lx,game.variables.selectGrid.rx,grid.x);
     } else {
         game.variables.selectGrid.ty = grid.y;
         game.variables.selectGrid.by = grid.y;
