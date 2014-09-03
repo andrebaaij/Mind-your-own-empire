@@ -303,25 +303,10 @@ common.getGridFromScreen = function(canvas, x, y) {
     var tileWidth = game.variables.tile.width;
     var tileHeight = game.variables.tile.height;
     
-    x = x + canvas.xOffset - tileWidth/2;
+    x = x + canvas.xOffset;
     y = y + canvas.yOffset;
    
-    var gx = Math.floor(x / tileWidth  + y / tileHeight);
-    var gy = Math.floor(y / tileHeight - x / tileWidth);
-    
-    var chunkX = Math.floor(gx/game.variables.chunk.size);
-    var chunkY = Math.floor(gy/game.variables.chunk.size);
-    
-    var i = (gx - chunkX * game.variables.chunk.size) + ((gy - chunkY * game.variables.chunk.size) * game.variables.chunk.size);
-    return {
-        chunk : {
-            x : chunkX,
-            y : chunkY
-        },
-        x : gx,
-        y : gy,
-        i : i
-    };
+    return common.getGridFromCoordinates(x, y);
     
 };
 

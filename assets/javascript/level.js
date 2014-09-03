@@ -49,7 +49,7 @@ level.load = function (jsonFilename) {
 //    //fill resources layer
 //    level.layers.resources.data = Array.apply(null, new Array(level.definition.width * level.definition.height)).map(Number.prototype.valueOf,4);
 //
-//    //generate iron resources
+    //generate iron resources
 //    for (var i = 0; i < level.definition.width*level.definition.height; i++) {
 //        y = Math.floor(i / level.definition.width);
 //        x = i - level.definition.width * y;
@@ -87,7 +87,91 @@ level.load = function (jsonFilename) {
         size : game.variables.chunk.size,
         data : [],
         generate : function(x, y) {
-            return 0;
+            function getType(x, y) {
+                var n = Math.round(Perlin.noise(x/100,y/100, game.variables.seed) * 10);
+                
+                var result;
+            
+                switch(n) {
+                    case 0:
+                        result = 0;
+                        break;
+                    case 1:
+                        result = 0;
+                        break;
+                    case 2:
+                        result = 5;
+                        break;
+                    case 3:
+                        result = 14;
+                        break;
+                    case 4:
+                        result = 5;
+                        break;
+                    case 5:
+                        result = 5;
+                        break;
+                    default:
+                        result = 0;
+                }
+                return result;        
+            }
+            
+            /* |TL|TM|TR|
+               |ML|MM|MR|
+               |BL|BM|BR| */
+            
+            var TL = getType(x-1, y-1);
+            var TM = getType(x,   y-1);
+            var TR = getType(x+1, y-1);
+            var ML = getType(x-1, y);
+            var MM = getType(x,   y);
+            var MR = getType(x+1, y);
+            var BL = getType(x-1, y+1);
+            var BM = getType(x,   y+1);
+            var BR = getType(x+1, y+1);
+            
+            //DIRT
+            if (MM === 0) return 0;
+            
+            //SAND TO DIRT
+            //outside corners
+            if (MM === 5 && ML === 5 && TM === 5 && TL === 0) return 6;
+            if (MM === 5 && MR === 5 && BM === 5 && BR === 0) return 7;
+            if (MM === 5 && ML === 5 && BM === 5 && BL === 0) return 8;
+            if (MM === 5 && MR === 5 && TM === 5 && TR === 0) return 9;
+            
+            //inside corners
+            if (MM === 5 && ML === 0 && TL === 0 && TM === 0) return 10;
+            if (MM === 5 && MR === 0 && BM === 0 && BR === 0) return 11;
+            if (MM === 5 && ML === 0 && BM === 0 && BL === 0) return 12;
+            if (MM === 5 && TM === 0 && TR === 0 && MR === 0) return 13;
+            
+            //borders
+            if (MM === 5 && ML === 0) return 1;
+            if (MM === 5 && TM === 0) return 2;
+            if (MM === 5 && BM === 0) return 3;
+            if (MM === 5 && MR === 0) return 4;
+
+            //SAND TO ACID
+            //outside corners
+            if (MM === 5 && ML === 5 && TM === 5 && TL === 14) return 29;
+            if (MM === 5 && MR === 5 && BM === 5 && BR === 14) return 28;
+            if (MM === 5 && ML === 5 && BM === 5 && BL === 14) return 31;
+            if (MM === 5 && MR === 5 && TM === 5 && TR === 14) return 30;
+            
+            //inside corners
+            if (MM === 5 && ML === 14 && TL === 14 && TM === 14) return 35;
+            if (MM === 5 && MR === 14 && BM === 14 && BR === 14) return 34;
+            if (MM === 5 && ML === 14 && BM === 14 && BL === 14) return 33;
+            if (MM === 5 && TM === 14 && TR === 14 && MR === 14) return 32;
+            
+            //borders
+            if (MM === 5 && ML === 14) return 39;
+            if (MM === 5 && TM === 14) return 37;
+            if (MM === 5 && BM === 14) return 38;
+            if (MM === 5 && MR === 14) return 36;
+            return MM;    
         }
     };
     level.layers.history = {
@@ -150,7 +234,7 @@ level.load = function (jsonFilename) {
     level.layers.fog = {
         name : "fog",
         type : "tile",
-        visible : true,
+        visible : false,
         tileset : common.resources.tilesets.get("gameTiles"),
         size : game.variables.chunk.size,
         data : [],
@@ -158,6 +242,24 @@ level.load = function (jsonFilename) {
             return 1;
         }
     };
+    
+    // Iterate through a lot of chunks, to predraw and calculate them
+    
+     for (var l in level.layers) {
+        var layer = level.layers[l];
+        
+        if (layer.visible === false) {
+            continue;    
+        }
+        
+        if (layer.type === 'tile') {        
+            for (y = -10; y <= 10; y++) {
+                for (x = -10; x <= 10; x++) {
+                    level.getChunk(x, y).getLayer(layer);
+                }
+            }
+        }
+     }
 };
 
 level.chunk = function(x, y){
@@ -169,10 +271,6 @@ level.chunk = function(x, y){
     _self.size = game.variables.chunk.size;
     
     _self.layers = {};
-};
-
-level.chunk.prototype.generate = function() {
-    var _self = this;
 };
 
 level.chunk.prototype.getLayer = function(layer) {
@@ -206,7 +304,7 @@ level.chunk.prototype.createLayer = function(layer) {
         for (var y = 0; y < chunkSize; y++) {
             for (var x = 0; x < chunkSize; x++) { 
                 var i = (y * _self.size + x);
-                _self.layers[layer.name].data[i] = layer.generate(x, y);
+                _self.layers[layer.name].data[i] = layer.generate(_self.x * chunkSize + x, _self.y * chunkSize + y);
             }
         }
     }
@@ -272,7 +370,7 @@ level.getChunk = function(x, y) {
         level.chunks[x][y] = new level.chunk(x, y);
         return level.chunks[x][y];
     }
-}
+};
 
 level.get = function() {
     var self = level.definition;

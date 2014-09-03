@@ -276,14 +276,22 @@ userInterface.canvasMoveMouseListener = function(e) {
     var grid = common.getGridFromCoordinates(x, y);      
     
     if (game.variables.mouseDown) {
-        if (game.variables.selectGrid.ty > grid.y) {
+        if (game.variables.selectGrid.y < grid.y) {
+            game.variables.selectGrid.ty = game.variables.selectGrid.y;
+            game.variables.selectGrid.by = grid.y;
+        } else {
             game.variables.selectGrid.by = game.variables.selectGrid.y;
             game.variables.selectGrid.ty = grid.y;
-        } else {
-            game.variables.selectGrid.by = grid.y;
         }
-        //game.variables.selectGrid.lx = Math.min(game.variables.selectGrid.lx,game.variables.selectGrid.rx,grid.x);
-        //game.variables.selectGrid.rx = Math.max(game.variables.selectGrid.lx,game.variables.selectGrid.rx,grid.x);
+        
+        if (game.variables.selectGrid.x < grid.x) {
+            game.variables.selectGrid.rx = grid.x;
+            game.variables.selectGrid.ly = game.variables.selectGrid.x;
+        } else {
+            game.variables.selectGrid.lx = grid.x;
+            game.variables.selectGrid.rx = game.variables.selectGrid.x;
+        }
+
     } else {
         game.variables.selectGrid.ty = grid.y;
         game.variables.selectGrid.by = grid.y;
@@ -329,7 +337,7 @@ userInterface.canvasMouseDownListener = function(e) {
         var mouseX = posx - rect.left;
         var mouseY = posy - rect.top;
         
-        var grid = common.getGridFromCoordinates(mouseX, mouseY);   
+        var grid = common.getGridFromScreen(userInterface.elements.canvas, mouseX, mouseY);   
         
         game.variables.selectGrid.x = grid.x;
         game.variables.selectGrid.y = grid.y;
