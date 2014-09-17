@@ -1,0 +1,38 @@
+<html>
+
+<head>
+    <title>RTS</title>
+    <link rel="stylesheet" type="text/css" href="./assets/stylesheets/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" href="./assets/stylesheets/style.css">
+</head>
+<body id="wrapper">
+    <div id="game">
+        <canvas id="canvas"></canvas>
+        <div class="menu top">
+            <div class="center">
+                <div id="menu_view" class="item" style="background-image: url('./assets/images/background-view.png');"></div>
+                <div id="menu_pause" class="item" style="background-image: url('./assets/images/pause.png');"></div>
+                <div id="menu_craft" class="item off" style="background-image: url('./assets/images/menu/menu_toggleCraft.png');"></div>
+            </div>
+        </div>
+        <div id="craft" class="overlay craft" style="display:none;">
+            <div class="window">
+            </div>
+        </div>
+        <div id="pause" class="overlay" style="display:none;">
+            <div class="modal">
+                <div class="inside">
+                    <h1>pause</h1>
+                    <a href="#" id="pauseContinue" class="button">Continue</a>
+                    <a href="#" id="pauseFullscreen" class="button">Fullscreen on/off</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="./assets/javascript/jquery-2.1.1.js"></script>
+    <script src="./assets/javascript/jquery-ui.js"></script>
+    <script src="./assets/javascript/common.js"></script>
+    <script src="./assets/javascript/game.js"></script>
+</body>
+
+</html>

@@ -120,6 +120,20 @@ Array.prototype.equals = function (array) {
     }       
     return true;
 };
+
+common.parseQueryString = function() {
+    var match,
+            pl     = /\+/g,  // Regex for replacing addition symbol with a space
+            search = /([^&=]+)=?([^&]*)/g,
+            decode = function (s) { return decodeURIComponent(s.replace(pl, " ")); },
+            query  = window.location.search.substring(1);
+
+        var urlParams = {};
+        while (match = search.exec(query))
+           urlParams[decode(match[1])] = decode(match[2]);
+    
+        game.variables.url = urlParams;
+}
 /*
 
     Resources
@@ -354,3 +368,84 @@ common.getCoordinatesFromGrid = function(x, y) {
     var sy = ((parseInt(x,10) + parseInt(y,10)) * (tileHeight / 2)) + tileHeight/2;
     return { x : sx, y : sy};
 };
+
+/*
+    Window
+*/
+
+common.window = function(header, x, y) {
+    $game = $('#game');
+    
+    $window = $('<div/>').addClass('table')
+                .addClass('window')
+                .attr('style','left:' + x + '; top:' + y + '; position: absolute;');
+    
+    $header = common.windowRow('100%','15px')
+        .addClass('header');
+        $title = common.windowRowCell('100%','15px')
+            .addClass('title')
+            .text(header);
+        $close = common.windowRowCell('15px','15px')
+            .addClass('close')
+            .text('X');
+    
+            $close.bind('click',function(e) {
+                $(this).parent().parent().remove();
+            });
+    
+    $header.append($title);
+    $header.append($close);
+        
+    $window.append($header);                                   
+        
+    $window.draggable({
+                stack: "#game > .window",
+                containment: "#game",
+                snap: true,
+                handle: ".header"
+            })
+            .resizable({
+                containment: "parent",
+                minHeight: 150,
+                minWidth: 300,
+                handles: "se" 
+            })
+            .hover(function () {
+                game.variables.scrollX = 0;
+                game.variables.scrollY = 0;
+            });
+    
+    $game.append($window);
+                                                       
+//        <div class="table window" style="top: 50; left 0;">
+//            <div class="row">
+//                <div class="cell header">
+//                    MIND
+//                </div>
+//            </div>
+//            <div class="row" style="height: 100%;">
+//                <div class="inside">
+//                </div>
+//            </div>
+//        </div>
+};
+
+common.windowRow = function(width, height) {
+    $row = $('<div/>')
+        .addClass('row')
+        .attr('style','width: ' + width + '; height: ' + height);
+    return $row;
+};
+
+common.windowRowCell = function(width, height) {
+    $cell = $('<div/>').addClass('cell')
+        .attr('style','width: ' + width + '; height: ' + height);
+    
+    return $cell;
+};
+
+
+
+
+
+

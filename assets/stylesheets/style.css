@@ -1,266 +1,179 @@
 @font-face {
-  font-family: 'Roboto';
-  font-style: normal;
-  font-weight: 400;
-  src: local('Roboto Regular'), local('Roboto-Regular'), url(http://themes.googleusercontent.com/static/fonts/roboto/v10/2UX7WLTfW3W8TclTUvlFyQ.woff) format('woff');
+    font-family: visitor;
+    src: url(./../fonts/visitor2.ttf);
 }
 
 * {
-	margin: 0;
-	padding: 0;
-}
-
-body {
-	font-family: 'Roboto', Arial, Geneva, sans-serif;
-    background-color: #1C1635;
-}
-
-.wrapper {
-    width:100%;
-    height: 100%;
-}
-
-.overlay {
-	display: none;
-	position: absolute;
-	left:0;
-	top:0;
-	width:100%;
-	height:100%;
-	background-color: rgba(0,0,0,0.5);
-}
-
-.menu {
-    text-align: center;
-	margin-top: 100px;
-    width: 100%;
-    //min-height: 800px;
-    border-radius: 10px 10px 10px 10px;
-    -moz-border-radius: 10px 10px 10px 10px;
-    -webkit-border-radius: 10px 10px 10px 10px;
-    border: 0px solid #000000;
-    padding-bottom: 100px;
-}
-
-.menu h1 {
-	color: #FFF047;
-    width: 100%;
-	display: block;
-	text-align: center;
-    font-size: 130px;
-    padding-top: 50px;
-
-}
-
-.menu .item{
-	padding: 10px 0;
-	//background-color: #4E6BB2;
-    font-size: 50px;
+    font-family: 'visitor', 'Ubuntu Mono', Arial;
+    font-weight: 400;
     color: #fff;
-	width: 500px;
-	display: block;
-	text-align: center;
-	text-decoration: none;
-	margin-bottom: 5px;
-    margin-left: auto;
-	margin-right: auto;
-    
+    padding: 0;
+    margin: 0;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
-
-.menu .item:hover{
-	color: #4660a1;
-}
-
-
-
-.side.menu {
-    display: block;
-    position: absolute;
-    margin:0;
-    left: 0;
-    top: 0;
-    width: 0;
-    height: 100%;
-    background-color: #3c3a33;
-    border-radius: 0px 0px 0px 0px;
-    -moz-border-radius: 0px 0px 0px 0px;
-    -webkit-border-radius: 0px 0px 0px 0px;
-    padding-bottom: 0;
-}
-
-.side.menu .bottom {
-    display: block;
-    position: absolute;
-    bottom: 0;
-}
-
-.side.menu .item{
-    width: 50px;
-    height: 50px;
-    padding: 5px;
-    margin: 10px;
-    margin-right: 0;
-    text-align: center;
-    color: #fff;
-    background-color: #3c3a33;
-    font-size: 20px;
-}
-
-.side.menu .item:hover{
-    background-color: rgba(0,0,0,0.5); 
-}
-
-.side.menu .item.off{
-    background-color: rgba(0,0,0,0.5); 
-}
-
-.side.menu .item:hover .child{
-    display: block;
-}
-
-.side.menu .item .child {
-    display: none;
-    width: 60px;
-    background-color: rgba(0,0,0,0.84);
-    position: relative;
-    top:-15px;
-    left: 60px;
-}
-
-.side.menu .item .child:hover {
-    display: block;
-    background-color: rgba(0,0,0,0.7);
-}
-
-.game.menu {
-    display: none;
-    position: absolute;
-    margin:0;
-    left: 0;
-    top: 0;
-    width: auto;
-    background-color: transparent;
-    border-radius: 0px 0px 0px 0px;
-    -moz-border-radius: 0px 0px 0px 0px;
-    -webkit-border-radius: 0px 0px 0px 0px;
-    padding-bottom: 0;
-}
-
-.game.menu .item{
-    width: 50px;
-    height: 50px;
-    padding: 5px;
-    text-align: center;
-    line-height: 50px;
-    color: #fff;
-    background-color: #3c3a33;
+.left {
     float: left;
-    position: relative;
-    float: left;
-    height: 55px;
 }
-
-.game.menu .item:hover{
-    background-color: #59564C; 
+.right {
+    float: right;
 }
-
-
-.game.menu .item:hover .child{
-    display: block;
-    width: 120px;
-    background-color: #59564C;
+.center {
+    margin: auto 0;
 }
-
-.game.menu .item .child {
-    display: none;
-    width: 60px;
-    background-color: #59564C;
-    position: relative;
-    top:60px;
-    left: -5px;
-}
-
-.game.menu .item .child:hover {
-    display: block;
-    background-color: #59564C;
-}
-
-.game.menu .item .child .item{
+.canvas {
     display: inline-block;
-    width: 50px;
-    height: 50px;
-    background-color: #59564C;
-    position: relative;
 }
-
-.game.menu .item .child .item:hover{
-    background-color: #403E36;
-}
-
-.progress.bar {
-    display: block;
-    position: absolute;
-    z-index: 1000;
+.overlay {
+    color: #fff;
     left: 0;
-    bottom: 0;
-    height: 6px;
-    width: 100%;
-
-}
-
-.progress.bar .progress {
-    display: block;
-    width: 0%;
-    background-color: #f66;
-    height: 6px;
-}
-
-.minimap {
-    position: absolute;
-    display: none;
     top: 0;
+    position: absolute;
+    height: 100%;
+    width: 100%; 
+    z-index: 200;
+    background-image: url(./../images/background-button.png);
+}
+.modal {
+    text-align: center;
+    width: 50%;
+    height: 50%;
+    margin: auto;
+    padding-bottom: 100px;
+    font-family: Arial;
+    color: rgba(0, 0, 0, 0.7);
+    background-color: #0a0a0a;  
+    max-width: 400px;
+    padding: 5px 0;
+    position:absolute;
+    bottom: 0;
+    top: 0; left: 0; bottom: 0; right: 0;
+    display: table;
+    padding: 20px;
+}
+.modal .inside {
+    border-width: 2px;
+    -webkit-border-image: url(./../assets/images/border-1.png) 2 repeat; /* Safari 3.1-5 */
+    -o-border-image: url(./../assets/images/border-1.png) 2 repeat; /* Opera 11-12.1 */
+    border-image: url(./../images/border-1.png) 2 fill;
+    height: 100%;
+    width: 100%;
+    display: table-cell;
+}
+.modal .button {
+    color: #fff;
+    text-decoration: none;
+    display: block;
+    width: 100%;
+    padding: 5px 0;
+    background-color: #0a0a0a; 
+    border: none;
+    background-image: url(./../images/background-button.png);
+    cursor: hand;
+    margin: 10px 0;
+}
+.modal .button.bottom {
+    position: absolute;
+    bottom: 0;   
+}
+.modal .button:hover {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+.top.menu {
+    position: absolute;
+    top: 0;
+    height: 25px;
+    display:inline-block;
+    background-color: #49586E;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.7);
+}
+.top.menu .item {
+    height: 100%;
+    width: 25px;
+    float: left;
+    border-right: 1px solid rgba(0, 0, 0, 0.7);
+    left: -1px;
+    display:inline-block;
+}
+.top.menu .item:hover {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+.top.menu .item:first-child {
+    border-left: 1px solid rgba(0, 0, 0, 0.7);
+}
+
+#windows {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;    
+}
+.window {
+    display: table;
+    width: 300px;
+    height: 150px;
+    background-color: #0a0a0a;
+    border: 1px solid #0a0a0a;
+    position: absolute;
+}
+.table .row {
+    display: table-row;
+}
+
+.table .row .cell {
+    display: table-cell;
+}
+
+.window .inside {
+    border-width: 2px;
+    -webkit-border-image: url(./../assets/images/border-1.png) 2 repeat; /* Safari 3.1-5 */
+    -o-border-image: url(./../assets/images/border-1.png) 2 repeat; /* Opera 11-12.1 */
+    border-image: url(./../images/border-1.png) 2 fill;
+    height: 100%;
+    width: 100%;
+}
+
+.ui-icon, .ui-widget-content .ui-icon {
+    background-image: url(./../images/grip.png);
+    background-position: 0;
+    background-color: #0a0a0a;
+    bottom: 0;
+    right: -1px;
+}
+
+.window .ui-resizable-e{
     right: 0;
 }
+.window .ui-resizable-s{
+    bottom: 0;
+}
 
-#game .craft {
-    -webkit-box-sizing: border-box;
-    -moz-box-sizing: border-box;
-    box-sizing: border-box;
+.window .header {
     width: 100%;
-    height: 100%;
-    padding: 5%;
-}
-
-#game .craft .window {
-    background-color: #3c3a33;
-    color: #fff;
-    
-    width: 100%;
-    height: 100%;
-}
-
-#game .craft .window .item {
-    overflow: auto;
-    width: 300px;
-}
-
-#game .craft .window .item:hover {
-    background-color: #2E2D29;
-}
-
-#game .craft .window .item.off {
-    opacity: 0.3;
-}
-
-#game .craft .window .item.off:hover {
-    background-color: transparent;
-}
-
-#game .craft .window .icon {
-    float:left;
-}
-
-#game .craft .window .resources > .resource > .icon {
     height: 20px;
+    cursor: move;
+    background-image: url(./../images/background-title.png);
+    line-height: 20px;
+    vertical-align: middle;
+}
+
+.window .header .title{
+    width: auto;
+    height: 20px;
+    padding-left: 3px;
+}
+
+.window .header .close{
+    right: 0;
+    cursor: pointer;
+    line-height: 20px;
+    vertical-align: middle;
+    text-align: left;
     width: 20px;
+    background: transparent;
 }

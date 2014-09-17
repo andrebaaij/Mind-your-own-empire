@@ -196,27 +196,19 @@ level.load = function (jsonFilename) {
             return 1;
         }
     };
-    level.layers.resources = {
-        name : "resources",
-        type : "tile",
-        visible : false,
-        tileset : common.resources.tilesets.get("gameTiles"),
-        size : game.variables.chunk.size,
-        data : [],
-        generate : function(x, y) {
-            return 1;
-        }
-    };
-    level.layers.resources.layers = {};
-    level.layers.resources.layers.iron = {
+    level.layers.iron = {
         name : "resources_iron",
-        type : "tile",
+        type : "resources",
         visible : true,
         tileset : common.resources.tilesets.get("iron"),
         size : game.variables.chunk.size,
         data : [],
         generate : function(x, y) {
-            return 1;
+            var n = Perlin.noise(x/20,y/20, game.variables.seed);
+            n = Math.cos(n*5);
+
+            var d = Math.round(n * 10)
+            return d < 0 ? -1 : d > 4 ? 4 : d;
         }
     };
     level.layers.selection = {
@@ -243,23 +235,6 @@ level.load = function (jsonFilename) {
         }
     };
     
-    // Iterate through a lot of chunks, to predraw and calculate them
-    
-     for (var l in level.layers) {
-        var layer = level.layers[l];
-        
-        if (layer.visible === false) {
-            continue;    
-        }
-        
-        if (layer.type === 'tile') {        
-            for (y = -10; y <= 10; y++) {
-                for (x = -10; x <= 10; x++) {
-                    level.getChunk(x, y).getLayer(layer);
-                }
-            }
-        }
-     }
 };
 
 level.chunk = function(x, y){

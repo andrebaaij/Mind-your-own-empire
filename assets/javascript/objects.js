@@ -47,7 +47,9 @@ objects.prototype.functions.move = function(x,y) {
 objects.prototype.functions.select = function(){
     if (this.tileset.image_selected) {
         this.image = this.tileset.image_selected;
-    }
+    };
+    
+    common.window(this.name, game.variables.mouseX, game.variables.mouseY);
 };
 
 objects.prototype.functions.deselect = function(){

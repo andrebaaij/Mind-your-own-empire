@@ -1,16 +1,20 @@
 /* global Image,document,window,setTimeout,console,XMLHttpRequest,requestAnimationFrame,common,draw,level,objects,userInterface */
 
+
+
 var game = {
    variables : {
        pause : false,
        chunk : {
-          size : 10  
-       },
-       seed : 15646984163
+          size : 20  
+       }
    }
 };
 
-game.initialise = function() {    
+common.parseQueryString();
+game.variables.seed = game.variables.url.seed;
+
+game.initialise = function() {
     objects.create("block",0,1);
     //objects.create("block",1,1);
     //objects.create("block",2,1);

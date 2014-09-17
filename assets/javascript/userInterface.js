@@ -16,10 +16,12 @@ game.variables.selectGrid = {
         rx : null
     };
 game.variables.mouseDown = false;
+game.variables.scale = 1;
 
 userInterface.initialise = function () {
     /* Elements */
     userInterface.elements.canvas = document.getElementById("canvas");
+    userInterface.elements.$canvas = $("#canvas");
     userInterface.elements.pause = document.getElementById("pause");
     userInterface.elements.craft = document.getElementById("craft");
     
@@ -32,6 +34,30 @@ userInterface.initialise = function () {
     userInterface.elements.canvas.addEventListener('mousemove', userInterface.canvasMoveMouseListener);
     userInterface.elements.canvas.addEventListener('mousedown', userInterface.canvasMouseDownListener);
     userInterface.elements.canvas.addEventListener('mouseup', userInterface.canvasClickListener);
+    
+    userInterface.elements.$canvas.bind('mousewheel', function(e){
+        var scale = game.variables.scale;
+        
+        if(e.originalEvent.wheelDelta < 0)
+        {
+            if (game.variables.scale < 1.4) {
+                scale += 0.1;
+            }
+
+        } else {
+            if (game.variables.scale > 1) {
+                scale -= 0.1;
+            }
+        }
+
+        console.log(game.variables.scale - scale);
+        console.log(game.variables.scale);
+        
+        userInterface.elements.canvas.context.scale(1 + game.variables.scale - scale, 1 + game.variables.scale - scale);
+        game.variables.scale = scale;
+    });
+
+    
     userInterface.elements.pauseContinue.addEventListener('click', function () {userInterface.pause("off"); });
     userInterface.elements.pauseFullscreen.addEventListener('click', function () {userInterface.fullscreen("toggle"); });
     userInterface.elements.menu_pause.addEventListener('mouseover', function () {game.variables.scrollX = 0; game.variables.scrollY = 0; });
@@ -240,6 +266,7 @@ userInterface.scrollLoop = function() {
 window.onresize = function() {
     userInterface.elements.canvas.width = window.innerWidth;
     userInterface.elements.canvas.height = window.innerHeight;
+    userInterface.elements.canvas.context.scale(1 - (game.variables.scale-1) * 1,1 - (game.variables.scale-1)*1);
     
     if (game.variables.pause) {
         game.draw();

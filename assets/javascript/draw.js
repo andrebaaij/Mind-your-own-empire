@@ -13,7 +13,9 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     var x, y, tileset, tilewidth, tileheight, imagewidth,tilesPerRow,tileIndex,tileXOffset,tileYOffset;
     
     // Clear canvas
-    canvas.context.clearRect(0, 0, canvas.width, canvas.height);
+    
+    var canvasWidth = canvas.width * game.variables.scale;
+    var canvasHeight = canvas.height * game.variables.scale;
     
     // Get tileset from level
     //var tileset_tiles = common.resources.tilesets.get(level.tilesets[0].name);
@@ -21,18 +23,19 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     // Assign tileset data to variables for easy use.
     var chunkSize = game.variables.chunk.size;
     var offsetsLT = common.getGridFromScreen(canvas, 0, 0); 
-    var offsetsRT = common.getGridFromScreen(canvas, canvas.width, 0); 
-    var offsetsLB = common.getGridFromScreen(canvas, 0, canvas.height); 
-    var offsetsRB = common.getGridFromScreen(canvas, canvas.width, canvas.height);   
+    var offsetsRT = common.getGridFromScreen(canvas, canvasWidth, 0); 
+    var offsetsLB = common.getGridFromScreen(canvas, 0, canvasHeight); 
+    var offsetsRB = common.getGridFromScreen(canvas, canvasWidth, canvasHeight);   
     
     var chunkXOffset = Math.min(offsetsLT.chunk.x, offsetsRT.chunk.x, offsetsLB.chunk.x, offsetsRB.chunk.x);
     var chunkYOffset = Math.min(offsetsLT.chunk.y, offsetsRT.chunk.y, offsetsLB.chunk.y, offsetsRB.chunk.y);
-    
+    var maxChunkXOffset = Math.max(offsetsLT.chunk.x, offsetsRT.chunk.x, offsetsLB.chunk.x, offsetsRB.chunk.x);
+    var maxChunkYOffset = Math.max(offsetsLT.chunk.y, offsetsRT.chunk.y, offsetsLB.chunk.y, offsetsRB.chunk.y);
     tilewidth = game.variables.tile.width;
     tileheight = game.variables.tile.height;
     
-    var numberOfTilesForHeight = Math.ceil(canvas.height/tileheight);
-    var numberOfTilesForWidth = Math.ceil(canvas.width/tilewidth);
+    var numberOfTilesForHeight = Math.ceil(canvasHeight/tileheight);
+    var numberOfTilesForWidth = Math.ceil(canvasWidth/tilewidth);
  
     var numberOfChunksForHeight = Math.ceil(numberOfTilesForHeight/chunkSize) * 2 + 1;
     var numberOfChunksForWidth = Math.ceil(numberOfTilesForWidth/chunkSize) * 2 + 1;
@@ -44,12 +47,12 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             continue;    
         }
         
-        if (layer.type === 'tile') {
+        if (layer.type === 'tile' || layer.type === "resources") {
             tilewidth = game.variables.tile.width;
             tileheight = game.variables.tile.height;
             
-            for (y = chunkYOffset; y <= chunkYOffset + numberOfChunksForHeight; y++) {
-                for (x = chunkXOffset; x <= chunkXOffset + numberOfChunksForWidth; x++) {
+            for (y = chunkYOffset; y <= maxChunkYOffset; y++) {
+                for (x = chunkXOffset; x <= maxChunkXOffset; x++) {
                     var chunkLayer = level.getChunk(x, y).getLayer(layer);
 
                     if (!chunkLayer || !chunkLayer.canvas) {
