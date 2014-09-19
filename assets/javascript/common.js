@@ -314,19 +314,28 @@ Scripts.prototype.add = function(name, callback) {
 
 
 common.getGridFromScreen = function(canvas, x, y) {
-    var tileWidth = game.variables.tile.width;
-    var tileHeight = game.variables.tile.height;
+    var xOffset = canvas.xOffset;
+    var yOffset = canvas.yOffset;
     
-    x = x + canvas.xOffset;
-    y = y + canvas.yOffset;
-   
-    return common.getGridFromCoordinates(x, y);
+    for (var i = 0; i < Math.round((game.variables.scale-1) * 10); i++) {
+        xOffset *= 0.9;
+        yOffset *= 0.9;
+    }
+    
+    
+    
+    return common.getGridFromCoordinates(x + xOffset, y + yOffset);
     
 };
 
 common.getGridFromCoordinates = function(x, y) {
     var tileWidth = game.variables.tile.width;
     var tileHeight = game.variables.tile.height;
+    
+    for (var i = 0; i < Math.round((game.variables.scale-1) * 10); i++) {
+        tileWidth *= 0.9;
+        tileHeight *= 0.9;
+    }
     
     x = x - tileWidth/2;
    
@@ -351,6 +360,13 @@ common.getGridFromCoordinates = function(x, y) {
     };
 };
 
+common.scaleNumber = function(number) {
+    for (var i = 0; i < Math.round((game.variables.scale-1) * 10); i++) {
+        number *= 0.9;
+    }
+    
+    return number;
+}
 
 // WARNING: This function is not tested yet
 // TODO: test this function

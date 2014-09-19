@@ -33,7 +33,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     var maxChunkYOffset = Math.max(offsetsLT.chunk.y, offsetsRT.chunk.y, offsetsLB.chunk.y, offsetsRB.chunk.y);
     tilewidth = game.variables.tile.width;
     tileheight = game.variables.tile.height;
-    
+
     var numberOfTilesForHeight = Math.ceil(canvasHeight/tileheight);
     var numberOfTilesForWidth = Math.ceil(canvasWidth/tilewidth);
  
@@ -42,7 +42,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     
     for (var l in level.layers) {
         var layer = level.layers[l];
-        
+            
         if (layer.visible === false) {
             continue;    
         }
@@ -56,7 +56,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                     var chunkLayer = level.getChunk(x, y).getLayer(layer);
 
                     if (!chunkLayer || !chunkLayer.canvas) {
-                        return;   
+                        continue;   
                     }
 
                     canvas.context.drawImage(chunkLayer.canvas,
@@ -65,6 +65,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                 }
             }
         } else if (layer.type === 'objects') {
+            
+            
             objects.sort(function (a,b) {
                 var result = (a.y < b.y) ? -1 : (a.y > b.y) ? 1 : 0;
                 return result;
@@ -74,8 +76,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                     object.crafted = typeof object.crafted !== 'undefined' && object.crafted < 1 ? object.crafted : 1;
 
                     tileset = object.tileset;
-                    tilewidth = tileset.grid.width;
-                    tileheight = tileset.grid.height;
+                    var tilewidth = tileset.grid.width;
+                    var tileheight = tileset.grid.height;
                 
                     imagewidth = tileset.width;
                     tilesPerRow = tileset.tilesPerRow;
@@ -105,6 +107,9 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             if (craftObject) {
                 tileset = craftObject.prototype.tileset;
 
+                var tilewidth = tileset.grid.width;
+                var tileheight = tileset.grid.height;
+                
                 imagewidth = tileset.width;
                 imageheight = tileset.width;
                 tilesPerRow = tileset.tilesPerRow;
@@ -137,6 +142,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
             tilewidth = tileset.grid.width;
             tileheight = tileset.grid.height;
+            
             imagewidth = tileset.width;
             var imageheight = tileset.height;
             tilesPerRow = tileset.tilesPerRow;

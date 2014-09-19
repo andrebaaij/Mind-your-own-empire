@@ -188,7 +188,7 @@ level.load = function (jsonFilename) {
     level.layers.calculateFog = {
         name : "calculateFog",
         type : "data",
-        visible : false,
+        visible : true,
         tileset : common.resources.tilesets.get("gameTiles"),
         size : game.variables.chunk.size,
         data : [],

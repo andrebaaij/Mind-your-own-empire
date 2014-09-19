@@ -74,7 +74,12 @@ userInterface.initialise = function () {
         userInterface.craft("off");
     });
     
-    window.onblur = function () {game.variables.mouseDown = false; userInterface.pause("on"); };
+    //window.onblur = function () {game.variables.mouseDown = false; userInterface.pause("on"); };
+    
+     $(window).blur(function() {
+        game.variables.mouseDown = false;
+        userInterface.pause("on"); 
+    });
     
     /* Loops */
     userInterface.scrollLoop();
@@ -266,7 +271,11 @@ userInterface.scrollLoop = function() {
 window.onresize = function() {
     userInterface.elements.canvas.width = window.innerWidth;
     userInterface.elements.canvas.height = window.innerHeight;
-    userInterface.elements.canvas.context.scale(1 - (game.variables.scale-1) * 1,1 - (game.variables.scale-1)*1);
+    
+    for (var i = 0; i < Math.round((game.variables.scale-1) * 10); i++) {
+        userInterface.elements.canvas.context.scale(0.9,0.9);    
+    }
+    
     
     if (game.variables.pause) {
         game.draw();
@@ -300,8 +309,8 @@ userInterface.canvasMoveMouseListener = function(e) {
     var x = mouseX + userInterface.elements.canvas.xOffset,
         y = mouseY + userInterface.elements.canvas.yOffset;
     
-    var grid = common.getGridFromCoordinates(x, y);      
-    
+    var grid = common.getGridFromScreen(userInterface.elements.canvas, mouseX, mouseY);      
+
     if (game.variables.mouseDown) {
         if (game.variables.selectGrid.y < grid.y) {
             game.variables.selectGrid.ty = game.variables.selectGrid.y;
