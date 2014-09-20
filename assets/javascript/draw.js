@@ -14,8 +14,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     
     // Clear canvas
     
-    var canvasWidth = canvas.width * game.variables.scale;
-    var canvasHeight = canvas.height * game.variables.scale;
+    var canvasWidth = common.scaleNumber(canvas.width, true);
+    var canvasHeight = common.scaleNumber(canvas.height, true);
     
     // Get tileset from level
     //var tileset_tiles = common.resources.tilesets.get(level.tilesets[0].name);
@@ -34,11 +34,6 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     tilewidth = game.variables.tile.width;
     tileheight = game.variables.tile.height;
 
-    var numberOfTilesForHeight = Math.ceil(canvasHeight/tileheight);
-    var numberOfTilesForWidth = Math.ceil(canvasWidth/tilewidth);
- 
-    var numberOfChunksForHeight = Math.ceil(numberOfTilesForHeight/chunkSize) * 2 + 1;
-    var numberOfChunksForWidth = Math.ceil(numberOfTilesForWidth/chunkSize) * 2 + 1;
     
     for (var l in level.layers) {
         var layer = level.layers[l];

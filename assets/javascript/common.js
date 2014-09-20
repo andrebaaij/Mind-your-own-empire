@@ -312,30 +312,31 @@ Scripts.prototype.add = function(name, callback) {
 
 */
 
-
-common.getGridFromScreen = function(canvas, x, y) {
-    var xOffset = canvas.xOffset;
-    var yOffset = canvas.yOffset;
+common.scaleNumber = function(number, invert) {
+    invert = typeof invert !== 'undefined' ? invert : false;
     
-    for (var i = 0; i < Math.round((game.variables.scale-1) * 10); i++) {
-        xOffset *= 0.9;
-        yOffset *= 0.9;
+    for (var i = game.variables.scale.minLevel; i < game.variables.scale.level; i++) {
+        if(invert) {
+            number *= 1+game.variables.scale.speed;
+        } else {
+            number *= 1-game.variables.scale.speed;
+        }
     }
     
-    
-    
+    return number;
+}
+
+common.getGridFromScreen = function(canvas, x, y) {
+    var xOffset = common.scaleNumber(canvas.xOffset);
+    var yOffset = common.scaleNumber(canvas.yOffset);
+
     return common.getGridFromCoordinates(x + xOffset, y + yOffset);
     
 };
 
 common.getGridFromCoordinates = function(x, y) {
-    var tileWidth = game.variables.tile.width;
-    var tileHeight = game.variables.tile.height;
-    
-    for (var i = 0; i < Math.round((game.variables.scale-1) * 10); i++) {
-        tileWidth *= 0.9;
-        tileHeight *= 0.9;
-    }
+    var tileWidth = common.scaleNumber(game.variables.tile.width);
+    var tileHeight = common.scaleNumber(game.variables.tile.height);
     
     x = x - tileWidth/2;
    
@@ -359,14 +360,6 @@ common.getGridFromCoordinates = function(x, y) {
         i : i
     };
 };
-
-common.scaleNumber = function(number) {
-    for (var i = 0; i < Math.round((game.variables.scale-1) * 10); i++) {
-        number *= 0.9;
-    }
-    
-    return number;
-}
 
 // WARNING: This function is not tested yet
 // TODO: test this function

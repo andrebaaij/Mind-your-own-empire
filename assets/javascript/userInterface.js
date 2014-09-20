@@ -16,7 +16,12 @@ game.variables.selectGrid = {
         rx : null
     };
 game.variables.mouseDown = false;
-game.variables.scale = 1;
+game.variables.scale = {
+    level: 1,
+    speed: 0.1,
+    minLevel : 1,
+    maxLevel : 4
+}
 
 userInterface.initialise = function () {
     /* Elements */
@@ -36,25 +41,31 @@ userInterface.initialise = function () {
     userInterface.elements.canvas.addEventListener('mouseup', userInterface.canvasClickListener);
     
     userInterface.elements.$canvas.bind('mousewheel', function(e){
-        var scale = game.variables.scale;
+        var scale = 0;
         
         if(e.originalEvent.wheelDelta < 0)
         {
-            if (game.variables.scale < 1.4) {
-                scale += 0.1;
+            if (game.variables.scale.level < game.variables.scale.maxLevel) {
+                scale = 0.9;
+                game.variables.scale.level += 1;
             }
 
         } else {
-            if (game.variables.scale > 1) {
-                scale -= 0.1;
+            if (game.variables.scale.level > game.variables.scale.minLevel) {
+                scale = 1.1;
+                game.variables.scale.level -= 1;
             }
         }
-
-        console.log(game.variables.scale - scale);
-        console.log(game.variables.scale);
         
-        userInterface.elements.canvas.context.scale(1 + game.variables.scale - scale, 1 + game.variables.scale - scale);
-        game.variables.scale = scale;
+        if(scale !== 0) {
+            userInterface.elements.canvas.width = window.innerWidth;
+            userInterface.elements.canvas.height = window.innerHeight;
+
+            var scale = common.scaleNumber(1);
+
+            userInterface.elements.canvas.context.scale(scale,scale);
+        }
+        
     });
 
     
@@ -272,10 +283,9 @@ window.onresize = function() {
     userInterface.elements.canvas.width = window.innerWidth;
     userInterface.elements.canvas.height = window.innerHeight;
     
-    for (var i = 0; i < Math.round((game.variables.scale-1) * 10); i++) {
-        userInterface.elements.canvas.context.scale(0.9,0.9);    
-    }
+    var scale = common.scaleNumber(1);
     
+    userInterface.elements.canvas.context.scale(scale,scale);    
     
     if (game.variables.pause) {
         game.draw();
