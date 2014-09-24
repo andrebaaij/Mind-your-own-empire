@@ -1,5 +1,5 @@
 {
-    "image" : "tiles.png",
+    "image" : "actions.png",
     "grid" : {
         "width" : 64,
         "height" : 32

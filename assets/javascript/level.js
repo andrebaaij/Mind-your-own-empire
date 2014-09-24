@@ -3,12 +3,15 @@
 /* jshint loopfunc: true */
 
 var level = {};
+level.chunkDrawQueue = new common.background.queue('chunk');
 
 var firstNode = {};
 var currentNode = {};
 
 level.initialise = function() {
-    this.load("west.json");
+    var _self = this;
+    
+    _self.load("west.json");
     
     //Interfaces 
     game.calculatefog = level.calculatefog;
@@ -18,63 +21,17 @@ level.initialise = function() {
 };
 
 level.load = function (jsonFilename) {
-//    var URI = "./assets/maps/" + jsonFilename;
-//    this.definition = common.getJSONFromURI(URI);
-//    
-//    //Add a layer with history of walked tiles.
-//    
-//    var historyLayer = {
-//        data:Array.apply(null, new Array(level.definition.width * level.definition.height)).map(Number.prototype.valueOf,2),
-//        height:level.definition.height,
-//        name:"history",
-//        type:"historylayer",
-//        visible:true,
-//        width:level.definition.width,
-//        x:0,
-//        y:0
-//    };
-//    
-//    this.definition.layers.push(historyLayer);
-//    
-//    level.layers = {};
-//    level.definition.layers.forEach(function(layer, index) {
-//        level.layers[layer.name] = layer;
-//    });
-//    
-//    game.variables.tile = {
-//        width : this.definition.tilewidth,
-//        height : this.definition.tileheight
-//    };
-//    
-//    //fill resources layer
-//    level.layers.resources.data = Array.apply(null, new Array(level.definition.width * level.definition.height)).map(Number.prototype.valueOf,4);
-//
-    //generate iron resources
-//    for (var i = 0; i < level.definition.width*level.definition.height; i++) {
-//        y = Math.floor(i / level.definition.width);
-//        x = i - level.definition.width * y;
-//        
-//        var n = Perlin.noise(x/20,y/20, game.variables.seed);
-//        n = Math.cos(n*5);
-//        
-//        var d = Math.round(n * 10)
-//        
-//        level.layers.iron.data[i] = d <= 0 ? 1 : d + 1;
-//    }
-//    
-//    level.calculatefog();
-    
-    
-    
-    
     game.variables.tile = {
         width : 64,
         height : 32
     };
     
+    level.emptyChunkLayer = document.createElement('canvas');
+    level.emptyChunkLayer.context = level.emptyChunkLayer.getContext("2d");
+    level.emptyChunkLayer.width = game.variables.chunk.size * game.variables.tile.width; 
+    level.emptyChunkLayer.height = game.variables.chunk.size * game.variables.tile.height;
     
-    
-    level.chunks = [];
+    level.chunks = []; //2d Array
     
     // Layers
     level.layers = {};
@@ -267,22 +224,11 @@ level.chunk.prototype.createLayer = function(layer) {
     
     _self.layers[layer.name] = {
         data : [],
-        tileset : layer.tileset
+        tileset : layer.tileset,
+        definition : layer
     };
     
-    var chunkSize = _self.size;
-    var chunkX = _self.x;
-    var chunkY = _self.y;
-    
-    // GENERATE
-    if (layer.generate) {
-        for (var y = 0; y < chunkSize; y++) {
-            for (var x = 0; x < chunkSize; x++) { 
-                var i = (y * _self.size + x);
-                _self.layers[layer.name].data[i] = layer.generate(_self.x * chunkSize + x, _self.y * chunkSize + y);
-            }
-        }
-    }
+
     
     if (layer.type === 'tile') {
         _self.drawLayer(_self.layers[layer.name]);
@@ -294,47 +240,77 @@ level.chunk.prototype.createLayer = function(layer) {
 level.chunk.prototype.drawLayer = function(layer) { 
     var _self = this;
     
-    var canvasLayer = document.createElement('canvas'); // Create a new canvas, with a render chunk we can just dispose of any pre-existing chunk and create a new canvas element
-    canvasLayer.context = canvasLayer.getContext("2d");
-     
-    canvasLayer.width = _self.size * game.variables.tile.width; 
-    canvasLayer.height = _self.size * game.variables.tile.height;
+    layer.canvas = level.emptyChunkLayer;
     
-    // Sometimes the tileset is not loaded yet, then we don't have any images to draw the chunk,
-    // so we can safely return and retry it later.
+    var job = new common.background.job();
     
-
-    if (!layer.tileset.isLoaded) {
-        layer.canvas = null;
-        return null;
-    }
-    
-    // Assign tileset data to variables for easy use.
-    var tileWidth = game.variables.tile.width;
-    var tileHeight = game.variables.tile.height;
-    
-    for (var i = 0; i < _self.size * _self.size; i++) {
-        var x = i % _self.size;
-        var y = Math.floor(i / _self.size);
+    job.process = function() {
+        if(layer.data.equals([])) {
+            var chunkSize = _self.size;
+            var chunkX = _self.x;
+            var chunkY = _self.y;
+            
+            // GENERATE
+            if (layer.definition.generate) {
+                for (var y = 0; y < chunkSize; y++) {
+                    for (var x = 0; x < chunkSize; x++) { 
+                        var i = (y * _self.size + x);
+                        layer.data[i] = layer.definition.generate(_self.x * chunkSize + x, _self.y * chunkSize + y);
+                    }
+                }
+            }
+        }
         
-        var sx = layer.data[i] % layer.tileset.tilesPerRow;
-        var sy = (layer.data[i] - sx) / layer.tileset.tilesPerRow;
+        var canvasLayer = document.createElement('canvas'); // Create a new canvas, with a render chunk we can just dispose of any pre-existing chunk and create a new canvas element
+        canvasLayer.context = canvasLayer.getContext("2d");
 
-        canvasLayer.context.drawImage(layer.tileset,
-                               sx * tileWidth,
-                               sy * tileHeight,
-                               tileWidth,
-                               tileHeight,
-                               (_self.size * tileWidth / 2) + Math.round(0.5*(x-y)*tileWidth) - (tileWidth / 2),
-                               Math.round(0.5*(x+y)*tileHeight),
-                               tileWidth,
-                               tileHeight
-                            );
-    }   
+        canvasLayer.width = _self.size * game.variables.tile.width; 
+        canvasLayer.height = _self.size * game.variables.tile.height;
+
+        // Sometimes the tileset is not loaded yet, then we don't have any images to draw the chunk,
+        // so we can safely return and retry it later.
+
+
+        if (!layer.tileset.isLoaded) {
+            layer.canvas = null;
+            return null;
+        }
+
+        // Assign tileset data to variables for easy use.
+        var tileWidth = game.variables.tile.width;
+        var tileHeight = game.variables.tile.height;
+
+        for (var i = 0; i < _self.size * _self.size; i++) {
+            var x = i % _self.size;
+            var y = Math.floor(i / _self.size);
+
+            var sx = layer.data[i] % layer.tileset.tilesPerRow;
+            var sy = (layer.data[i] - sx) / layer.tileset.tilesPerRow;
+
+            canvasLayer.context.drawImage(layer.tileset,
+                                   sx * tileWidth,
+                                   sy * tileHeight,
+                                   tileWidth,
+                                   tileHeight,
+                                   (_self.size * tileWidth / 2) + Math.round(0.5*(x-y)*tileWidth) - (tileWidth / 2),
+                                   Math.round(0.5*(x+y)*tileHeight),
+                                   tileWidth,
+                                   tileHeight
+                                );
+        }   
+
+        layer.canvas = canvasLayer;
+    };
     
-    layer.canvas = canvasLayer;
+    level.chunkDrawQueue.push(job);
+};
 
-    return canvasLayer;
+level.chunk.prototype.backgroundProcess = function() {
+    
+}
+
+level.collectGarbage = function() {
+    
 };
 
 level.getChunk = function(x, y) {

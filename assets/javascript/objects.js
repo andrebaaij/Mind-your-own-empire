@@ -45,17 +45,25 @@ objects.prototype.functions.move = function(x,y) {
 };
 
 objects.prototype.functions.select = function(){
+    var _self = this;
+    
     if (this.tileset.image_selected) {
         this.image = this.tileset.image_selected;
     };
+    
+    _self.isSelected = true;
     
     common.window(this.name, game.variables.mouseX, game.variables.mouseY);
 };
 
 objects.prototype.functions.deselect = function(){
+    var _self = this;
+    
     if (this.tileset.image_selected) {
         this.image = this.tileset;
     }
+    
+    _self.isSelected = false;
 };
 
 objects.prototype.functions.addResources = function(resources) {

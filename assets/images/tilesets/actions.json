@@ -1,0 +1,19 @@
+{
+    "image" : "tiles.png",
+    "grid" : {
+        "width" : 64,
+        "height" : 32
+    },
+    "animations" : {
+        "walk" : {
+            "SE" : [0],
+            "SW" : [0],
+            "NW" : [0],
+            "NE" : [0],
+            "E"  : [0],
+            "W"  : [0],
+            "N"  : [0],
+            "S"  : [0]
+        }
+    }
+}

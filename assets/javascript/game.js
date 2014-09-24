@@ -6,7 +6,7 @@ var game = {
    variables : {
        pause : false,
        chunk : {
-          size : 20  
+          size : 10  
        }
    }
 };
@@ -22,6 +22,7 @@ game.initialise = function() {
     objects.create("mind",5,5);
     //objects.create("tower",10,10);
     
+    game.variables.counter= 0;
     game.gameLoop();
     //setInterval(function () {game.gameLoop();}, 2000);
     
@@ -34,6 +35,8 @@ game.gameLoop = function() {
     if (!game.variables.pause) {
         game.draw();
     }
+    
+    common.background.process();
 };
 
 game.draw = function() {
