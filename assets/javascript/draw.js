@@ -21,6 +21,13 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     var canvasWidth = common.scaleNumber(canvas.width, true);
     var canvasHeight = common.scaleNumber(canvas.height, true);
     
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    var scale = common.scaleNumber(1);
+    canvas.context.scale(scale,scale);   
+    canvas.context.translate(canvas.xOffset,canvas.yOffset)
+    
     // Get tileset from level
     //var tileset_tiles = common.resources.tilesets.get(level.tilesets[0].name);
        
@@ -59,8 +66,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                     }
 
                     canvas.context.drawImage(chunkLayer.canvas,
-                             ((x-y)*chunkSize*tilewidth/2) - (chunkSize*tilewidth/2) + (tilewidth / 2) - canvas.xOffset,
-                             ((y+x)*chunkSize*tileheight/2) - canvas.yOffset);
+                             ((x-y)*chunkSize*tilewidth/2) - (chunkSize*tilewidth/2) + (tilewidth / 2),
+                             ((y+x)*chunkSize*tileheight/2));
                 }
             }
         } else if (layer.type === 'objects') {
@@ -72,8 +79,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             
             //Draw actions for selected objects
             objects.forEach(function(object, index, array) {
-                var prevX = Math.round(object.x-canvas.xOffset);
-                var prevY = Math.round(object.y-canvas.yOffset);
+                var prevX = Math.round(object.x);
+                var prevY = Math.round(object.y);
                 
                 if(object.isSelected) {
                     object.actions.forEach(function(action, action_index, action_array) {
@@ -88,7 +95,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                         
                         canvas.context.beginPath();
                         canvas.context.moveTo(prevX, prevY);
-                        canvas.context.lineTo(action.x-canvas.xOffset, action.y-canvas.yOffset);
+                        canvas.context.lineTo(action.x, action.y);
                         canvas.context.strokeStyle="rgba(0,0,0,0.5)";
                         canvas.context.stroke();
                         
@@ -97,15 +104,15 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                                            sy * tileheight,
                                            tilewidth,
                                            tileheight,
-                                           Math.round(action.x-canvas.xOffset-tilewidth/2),
-                                           Math.round(action.y-canvas.yOffset-tileheight/2),
+                                           Math.round(action.x-tilewidth/2),
+                                           Math.round(action.y-tileheight/2),
                                            tilewidth,
                                            tileheight
                                         );
                         
 
-                        prevX = action.x-canvas.xOffset;
-                        prevY = action.y-canvas.yOffset;
+                        prevX = action.x;
+                        prevY = action.y;
                     });
                 }
             });
@@ -123,44 +130,20 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                     sx = tileIndex % tileset.tilesPerRow;
                     sy = (tileIndex - sx) / tileset.tilesPerRow;
 
-                    if (object.emitter && object.crafted === 1) {
-                        object.emitter.update(canvas, Math.round(object.x-canvas.xOffset), Math.round(object.y-canvas.yOffset));
-                    }
+//                    if (object.emitter && object.crafted === 1) {
+//                        object.emitter.update(canvas, Math.round(object.x), Math.round(object.y));
+//                    }
 
                     canvas.context.drawImage(object.image,
                                            sx * tilewidth,
                                            sy * tileheight + tileheight * (1-object.crafted),
                                            tilewidth,
                                            Math.round(tileheight*object.crafted),
-                                           Math.round(object.x-canvas.xOffset - object.center.x),
-                                           Math.round(object.y-canvas.yOffset - object.center.y) + tileheight * (1-object.crafted),
+                                           Math.round(object.x - object.center.x),
+                                           Math.round(object.y - object.center.y) + tileheight * (1-object.crafted),
                                            tilewidth,
                                            Math.round(tileheight*object.crafted)
                                         );
-                
-                if(object.isSelected) {
-                    object.actions.forEach(function(action, action_index, action_array) {
-                        tileset = _self.actionTiles;
-                        tileIndex = _self.actionTiles.animations[action.action]['N'];
-                        
-                        var tilewidth = tileset.grid.width;
-                        var tileheight = tileset.grid.height;
-                        
-                        sx = tileIndex % tileset.tilesPerRow;
-                        sy = (tileIndex - sx) / tileset.tilesPerRow;
-
-                        canvas.context.drawImage(_self.actionTiles,
-                                           sx * tilewidth,
-                                           sy * tileheight,
-                                           tilewidth,
-                                           tileheight,
-                                           Math.round(action.x-canvas.xOffset-tilewidth/2),
-                                           Math.round(action.y-canvas.yOffset-tileheight/2),
-                                           tilewidth,
-                                           tileheight
-                                        );
-                    });
-                }
             });
 
             
@@ -203,8 +186,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             var imageheight = tileset.height;
             tilesPerRow = tileset.tilesPerRow;
 
-            x = game.variables.mouseX + canvas.xOffset;
-            y = game.variables.mouseY + canvas.yOffset;
+            x = game.variables.mouseX;
+            y = game.variables.mouseY;
 
             tileIndex = 0;
             var sx = tileIndex % tilesPerRow;
@@ -217,8 +200,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                                        sy * tileheight,
                                        tilewidth,
                                        tileheight,
-                                       Math.round(0.5*(x-y)*tilewidth-canvas.xOffset),
-                                       Math.round(0.5*(x+y)*tileheight-canvas.yOffset),
+                                       Math.round(0.5*(x-y)*tilewidth),
+                                       Math.round(0.5*(x+y)*tileheight),
                                        tilewidth,
                                        tileheight
                                     );

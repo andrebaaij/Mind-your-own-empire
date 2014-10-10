@@ -4,7 +4,24 @@
     <title>RTS</title>
     <link rel="stylesheet" type="text/css" href="./assets/stylesheets/jquery-ui.css">
     <link rel="stylesheet" type="text/css" href="./assets/stylesheets/style.css">
+
+    <script id="shader-fs" type="x-shader/x-fragment">
+        void main(void) {
+            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        }
+    </script>
+    <script id="shader-vs" type="x-shader/x-vertex">
+        attribute vec3 aVertexPosition;
+
+        uniform mat4 uMVMatrix;
+        uniform mat4 uPMatrix;
+
+        void main(void) {
+            gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        }
+    </script>
 </head>
+
 <body id="wrapper" oncontextmenu="return false;">
     <div id="game">
         <canvas id="canvas"></canvas>
@@ -31,6 +48,7 @@
     </div>
     <script src="./assets/javascript/jquery-2.1.1.js"></script>
     <script src="./assets/javascript/jquery-ui.js"></script>
+    <script src="./assets/javascript/simplex-noise.js"></script>
     <script src="./assets/javascript/common.js"></script>
     <script src="./assets/javascript/game.js"></script>
 </body>

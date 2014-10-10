@@ -321,9 +321,9 @@ common.scaleNumber = function(number, invert) {
     
     for (var i = game.variables.scale.minLevel; i < game.variables.scale.level; i++) {
         if(invert) {
-            number *= 1+game.variables.scale.speed;
+            number *= game.variables.scale.speed;
         } else {
-            number *= 1-game.variables.scale.speed;
+            number /= game.variables.scale.speed;
         }
     }
     
@@ -331,16 +331,15 @@ common.scaleNumber = function(number, invert) {
 }
 
 common.getGridFromScreen = function(canvas, x, y) {
-    var xOffset = common.scaleNumber(canvas.xOffset);
-    var yOffset = common.scaleNumber(canvas.yOffset);
+    var coordinates = common.getCoordinatesFromScreen(canvas, x, y)
 
-    return common.getGridFromCoordinates(x + xOffset, y + yOffset);
+    return common.getGridFromCoordinates(coordinates.x, coordinates.y);
     
 };
 
 common.getGridFromCoordinates = function(x, y) {
-    var tileWidth = common.scaleNumber(game.variables.tile.width);
-    var tileHeight = common.scaleNumber(game.variables.tile.height);
+    var tileWidth = game.variables.tile.width;
+    var tileHeight = game.variables.tile.height;
     
     x = x - tileWidth/2;
    
@@ -365,12 +364,11 @@ common.getGridFromCoordinates = function(x, y) {
     };
 };
 
-// WARNING: This function is not tested yet
-// TODO: test this function
-common.getScreenFromGrid = function(level, canvas, x, y) {
-    var sx = Math.round(canvas.xOffset) + ((parseInt(x,10) - parseInt(y,10)) * (level.tilewidth / 2));
-    var sy = Math.round(canvas.yOffset) + ((parseInt(x,10) + parseInt(y,10)) * (level.tileheight / 2));
-    return { x : sx, y : sy};
+common.getCoordinatesFromScreen = function(canvas, x, y) {
+    x = common.scaleNumber(x, true) - canvas.xOffset;
+    y = common.scaleNumber(y, true ) - canvas.yOffset;
+    
+    return {x : x, y : y};
 };
 
 common.getCoordinatesFromGrid = function(x, y) {
@@ -387,13 +385,13 @@ common.getCoordinatesFromGrid = function(x, y) {
 */
 
 common.window = function(header, x, y) {
-    $game = $('#game');
+    var $game = $('#game');
     
-    $window = $('<div/>').addClass('table')
+    var $window = $('<div/>').addClass('table')
                 .addClass('window')
                 .attr('style','left:' + x + '; top:' + y + '; position: absolute;');
     
-    $header = common.windowRow('100%','15px')
+    var $header = common.windowRow('100%','15px')
         .addClass('header');
         $title = common.windowRowCell('100%','15px')
             .addClass('title')
@@ -402,15 +400,15 @@ common.window = function(header, x, y) {
             .addClass('close')
             .text('X');
     
-            $close.bind('click',function(e) {
-                $(this).parent().parent().remove();
-            });
-    
     $header.append($title);
     $header.append($close);
         
     $window.append($header);                                   
-        
+
+    $close.bind('click',function(e) {
+                $window.hide();
+    });
+    
     $window.draggable({
                 stack: "#game > .window",
                 containment: "#game",
@@ -429,7 +427,9 @@ common.window = function(header, x, y) {
             });
     
     $game.append($window);
-                                                       
+    
+    return $window;
+    
 //        <div class="table window" style="top: 50; left 0;">
 //            <div class="row">
 //                <div class="cell header">
@@ -549,3 +549,5 @@ common.background.job.prototype.clean = function() {
         _self.queue.splice(i,1);
     }
 }
+
+

@@ -52,8 +52,7 @@ objects.prototype.functions.select = function(){
     };
     
     _self.isSelected = true;
-    
-    common.window(this.name, game.variables.mouseX, game.variables.mouseY);
+    _self.$window.show();
 };
 
 objects.prototype.functions.deselect = function(){
@@ -147,7 +146,14 @@ objects.prototype.functions.walk = function(x,y) {
 
         x = leg.x - origin.x;
         y = leg.y - origin.y;
-
+        
+        var nbSteps = Math.sqrt(x*x + y*y)/2
+        
+        leg.step = {
+            x : x / nbSteps,
+            y : y / nbSteps
+        }
+        
         var NS,
             WE;
 
@@ -170,7 +176,7 @@ objects.prototype.functions.walk = function(x,y) {
         origin.x = leg.x;
         origin.y = leg.y;
 
-        leg.direction = NS+WE;
+        leg.direction = 'N';
 
         self.actions.push(leg);
     });
@@ -186,32 +192,17 @@ objects.prototype.functions.walkLoop = function(action) {
     x = destination.x - this.x;
     y = destination.y - this.y;
 
-    if(x >= 2) {
-        x = 2;
-    } else if (x <= -2){
-        x = -2;
-    } else {
-        x = 0;
+    if(Math.abs(x) > Math.abs(action.step.x)) {
+        x = action.step.x;
     }
 
-    if(y >= 1) {
-        y = 1;
-    } else if (y <= -1){
-        y = -1;
-    } else {
-        y = 0;    
+    if(Math.abs(y) > Math.abs(action.step.y)) {
+        y = action.step.y;
     }
-
-    if (x === 0 && y !== 0) {
-        y = y * 2;
-    }
-
 
     this.move(x,y);
 
-    if (-3 < this.x-destination.x && this.x-destination.x < 3 && -2 < this.y-destination.y && this.y-destination.y < 2) {
-        this.x = destination.x;
-        this.y = destination.y;
+    if (this.x === destination.x && this.y === destination.y) {
         this.actions.shift();
     }
 
@@ -313,7 +304,10 @@ objects.prototype.functions.initialise = function(x,y) {
     object.setDirection('NE');
     setTimeout(object.animationLoop.bind(object),100);
     object.loopSpeed = 10; //milliseconds
-
+    
+    object.$window = common.window(this.name, game.variables.mouseX, game.variables.mouseY).hide();
+    //object.$window.hide();
+    
     for (var variable in object.defaults) {
         object[variable] = object.defaults[variable];
     }

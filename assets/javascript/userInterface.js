@@ -18,7 +18,7 @@ game.variables.selectGrid = {
 game.variables.mouseDown = false;
 game.variables.scale = {
     level: 1,
-    speed: 0.1,
+    speed: 2,
     minLevel : 1,
     maxLevel : 4
 }
@@ -36,9 +36,9 @@ userInterface.initialise = function () {
     userInterface.elements.menu_craft = document.getElementById("menu_craft");
     
     /* EventListeners assignment*/
-    userInterface.elements.canvas.addEventListener('mousemove', userInterface.canvasMoveMouseListener);
-    userInterface.elements.canvas.addEventListener('mousedown', userInterface.canvasMouseDownListener);
-    userInterface.elements.canvas.addEventListener('mouseup', userInterface.canvasClickListener);
+    userInterface.elements.$canvas.mousemove(userInterface.canvasMoveMouseListener);
+    userInterface.elements.$canvas.mousedown(userInterface.canvasMouseDownListener);
+    userInterface.elements.$canvas.mouseup(userInterface.canvasClickListener);
     
     userInterface.elements.$canvas.bind('mousewheel', function(e){
         var scale = 0;
@@ -96,7 +96,7 @@ userInterface.initialise = function () {
     userInterface.scrollLoop();
     
     /* initialise */
-    userInterface.elements.canvas.context = userInterface.elements.canvas.getContext("2d");
+    userInterface.elements.canvas.context = canvas.getContext('2d');
     userInterface.elements.canvas.xOffset = 0;
     userInterface.elements.canvas.yOffset = 0;
     window.onresize();
@@ -292,32 +292,9 @@ window.onresize = function() {
     }
 };
 
-userInterface.canvasMoveMouseListener = function(e) {
-    var rect = userInterface.elements.canvas.getBoundingClientRect();
-
-    var posx = 0;
-	var posy = 0;
-	if (!e) e = window.event;
-	if (e.pageX || e.pageY) {
-		posx = e.pageX;
-		posy = e.pageY;
-	}
-	else if (e.clientX || e.clientY) {
-		posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
-		posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
-	}
-	// posx and posy contain the mouse position relative to the document
-	// Do something with this information
-    
-    var mouseX = posx - rect.left;
-    var mouseY = posy - rect.top;
-    
-    game.variables.mouseX = mouseX;
-    game.variables.mouseY = mouseY;
-    
-    
-    var x = mouseX + userInterface.elements.canvas.xOffset,
-        y = mouseY + userInterface.elements.canvas.yOffset;
+userInterface.canvasMoveMouseListener = function(event) {
+    var mouseX = game.variables.mouseX = event.pageX;
+    var mouseY = game.variables.mouseY = event.pageY;
     
     var grid = common.getGridFromScreen(userInterface.elements.canvas, mouseX, mouseY);      
 
@@ -346,42 +323,26 @@ userInterface.canvasMoveMouseListener = function(e) {
     }
     
     if(mouseX < 100) {
-        game.variables.scrollX = -1;
-    } else if (mouseX > userInterface.elements.canvas.width - 100) {
         game.variables.scrollX = 1;
+    } else if (mouseX > userInterface.elements.canvas.width - 100) {
+        game.variables.scrollX = -1;
     } else {
         game.variables.scrollX = 0;
     }
     
     if (mouseY < 100) {
-        game.variables.scrollY = -1;
-    } else if (mouseY > userInterface.elements.canvas.height - 100) {
         game.variables.scrollY = 1;
+    } else if (mouseY > userInterface.elements.canvas.height - 100) {
+        game.variables.scrollY = -1;
     } else {
         game.variables.scrollY = 0;
     }
 };
 
-userInterface.canvasMouseDownListener = function(e) {
+userInterface.canvasMouseDownListener = function(event) {
     if (!game.variables.mouseDown) {
-        var rect = userInterface.elements.canvas.getBoundingClientRect();
-
-        var posx = 0;
-        var posy = 0;
-        if (!e) e = window.event;
-        if (e.pageX || e.pageY) {
-            posx = e.pageX;
-            posy = e.pageY;
-        }
-        else if (e.clientX || e.clientY) {
-            posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
-            posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
-        }
-        // posx and posy contain the mouse position relative to the document
-        // Do something with this information
-
-        var mouseX = posx - rect.left;
-        var mouseY = posy - rect.top;
+        var mouseX = game.variables.mouseX = event.pageX;
+        var mouseY = game.variables.mouseY = event.pageY;
         
         var grid = common.getGridFromScreen(userInterface.elements.canvas, mouseX, mouseY);   
         
@@ -392,22 +353,19 @@ userInterface.canvasMouseDownListener = function(e) {
     }
 };
 
-userInterface.canvasClickListener = function(e) {
+userInterface.canvasClickListener = function(event) {
     var button;
     
     game.variables.mouseDown = false;
     
-    var mouseX = game.variables.mouseX;
-    var mouseY = game.variables.mouseY;
-    
-    if (e.which === null) {
-        /* IE case */
-        button = (e.button < 2) ? "LEFT" :
-                 ((e.button == 4) ? "MIDDLE" : "RIGHT");
-    } else {
-        /* All others */
-        button = (e.which < 2) ? "LEFT" :
-                 ((e.which == 2) ? "MIDDLE" : "RIGHT");
+    var mouseX = game.variables.mouseX = event.pageX;
+    var mouseY = game.variables.mouseY = event.pageY;
+
+    /* IE case */
+    if (event.which === null) {
+        button = (event.button < 2) ? "LEFT" : ((event.button == 4) ? "MIDDLE" : "RIGHT");
+    } else { /* All others */
+        button = (event.which < 2) ? "LEFT" : ((event.which == 2) ? "MIDDLE" : "RIGHT");
     }
     
     if (button === "LEFT") {
@@ -441,8 +399,6 @@ userInterface.canvasClickListener = function(e) {
             object.deselect();
         });
         
-        //console.log("lx:" + game.variables.selectGrid.lx + ",ty:" + game.variables.selectGrid.ty + ",rx:" + game.variables.selectGrid.rx + ",by:"+ game.variables.selectGrid.by)
-  
         game.variables.selectedObjects = game.findObject(game.variables.selectGrid.lx,game.variables.selectGrid.ty, game.variables.selectGrid.rx, game.variables.selectGrid.by);
 
         game.variables.selectedObjects.forEach(function(object, index) {
@@ -516,7 +472,8 @@ userInterface.canvasClickListener = function(e) {
             } else {
                 game.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
                     if (selectedObject.walk) {
-                        selectedObject.walk(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+                        var coordinates = common.getCoordinatesFromScreen(userInterface.elements.canvas,mouseX,mouseY);
+                        selectedObject.walk(coordinates.x,coordinates.y);
                     }
                 });
             }

@@ -1,0 +1,62 @@
+<html>
+
+<head>
+<title>2dContext</title>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+<script type="text/javascript" src="./assets/javascript/glMatrix.js"></script>
+<script type="text/javascript" src="./assets/javascript/2dContext.js"></script>
+<script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec2 vTextureCoord;
+
+    uniform sampler2D uSampler;
+
+    void main(void) {
+        gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+    }
+</script>
+<script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec2 aTextureCoord;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    varying vec2 vTextureCoord;
+
+    attribute vec2 a_position;
+    uniform vec2 u_resolution;
+    
+    void main(void) {
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vTextureCoord = aTextureCoord;
+       
+       // convert the rectangle from pixels to 0.0 to 1.0
+       vec2 zeroToOne = a_position / u_resolution;
+
+       // convert from 0->1 to 0->2
+       vec2 zeroToTwo = zeroToOne * 2.0;
+
+       // convert from 0->2 to -1->+1 (clipspace)
+       vec2 clipSpace = zeroToTwo - 1.0;
+
+       //gl_Position = vec4(clipSpace, 0, 1);
+        
+    }
+</script>
+</head>
+
+
+<body>
+    <canvas id="canvas" style="border: none;" width="500" height="500"></canvas>
+    <script>
+        var canvas = document.getElementById("canvas");
+        canvas.context = gl = new context2d(canvas);
+    </script>
+</body>
+
+</html>
+
+    

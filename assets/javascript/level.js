@@ -21,6 +21,8 @@ level.initialise = function() {
 };
 
 level.load = function (jsonFilename) {
+    var _self = this;
+    
     game.variables.tile = {
         width : 64,
         height : 32
@@ -30,6 +32,9 @@ level.load = function (jsonFilename) {
     level.emptyChunkLayer.context = level.emptyChunkLayer.getContext("2d");
     level.emptyChunkLayer.width = game.variables.chunk.size * game.variables.tile.width; 
     level.emptyChunkLayer.height = game.variables.chunk.size * game.variables.tile.height;
+    
+    var random = new Alea(game.variables.seed)
+    level.simplex = new SimplexNoise(random)
     
     level.chunks = []; //2d Array
     
@@ -45,7 +50,7 @@ level.load = function (jsonFilename) {
         data : [],
         generate : function(x, y) {
             function getType(x, y) {
-                var n = Math.round(Perlin.noise(x/100,y/100, game.variables.seed) * 10);
+                var n = Math.round(_self.simplex.noise2D(x/100,y/100) * 10);
                 
                 var result;
             
@@ -161,7 +166,8 @@ level.load = function (jsonFilename) {
         size : game.variables.chunk.size,
         data : [],
         generate : function(x, y) {
-            var n = Perlin.noise(x/20,y/20, game.variables.seed);
+            var n = _self.simplex.noise2D(x/20,y/20)
+            
             n = Math.cos(n*5);
 
             var d = Math.round(n * 10)
@@ -468,6 +474,8 @@ level.getPath = function(object, destination) {
 };
 
 level.calculatefog = function() {
+    console.log('start: calculatefog');
+    
     var arrObjects = game.getObjects();
     var handledObjects = [];
     var objectsBeingHandled = [];
@@ -475,9 +483,7 @@ level.calculatefog = function() {
     arrObjects.forEach(function(object, index) {
         if (object.name === 'mind') {
             objectsBeingHandled.push(object);
-           
         }
-    
     });
     
     var thereAreNewObjectsToBeHandled = true;
@@ -537,5 +543,6 @@ level.calculatefog = function() {
                 }
             }
         }
-    } 
+    }
+    console.log('end: calculatefog');
 };
