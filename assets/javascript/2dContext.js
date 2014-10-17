@@ -1,26 +1,11 @@
 var neheTexture;
 var shaderProgram;
-var mvMatrix = mat4.create();
-var mvMatrixStack = [];
-var pMatrix = mat4.create();
 var cubeVertexPositionBuffer;
 var cubeVertexTextureCoordBuffer;
 var cubeVertexIndexBuffer;
 
 
 function context2d(canvas) {
-    this.initGL(canvas);
-    this.initShaders();
-    this.initBuffers();
-    this.initTexture();
-
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.enable(gl.DEPTH_TEST);
-
-    this.tick();
-};
-
-context2d.prototype.initGL = function(canvas) {
     try {
         gl = canvas.getContext("experimental-webgl");
         gl.viewportWidth = canvas.width;
@@ -30,7 +15,16 @@ context2d.prototype.initGL = function(canvas) {
     if (!gl) {
         alert("Could not initialise WebGL, sorry :-(");
     }
-}
+    
+    this.initShaders();
+    this.initBuffers();
+    this.initTexture();
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.enable(gl.DEPTH_TEST);
+
+    this.tick();
+};
 
 context2d.prototype.initShaders = function() {
     var fragmentShader = this.getShader(gl, "shader-fs");
@@ -47,14 +41,16 @@ context2d.prototype.initShaders = function() {
 
     gl.useProgram(shaderProgram);
 
-    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "a_position");
     gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-
+    
     shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
     gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
 
-    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
-    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    // set the resolution
+    shaderProgram.resolutionLocation = gl.getUniformLocation(shaderProgram, "u_resolution");
+    gl.uniform2f(shaderProgram.resolutionLocation, 500, 500);
+    
     shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
 }
 
@@ -64,7 +60,14 @@ context2d.prototype.initTexture = function() {
     neheTexture = gl.createTexture();
     neheTexture.image = new Image();
     neheTexture.image.onload = function () {
-        this.handleLoadedTexture(neheTexture)
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, neheTexture);
+       // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, neheTexture.image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        //gl.bindTexture(gl.TEXTURE_2D, null);
+        
     }.bind(this);
 
     neheTexture.image.src = "./assets/nehe.gif";
@@ -73,13 +76,19 @@ context2d.prototype.initTexture = function() {
 context2d.prototype.initBuffers = function() {
     cubeVertexPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
+    var x = 50,
+        y = 150,
+        width = 1250,
+        height = 250;
+    
+    
     vertices = [
-        // Front face
-        -1.0, -1.0,  1.0,
-         1.0, -1.0,  1.0,
-         1.0,  1.0,  1.0,
-        -1.0,  1.0,  1.0
-    ];
+        x,y,1,
+        x+width,y,1,
+        x+width,y+height,1,
+        x,y+height,1
+    ]
+    
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     cubeVertexPositionBuffer.itemSize = 3;
     cubeVertexPositionBuffer.numItems = 4;
@@ -111,18 +120,11 @@ context2d.prototype.initBuffers = function() {
 context2d.prototype.tick = function() {
     requestAnimationFrame(this.tick.bind(this));
     this.drawScene();
-    //this.animate();
 }
 
 context2d.prototype.drawScene = function() {
-    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+    //gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
-
-    mat4.identity(mvMatrix);
-
-    mat4.translate(mvMatrix, [0.0, 0.0, -5.0]);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
     gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -135,13 +137,8 @@ context2d.prototype.drawScene = function() {
     gl.uniform1i(shaderProgram.samplerUniform, 0);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
-    this.setMatrixUniforms();
     gl.drawElements(gl.TRIANGLES, cubeVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
-
-
-
-
 
 context2d.prototype.getShader = function(gl, id) {
     var shaderScript = document.getElementById(id);
@@ -179,29 +176,11 @@ context2d.prototype.getShader = function(gl, id) {
 }
 
 context2d.prototype.handleLoadedTexture = function(texture) {
+    gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+   // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-}
-
-context2d.prototype.mvPushMatrix = function() {
-    var copy = mat4.create();
-    mat4.set(mvMatrix, copy);
-    mvMatrixStack.push(copy);
-}
-
-context2d.prototype.mvPopMatrix = function() {
-    if (mvMatrixStack.length == 0) {
-        throw "Invalid popMatrix!";
-    }
-    mvMatrix = mvMatrixStack.pop();
-}
-
-
-context2d.prototype.setMatrixUniforms = function() {
-    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+    //gl.bindTexture(gl.TEXTURE_2D, null);
 }
