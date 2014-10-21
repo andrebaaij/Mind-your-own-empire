@@ -23,7 +23,7 @@
         varying vec2 vTextureCoord;
 
         attribute vec2 a_position;
-        //attribute vec2 a_textureposition;
+        attribute vec2 a_textureposition;
         uniform vec2 u_resolution;
         uniform vec2 u_textureresolution;
         
@@ -36,7 +36,7 @@
             vec2 texture_clipSpace = (aTextureCoord / u_textureresolution);
             vTextureCoord = texture_clipSpace * vec2(1, -1);
 
-            vTextureCoord = aTextureCoord;
+            //vTextureCoord = aTextureCoord;
         }
     </script>
 </head>
