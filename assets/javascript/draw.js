@@ -65,10 +65,12 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                         continue;   
                     }
 
+                    
                     canvas.context.drawImage(chunkLayer.canvas,
                              ((x-y)*chunkSize*tilewidth/2) - (chunkSize*tilewidth/2) + (tilewidth / 2),
                              ((y+x)*chunkSize*tileheight/2));
                 }
+               
             }
         } else if (layer.type === 'objects') {
             // Sort objects by y position

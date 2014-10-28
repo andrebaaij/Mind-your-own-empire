@@ -60,7 +60,9 @@ userInterface.initialise = function () {
         if(scale !== 0) {
             userInterface.elements.canvas.width = window.innerWidth;
             userInterface.elements.canvas.height = window.innerHeight;
-
+            
+            userInterface.elements.canvas.context.dimensions(window.innerWidth, window.innerHeight);
+            
             var scale = common.scaleNumber(1);
 
             userInterface.elements.canvas.context.scale(scale,scale);
@@ -96,7 +98,9 @@ userInterface.initialise = function () {
     userInterface.scrollLoop();
     
     /* initialise */
-    userInterface.elements.canvas.context = canvas.getContext('2d');
+    //userInterface.elements.canvas.context = canvas.getContext('2d');
+    userInterface.elements.canvas.context = new context2d(userInterface.elements.canvas);
+    userInterface.elements.canvas.context.dimensions(window.innerWidth, window.innerHeight);
     userInterface.elements.canvas.xOffset = 0;
     userInterface.elements.canvas.yOffset = 0;
     window.onresize();
@@ -285,6 +289,7 @@ window.onresize = function() {
     
     var scale = common.scaleNumber(1);
     
+    userInterface.elements.canvas.context.dimensions(window.innerWidth, window.innerHeight);
     userInterface.elements.canvas.context.scale(scale,scale);    
     
     if (game.variables.pause) {

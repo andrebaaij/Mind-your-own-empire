@@ -6,7 +6,7 @@ var cubeVertexIndexBuffer;
 
 
 function context2d(canvas) {
-    var gl;
+    
     
     try {
         gl = canvas.getContext("experimental-webgl");
@@ -18,12 +18,16 @@ function context2d(canvas) {
         alert("Could not initialise WebGL, sorry :-(");
     }
     
+    
+    this.width = canvas.width;
+    this.height = canvas.height;
+    
     this.helper.variables.texture.max_units = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS),
     this.helper.gl = gl;
     
     this.initShaders();
     this.initBuffers();
-
+    
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     //gl.enable(gl.DEPTH_TEST);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -32,7 +36,11 @@ function context2d(canvas) {
     this.textureCoordinationBuffer = [];
     this.vertexIndexBuffer = [];
     
-    //this.tick();
+    this.vertexPositionBuffer = [];
+    this.textureCoordinationBuffer = [];
+    this.vertexIndexBuffer = [];
+    
+    this.images = [];
 };
 
 context2d.prototype.helper = {
@@ -40,11 +48,33 @@ context2d.prototype.helper = {
         texture : {
             current_unit : -1,
             array : []
+        },
+        offset : {
+            x : 0,
+            y : 0
         }
     }
 };
 
+/* Placeholders */
+context2d.prototype.scale = function(scale,scale) {}; 
 
+context2d.prototype.translate = function(xOffset,yOffset) {
+    this.helper.variables.offset.x = xOffset;
+    this.helper.variables.offset.y = yOffset;
+};
+
+context2d.prototype.dimensions = function(width, height) {
+    var gl = this.helper.gl;
+    
+    this.width = width;
+    this.height = height;
+//    gl.viewportWidth = width;
+//    gl.viewportHeight = height;
+    gl.viewport(0, 0, width, height);
+    shaderProgram.resolutionLocation = gl.getUniformLocation(shaderProgram, "u_resolution");
+    gl.uniform2f(shaderProgram.resolutionLocation, this.width, this.height);
+};
 
 context2d.prototype.initShaders = function() {
     var gl = this.helper.gl;
@@ -70,9 +100,9 @@ context2d.prototype.initShaders = function() {
     gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
 
     // set the resolution
-    shaderProgram.resolutionLocation = gl.getUniformLocation(shaderProgram, "u_resolution");
     shaderProgram.textureresolution = gl.getUniformLocation(shaderProgram, "u_textureresolution");
-    gl.uniform2f(shaderProgram.resolutionLocation, 500, 500);
+    console.log();
+    gl.uniform2f(shaderProgram.resolutionLocation, this.height,this.width);
     
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.BLEND);
@@ -227,13 +257,12 @@ context2d.prototype.drawImage = function () {
     // Default settings
     params.img = arguments[0];
     
-    // If the image is not loaded yet, we can stop this.
-    if (!params.img || !params.img.complete) {
+        // If the image is not loaded yet, we can stop this.
+    if (!params.img || (params.img.nodeName.toLowerCase() === 'img' && !params.img.complete)) {
         return;
     }
 
     //console.log(params.img.stored_width);
-
     if (arguments.length === 3) {
         // context.drawImage(img,x,y);
         params.x = arguments[1];
@@ -244,6 +273,8 @@ context2d.prototype.drawImage = function () {
         params.sy = 0;
         params.swidth = params.img.stored_width;
         params.sheight = params.img.stored_height;
+        
+        //console.log(params);
     } else if (arguments.length === 5) {
         // context.drawImage(img,x,y,width,height);
         params.x = arguments[1];
@@ -269,6 +300,9 @@ context2d.prototype.drawImage = function () {
         return;
     }
 
+    params.x += this.helper.variables.offset.x;
+    params.y += this.helper.variables.offset.y;
+    
     // If the image is not buffered yet, buffer it now.
     if (!params.img.buffer) {
         this.initTexture(params.img);

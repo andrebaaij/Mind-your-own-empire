@@ -32,11 +32,14 @@ common.require('objects','perlin','level','userInterface','draw','particle',game
 
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);
+    
+    userInterface.elements.canvas.context.clearScene();
     if (!game.variables.pause) {
         game.draw();
     }
     
     common.background.process();
+    userInterface.elements.canvas.context.drawScene();
 };
 
 game.draw = function() {

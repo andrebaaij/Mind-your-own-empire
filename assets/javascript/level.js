@@ -272,7 +272,8 @@ level.chunk.prototype.drawLayer = function(layer) {
 
         canvasLayer.width = _self.size * game.variables.tile.width; 
         canvasLayer.height = _self.size * game.variables.tile.height;
-
+        canvasLayer.stored_width = _self.size * game.variables.tile.width; 
+        canvasLayer.stored_height = _self.size * game.variables.tile.height;
         // Sometimes the tileset is not loaded yet, then we don't have any images to draw the chunk,
         // so we can safely return and retry it later.
 
