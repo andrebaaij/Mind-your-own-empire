@@ -25,11 +25,14 @@ function context2d(canvas) {
     this.initBuffers();
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.enable(gl.DEPTH_TEST);
+    //gl.enable(gl.DEPTH_TEST);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     
+    this.vertexPositionBuffer = [];
+    this.textureCoordinationBuffer = [];
+    this.vertexIndexBuffer = [];
     
-    this.tick();
+    //this.tick();
 };
 
 context2d.prototype.helper = {
@@ -70,6 +73,9 @@ context2d.prototype.initShaders = function() {
     shaderProgram.resolutionLocation = gl.getUniformLocation(shaderProgram, "u_resolution");
     shaderProgram.textureresolution = gl.getUniformLocation(shaderProgram, "u_textureresolution");
     gl.uniform2f(shaderProgram.resolutionLocation, 500, 500);
+    
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.BLEND);
     
     shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
 }
@@ -124,9 +130,7 @@ context2d.prototype.initTexture = function(img) {
     buffer.texture.unit_identifier = 'TEXTURE' + this.helper.variables.texture.current_unit;
     this.helper.variables.texture.array[this.helper.variables.texture.current_unit] = img;
     
-    console.log(gl[buffer.texture.unit_identifier]);
-    
-    gl.activeTexture(gl[buffer.texture.unit_identifier]);
+    gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, buffer.texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, buffer.texture.image);
     
@@ -154,10 +158,11 @@ context2d.prototype.tick = function() {
     var gl = this.helper.gl;
     
     requestAnimationFrame(this.tick.bind(this));
-
-    //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     
-    for (var i = 0; i < 100; i++) {
+    this.clearScene();
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    
+    for (var i = 0; i < 2000; i++) {
         var img = common.resources.tilesets.get("block");
         this.drawImage(img, 50, 50);
     }
@@ -167,6 +172,9 @@ context2d.prototype.tick = function() {
     
     var img = common.resources.tilesets.get("tower");
     this.drawImage(img, 50, 50);
+    
+    this.drawScene();
+    
 }
 
 context2d.prototype.getShader = function(gl, id) {
@@ -224,23 +232,28 @@ context2d.prototype.drawImage = function () {
         return;
     }
 
-    params.width = params.img.width;
-    params.height = params.img.height;
-    params.sx = 0;
-    params.sy = 0;
-    params.swidth = params.img.width;
-    params.sheight = params.img.height;
+    //console.log(params.img.stored_width);
 
     if (arguments.length === 3) {
         // context.drawImage(img,x,y);
         params.x = arguments[1];
         params.y = arguments[2];
+        params.width = params.img.stored_width;
+        params.height = params.img.stored_height;
+        params.sx = 0;
+        params.sy = 0;
+        params.swidth = params.img.stored_width;
+        params.sheight = params.img.stored_height;
     } else if (arguments.length === 5) {
         // context.drawImage(img,x,y,width,height);
         params.x = arguments[1];
         params.y = arguments[2];
         params.width = arguments[3];
         params.height = arguments[4];
+        params.sx = 0;
+        params.sy = 0;
+        params.swidth = params.img.stored_width;
+        params.sheight = params.img.stored_height;
     } else if (arguments.length === 9) {
         // context.drawImage(img,sx,sy,swidth,sheight,x,y,width,height);
         params.sx = arguments[1];
@@ -258,75 +271,82 @@ context2d.prototype.drawImage = function () {
 
     // If the image is not buffered yet, buffer it now.
     if (!params.img.buffer) {
-        //params.img.buffer = this.bufferImage(params.img);
         this.initTexture(params.img);
     }
-//
-//    // If the texture is not activate anymore, activate it.
-//    if (!params.img.buffer.texture.glActiveTextureReference) {
-//        params.img.buffer.texture.glActiveTextureReference = this.activateTexture(params.img.buffer.texture);
-//    }
     
-    //gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+    var i = this.images.push(params.img)-1;
     
-    gl.activeTexture(gl[params.img.buffer.texture.unit_identifier]);
-    gl.bindTexture(gl.TEXTURE_2D, params.img.buffer.texture);
-    
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
     var x = params.x,
         y = params.y,
         width = params.width,
         height = params.height;
     
-    var vertices = [
-        x,y,1,
-        x+width,y,1,
-        x+width,y+height,1,
-        x,y+height,1
-    ]
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    this.vertexPositionBuffer.push(x,y,i,
+        x+width,y,i,
+        x+width,y+height,i,
+        x,y+height,i);
 
-
-    gl.uniform2f(shaderProgram.textureresolution, params.img.buffer.texture.image.width, params.img.buffer.texture.image.height);
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
-    
     var x = params.sx,
         y = params.sy,
         width = params.swidth,
         height = params.sheight;
     
-    var textureCoords = [
+    var textureCoordinates = [
         x,y,
         x+width,y,
         x+width,y+height,
         x,y+height
     ]
-    
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
+    this.textureCoordinationBuffer.push(x,y,
+        x+width,y,
+        x+width,y+height,
+        x,y+height);
 
 
-    
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
-    var cubeVertexIndices = [
-        0, 1, 2,
-        0, 2, 3
-    ];
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), gl.STATIC_DRAW);
+    this.vertexIndexBuffer.push(i*3+0, i*3+1, i*3+2,
+        i*3+0, i*3+2, i*3+3);
 
-    
-    //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
-    gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, cubeVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-    gl.activeTexture(gl[params.img.buffer.texture.unit_identifier]);
-    gl.uniform1i(shaderProgram.samplerUniform, params.img.buffer.texture.unit_number);
-
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
-    //gl.activeTexture(gl[params.img.buffer.texture.unit_number]);
-    gl.drawElements(gl.TRIANGLES, cubeVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-    
 };
+
+
+context2d.prototype.drawScene = function() {
+    var gl = this.helper.gl;
+    
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1i(shaderProgram.samplerUniform, 0);    
+    
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.BLEND);
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertexPositionBuffer), gl.STATIC_DRAW);
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.textureCoordinationBuffer), gl.STATIC_DRAW);
+    
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.vertexIndexBuffer), gl.STATIC_DRAW);
+    
+    this.images.forEach(function(image, index, array) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, image.buffer.texture);
+        gl.uniform2f(shaderProgram.textureresolution, image.buffer.texture.image.width, image.buffer.texture.image.height);
+        
+        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 4*index*cubeVertexPositionBuffer.itemSize);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
+        gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, cubeVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 4*index*cubeVertexTextureCoordBuffer.itemSize);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+        gl.drawElements(gl.TRIANGLES, cubeVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 2*index*cubeVertexIndexBuffer.numItems);
+    }.bind(this));
+}
+
+context2d.prototype.clearScene = function() {
+    this.vertexPositionBuffer = [];
+    this.textureCoordinationBuffer = [];
+    this.vertexIndexBuffer = [];
+    
+    this.images = [];
+}

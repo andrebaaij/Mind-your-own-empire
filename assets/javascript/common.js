@@ -185,6 +185,8 @@ tilesets.prototype.add = function(name) {
         this.isLoaded = true;
         this.nbErrors = 0;
         this.tilesPerRow = this.width / this.grid.width;
+        this.stored_width = this.width;
+        this.stored_height = this.height;
     });
     
     common.resources.tilesets[name].addEventListener('error',function(){
@@ -204,6 +206,9 @@ tilesets.prototype.add = function(name) {
             this.isLoaded = true;
             this.nbErrors = 0;
             this.tilesPerRow = this.width / this.grid.width;
+            this.stored_width = this.width;
+            this.stored_height = this.height;
+            
         });
         
         common.resources.tilesets[name].image_selected.addEventListener('error',function(){
