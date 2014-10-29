@@ -1,0 +1,7 @@
+{
+    "images" : ["tileset"],
+    "skills" : ["walk"],
+    "defaults" : {
+        "communicationRadius" : 2   
+    }
+}
