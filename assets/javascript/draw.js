@@ -95,11 +95,11 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                         sx = tileIndex % tileset.tilesPerRow;
                         sy = (tileIndex - sx) / tileset.tilesPerRow;
                         
-                        canvas.context.beginPath();
-                        canvas.context.moveTo(prevX, prevY);
-                        canvas.context.lineTo(action.x, action.y);
-                        canvas.context.strokeStyle="rgba(0,0,0,0.5)";
-                        canvas.context.stroke();
+//                        canvas.context.beginPath();
+//                        canvas.context.moveTo(prevX, prevY);
+//                        canvas.context.lineTo(action.x, action.y);
+//                        canvas.context.strokeStyle="rgba(0,0,0,0.5)";
+//                        canvas.context.stroke();
                         
                         canvas.context.drawImage(_self.actionTiles,
                                            sx * tilewidth,
