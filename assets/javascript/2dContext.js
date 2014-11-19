@@ -51,7 +51,8 @@ context2d.prototype.helper = {
         offset : {
             x : 0,
             y : 0
-        }
+        },
+        imageDrawCallCounter : -1
     }
 };
 
@@ -182,29 +183,6 @@ context2d.prototype.initBuffers = function() {
 
 };
 
-//context2d.prototype.tick = function() {
-//    var gl = this.helper.gl;
-//
-//    Window.requestAnimationFrame(this.tick.bind(this));
-//
-//    this.clearScene();
-//    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-//
-//    for (var i = 0; i < 2000; i++) {
-//        var img = common.resources.tilesets.get("block");
-//        this.drawImage(img, 50, 50);
-//    }
-//
-//    var img = common.resources.tilesets.get("mind");
-//    this.drawImage(img, 150, 150);
-//
-//    var img = common.resources.tilesets.get("tower");
-//    this.drawImage(img, 50, 50);
-//
-//    this.drawScene();
-//    
-//}
-
 context2d.prototype.getShader = function(gl, id) {
     var shaderScript = document.getElementById(id);
     if (!shaderScript) {
@@ -303,7 +281,14 @@ context2d.prototype.drawImage = function () {
         this.initTexture(params.img);
     }
 
-    var i = this.images.push(params.img)-1;
+    var i = this.helper.variables.imageDrawCallCounter += 1;
+
+    var imgIndex = this.images.indexOf(params.img);
+    if (imgIndex === -1) {
+        this.images.push(params.img);
+    }
+
+    params.img.drawCalls.push(i);
 
     var x = params.x,
         y = params.y,
@@ -356,19 +341,21 @@ context2d.prototype.drawScene = function() {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.vertexIndexBuffer), gl.STATIC_DRAW);
 
-    this.images.forEach(function(image, index, array) {
+    this.images.forEach(function(image) {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, image.buffer.texture);
         gl.uniform2f(shaderProgram.textureresolution, image.buffer.texture.image.width, image.buffer.texture.image.height);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
-        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 4*index*cubeVertexPositionBuffer.itemSize);
+        image.drawCalls.forEach(function(index) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 4*index*cubeVertexPositionBuffer.itemSize);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, cubeVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 4*index*cubeVertexTextureCoordBuffer.itemSize);
+            gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
+            gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, cubeVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 4*index*cubeVertexTextureCoordBuffer.itemSize);
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
-        gl.drawElements(gl.TRIANGLES, cubeVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 2*index*cubeVertexIndexBuffer.numItems);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+            gl.drawElements(gl.TRIANGLES, cubeVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 2*index*cubeVertexIndexBuffer.numItems);
+        });
     }.bind(this));
 };
 
@@ -377,5 +364,10 @@ context2d.prototype.clearScene = function() {
     this.textureCoordinationBuffer = [];
     this.vertexIndexBuffer = [];
 
+    this.images.forEach(function(image) {
+        image.drawCalls = [];
+    });
+
+    this.helper.variables.imageDrawCallCounter = -1;
     this.images = [];
 };
