@@ -104,14 +104,15 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 //                                            );
 
                         canvas.context.drawImage(layer.tileset,
-                                sx * tilewidth,
-                                sy * tileheight,
-                                tilewidth,
-                                tileheight,
+//                                sx * tilewidth,
+//                                sy * tileheight,
+//                                tilewidth,
+//                                tileheight,
                                 Math.round(((cx+(x*chunkSize))-(cy+(y*chunkSize)))*0.5*tilewidth),
                                 Math.round(((cx+(x*chunkSize))+(cy+(y*chunkSize)))*0.5*tileheight),
-                                tilewidth,
-                                tileheight
+                                chunkLayer.data[i]
+//                                tilewidth,
+//                                tileheight
                                 );
                     }
                 }
@@ -146,14 +147,15 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 //                        canvas.context.stroke();
 
                         canvas.context.drawImage(_self.actionTiles,
-                                           sx * tilewidth,
-                                           sy * tileheight,
-                                           tilewidth,
-                                           tileheight,
+//                                           sx * tilewidth,
+//                                           sy * tileheight,
+//                                           tilewidth,
+//                                           tileheight,
                                            Math.round(action.x-tilewidth/2),
                                            Math.round(action.y-tileheight/2),
-                                           tilewidth,
-                                           tileheight
+                                           tileIndex
+//                                           tilewidth,
+//                                           tileheight
                                         );
 
 
@@ -181,44 +183,45 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 //                    }
 
                     canvas.context.drawImage(object.image,
-                                           sx * tilewidth,
-                                           sy * tileheight + tileheight * (1-object.crafted),
-                                           tilewidth,
-                                           Math.round(tileheight*object.crafted),
+//                                           sx * tilewidth,
+//                                           sy * tileheight + tileheight * (1-object.crafted),
+//                                           tilewidth,
+//                                           Math.round(tileheight*object.crafted),
                                            Math.round(object.x - object.center.x),
                                            Math.round(object.y - object.center.y) + tileheight * (1-object.crafted),
-                                           tilewidth,
-                                           Math.round(tileheight*object.crafted)
+//                                           tilewidth,
+//                                           Math.round(tileheight*object.crafted)
+                                             tileIndex
                                         );
             });
 
-            if (craftObject) {
-                tileset = craftObject.prototype.tileset;
-
-                var tilewidth = tileset.grid.width;
-                var tileheight = tileset.grid.height;
-
-                tileIndex = 0;
-
-                sx = tileIndex % tileset.tilesPerRow;
-                sy = (tileIndex - sx) / tileset.tilesPerRow;
-
-                canvas.context.save();
-                canvas.context.globalAlpha = 0.7;
-
-                canvas.context.drawImage(craftObject.prototype.image,
-                                       sx * tilewidth,
-                                       sy * tileheight,
-                                       tilewidth,
-                                       tileheight,
-                                       game.variables.mouseX - craftObject.prototype.center.x,
-                                       game.variables.mouseY - craftObject.prototype.center.y,
-                                       tilewidth,
-                                       tileheight
-                                    );
-
-                canvas.context.restore();
-            }
+//            if (craftObject) {
+//                tileset = craftObject.prototype.tileset;
+//
+//                var tilewidth = tileset.grid.width;
+//                var tileheight = tileset.grid.height;
+//
+//                tileIndex = 0;
+//
+//                sx = tileIndex % tileset.tilesPerRow;
+//                sy = (tileIndex - sx) / tileset.tilesPerRow;
+//
+//                canvas.context.save();
+//                canvas.context.globalAlpha = 0.7;
+//
+//                canvas.context.drawImage(craftObject.prototype.image,
+//                                       sx * tilewidth,
+//                                       sy * tileheight,
+//                                       tilewidth,
+//                                       tileheight,
+//                                       game.variables.mouseX - craftObject.prototype.center.x,
+//                                       game.variables.mouseY - craftObject.prototype.center.y,
+//                                       tilewidth,
+//                                       tileheight
+//                                    );
+//
+//                canvas.context.restore();
+//            }
         } else if (layer.type === 'selection') {
         // Draw selection box:
 
@@ -239,14 +242,15 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             for (x = selectGrid.lx; x <= selectGrid.rx; x++) {
                 for (y = selectGrid.ty; y <= selectGrid.by; y++) {
                     canvas.context.drawImage(tileset,
-                                       sx * tilewidth,
-                                       sy * tileheight,
-                                       tilewidth,
-                                       tileheight,
+//                                       sx * tilewidth,
+//                                       sy * tileheight,
+//                                       tilewidth,
+//                                       tileheight,
                                        Math.round(0.5*(x-y)*tilewidth),
                                        Math.round(0.5*(x+y)*tileheight),
-                                       tilewidth,
-                                       tileheight
+//                                       tilewidth,
+//                                       tileheight
+                                        tileIndex
                                     );
                 }
             }

@@ -3,7 +3,13 @@
     src: url(./../fonts/visitor2.ttf);
 }
 
-* {
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+#game {
     font-family: 'visitor', 'Ubuntu Mono', Arial;
     font-weight: 400;
     color: #fff;
@@ -34,7 +40,7 @@
     top: 0;
     position: absolute;
     height: 100%;
-    width: 100%; 
+    width: 100%;
     z-index: 200;
     background-image: url(./../images/background-button.png);
 }
@@ -46,7 +52,7 @@
     padding-bottom: 100px;
     font-family: Arial;
     color: rgba(0, 0, 0, 0.7);
-    background-color: #0a0a0a;  
+    background-color: #0a0a0a;
     max-width: 400px;
     padding: 5px 0;
     position:absolute;
@@ -70,7 +76,7 @@
     display: block;
     width: 100%;
     padding: 5px 0;
-    background-color: #0a0a0a; 
+    background-color: #0a0a0a;
     border: none;
     background-image: url(./../images/background-button.png);
     cursor: hand;
@@ -78,7 +84,7 @@
 }
 .modal .button.bottom {
     position: absolute;
-    bottom: 0;   
+    bottom: 0;
 }
 .modal .button:hover {
     background-color: rgba(0, 0, 0, 0.5);
@@ -106,14 +112,7 @@
     border-left: 1px solid rgba(0, 0, 0, 0.7);
 }
 
-#windows {
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    width: 100%;    
-}
-.window {
+#game .window {
     display: table;
     width: 300px;
     height: 150px;
@@ -129,7 +128,7 @@
     display: table-cell;
 }
 
-.window .inside {
+#game .window .inside {
     border-width: 2px;
     -webkit-border-image: url(./../assets/images/border-1.png) 2 repeat; /* Safari 3.1-5 */
     -o-border-image: url(./../assets/images/border-1.png) 2 repeat; /* Opera 11-12.1 */
@@ -146,14 +145,14 @@
     right: -1px;
 }
 
-.window .ui-resizable-e{
+#game .window .ui-resizable-e{
     right: 0;
 }
-.window .ui-resizable-s{
+#game .window .ui-resizable-s{
     bottom: 0;
 }
 
-.window .header {
+#game .window .header {
     width: 100%;
     height: 20px;
     cursor: move;
@@ -162,13 +161,13 @@
     vertical-align: middle;
 }
 
-.window .header .title{
+#game .window .header .title{
     width: auto;
     height: 20px;
     padding-left: 3px;
 }
 
-.window .header .close{
+#game .window .header .close{
     right: 0;
     cursor: pointer;
     line-height: 20px;
