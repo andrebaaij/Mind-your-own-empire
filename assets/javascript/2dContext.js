@@ -35,6 +35,9 @@ function context2d(canvas) {
     _self.textureCoordinationBuffer = [];
     _self.vertexIndexBuffer = [];
     _self.textures = [];
+
+    _self.gl.activeTexture(_self.gl.TEXTURE0);
+    _self.gl.bindBuffer(_self.gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
 }
 
 /* Placeholders */
@@ -52,8 +55,7 @@ context2d.prototype.dimensions = function(width, height) {
 
     _self.width = width;
     _self.height = height;
-//    gl.viewportWidth = width;
-//    gl.viewportHeight = height;
+
     gl.viewport(0, 0, width, height);
     shaderProgram.resolutionLocation = gl.getUniformLocation(shaderProgram, "u_resolution");
     gl.uniform2f(shaderProgram.resolutionLocation, _self.width, _self.height);
@@ -198,101 +200,86 @@ context2d.prototype.getShader = function(gl, id) {
 */
 
 
-context2d.prototype.drawImage = function () {
+context2d.prototype.drawImage = function (image, x, y, tileIndex) {
     //console.log('drawImage:start');
 
     var _self = this;
 
-    var params = {
-        image : arguments[0],
-        x : arguments[1],
-        y : arguments[2],
-        tileIndex : arguments[3]
-    };
-
     // If the image is not loaded yet, we don't have anything to draw, so let's quit the execution of this function.
-    if (!params.image.isLoaded) {
+    if (!image.isLoaded) {
         return;
     }
 
     //TODO: Migrate this to the gl camera.
     //Draw the images with an offset because of scrolling throug the field.
-    params.x += _self.variables.offset.x;
-    params.y += _self.variables.offset.y;
+    x += _self.variables.offset.x;
+    y += _self.variables.offset.y;
 
     // If the image is not initialised yet, buffer it now.
-    if (!params.image.gl) {
-        _self.initTexture(params.image);
+    if (!image.gl) {
+        _self.initTexture(image);
     }
 
     // For this scene, this is the nth drawcall:
-    var i = params.image.gl.numberOfDrawCalls += 1;
+    var i = image.gl.numberOfDrawCalls += 1;
 
     // Add this texture to the scene if this is its first drawcall.
     if (typeof i === 'undefined' || i === 0) {
-        _self.textures.push(params.image);
+        _self.textures.push(image);
     }
 
     //Vertices px positions
 
-    var x = params.x,
-        y = params.y,
-        xwidth = params.x + params.image.grid.width,
-        yheight = params.y + params.image.grid.height;
+    var xwidth = x + image.grid.width,
+        yheight = y + image.grid.height;
 
 
     var i12 = i * 12;
-    params.image.gl.vertexPositionBuffer[i12] = x;
-    params.image.gl.vertexPositionBuffer[i12+1] = y;
-    params.image.gl.vertexPositionBuffer[i12+2] = i;
+    image.gl.vertexPositionBuffer[i12] = x;
+    image.gl.vertexPositionBuffer[i12+1] = y;
+    image.gl.vertexPositionBuffer[i12+2] = i;
 
-    params.image.gl.vertexPositionBuffer[i12+3] = xwidth;
-    params.image.gl.vertexPositionBuffer[i12+4] = y;
-    params.image.gl.vertexPositionBuffer[i12+5] = i;
+    image.gl.vertexPositionBuffer[i12+3] = xwidth;
+    image.gl.vertexPositionBuffer[i12+4] = y;
+    image.gl.vertexPositionBuffer[i12+5] = i;
 
-    params.image.gl.vertexPositionBuffer[i12+6] = xwidth;
-    params.image.gl.vertexPositionBuffer[i12+7] = yheight;
-    params.image.gl.vertexPositionBuffer[i12+8] = i;
+    image.gl.vertexPositionBuffer[i12+6] = xwidth;
+    image.gl.vertexPositionBuffer[i12+7] = yheight;
+    image.gl.vertexPositionBuffer[i12+8] = i;
 
-    params.image.gl.vertexPositionBuffer[i12+9] = x;
-    params.image.gl.vertexPositionBuffer[i12+10] = yheight;
-    params.image.gl.vertexPositionBuffer[i12+11] = i;
+    image.gl.vertexPositionBuffer[i12+9] = x;
+    image.gl.vertexPositionBuffer[i12+10] = yheight;
+    image.gl.vertexPositionBuffer[i12+11] = i;
 
     //Texture px positions
 
-    var tile = params.image.tile[params.tileIndex],
+    var tile = image.tile[tileIndex],
         i8 = i * 8;
 
-    params.image.gl.textureCoordinationBuffer[i8] = tile.lx;
-    params.image.gl.textureCoordinationBuffer[i8+1] = tile.ty;
+    image.gl.textureCoordinationBuffer[i8] = tile.lx;
+    image.gl.textureCoordinationBuffer[i8+1] = tile.ty;
 
-    params.image.gl.textureCoordinationBuffer[i8+2] = tile.rx;
-    params.image.gl.textureCoordinationBuffer[i8+3] = tile.ty;
+    image.gl.textureCoordinationBuffer[i8+2] = tile.rx;
+    image.gl.textureCoordinationBuffer[i8+3] = tile.ty;
 
-    params.image.gl.textureCoordinationBuffer[i8+4] = tile.rx;
-    params.image.gl.textureCoordinationBuffer[i8+5] = tile.by;
+    image.gl.textureCoordinationBuffer[i8+4] = tile.rx;
+    image.gl.textureCoordinationBuffer[i8+5] = tile.by;
 
-    params.image.gl.textureCoordinationBuffer[i8+6] = tile.lx;
-    params.image.gl.textureCoordinationBuffer[i8+7] = tile.by;
+    image.gl.textureCoordinationBuffer[i8+6] = tile.lx;
+    image.gl.textureCoordinationBuffer[i8+7] = tile.by;
 
     //Vertices index
 
     var i4 = i*4,
         i6 = i*6;
 
-    params.image.gl.vertexIndexBuffer[i6] = i4;
-    params.image.gl.vertexIndexBuffer[i6+1] = i4+1;
-    params.image.gl.vertexIndexBuffer[i6+2] = i4+2;
+    image.gl.vertexIndexBuffer[i6] = i4;
+    image.gl.vertexIndexBuffer[i6+1] = i4+1;
+    image.gl.vertexIndexBuffer[i6+2] = i4+2;
 
-    params.image.gl.vertexIndexBuffer[i6+3] = i4;
-    params.image.gl.vertexIndexBuffer[i6+4] = i4+2;
-    params.image.gl.vertexIndexBuffer[i6+5] = i4+3;
-
-//    console.log(params.image.gl.vertexPositionBuffer.length);
-//    console.log(params.image.gl.textureCoordinationBuffer.length);
-//    console.log(params.image.gl.vertexIndexBuffer.length);
-
-    //console.log('drawImage:end');
+    image.gl.vertexIndexBuffer[i6+3] = i4;
+    image.gl.vertexIndexBuffer[i6+4] = i4+2;
+    image.gl.vertexIndexBuffer[i6+5] = i4+3;
 };
 
 
@@ -317,7 +304,9 @@ context2d.prototype.drawTextures = function(gl, textures) {
 context2d.prototype.drawTexture = function(gl, texture) {
     //console.log('drawTexture:start');
 
-    gl.activeTexture(gl.TEXTURE0);
+
+
+    //gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture.gl.texture);
     gl.uniform2f(shaderProgram.textureresolution, texture.gl.texture.image.width, texture.gl.texture.image.height);
 
@@ -327,7 +316,7 @@ context2d.prototype.drawTexture = function(gl, texture) {
     gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texture.gl.textureCoordinationBuffer), gl.STATIC_DRAW);
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+    //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(texture.gl.vertexIndexBuffer), gl.STATIC_DRAW);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
@@ -336,7 +325,7 @@ context2d.prototype.drawTexture = function(gl, texture) {
     gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
     gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+    //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
     gl.drawElements(gl.TRIANGLES, (texture.gl.numberOfDrawCalls + 1) * 6, gl.UNSIGNED_SHORT, 0);
 
     //console.log('drawTexture:end');
@@ -368,9 +357,9 @@ context2d.prototype.clearTexture = function(texture) {
 
     //Set the current drawcalls to 0
     texture.gl.numberOfDrawCalls = -1;
-    texture.gl.vertexPositionBuffer = [];
-    texture.gl.textureCoordinationBuffer = [];
-    texture.gl.vertexIndexBuffer = [];
+    texture.gl.vertexPositionBuffer = new Array(texture.gl.vertexPositionBuffer.length);
+    texture.gl.textureCoordinationBuffer = new Array(texture.gl.textureCoordinationBuffer.length);
+    texture.gl.vertexIndexBuffer = new Array(texture.gl.vertexIndexBuffer.length);
 
     return texture;
 };

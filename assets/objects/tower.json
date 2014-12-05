@@ -2,6 +2,7 @@
     "images" : ["tileset"],
     "targetActions" : [],
     "defaults" : {
-        "communicationRadius" : 3    
+        "communicationRadius" : 3,
+        "hasWindow" :  true
     }
 }

@@ -1,5 +1,5 @@
 /*
-    
+
 
     Styleguide: https://github.com/airbnb/javascript
 */
@@ -7,13 +7,13 @@
 /*
 
     Interface to objects:
-    
+
     objects.create(objectName, x, y);
     returns the newly created object;
-    
+
     objects.list(orderArguments);
     returns a list of all the objects sorted by arguments
-    
+
     objects.find(x, y);
     find an object based on a x and y position.
 */
@@ -22,11 +22,39 @@
 /* global Image,document,window,setTimeout,console,XMLHttpRequest,common,game */
 
 function objects() {
-    this.array = [];
+    var _self = this;
+
+    _self.array = [];
+    _self.chunk = [];
 }
 
 objects.prototype.list = function() {
     return objects.array;
+};
+
+objects.prototype.updateChunk = function(chunk, object, newChunk) {
+    if (object.chunk.x !== newChunk.x || object.chunk.y !== newChunk.y) {
+        if (object.chunk !== 'undefined') {
+            //Remove from the old chunk
+            game.getChunk(object.chunk.x,object.chunk.y).objects.splice(object.chunk.position,1);
+
+            //Renumber all positions for object later on in the chunk.
+            for(var i = object.chunk.position; i < game.getChunk(object.chunk.x,object.chunk.y).objects.length; i++) {
+                game.getChunk(object.chunk.x,object.chunk.y).objects[i].chunk.position = i;
+            }
+        }
+
+        object.chunk = newChunk;
+        if(typeof chunk[object.chunk.x] === 'undefined') {
+            chunk[object.chunk.x] = [];
+        }
+        if(typeof chunk[object.chunk.x][object.chunk.y] === 'undefined') {
+            chunk[object.chunk.x][object.chunk.y] = [];
+        }
+        object.chunk.position = game.getChunk(object.chunk.x,object.chunk.y).objects.push(object);
+    }
+
+    return chunk;
 };
 
 objects.prototype.functions = {};
@@ -34,34 +62,35 @@ objects.prototype.functions = {};
 objects.prototype.functions.move = function(x,y) {
     this.x += x;
     this.y += y;
-    
+
     var grid = common.getGridFromCoordinates(this.x, this.y);
-    
+
     if (this.grid.x !== grid.x || this.grid.y !== grid.y) {
         game.calculatefog();
     }
-    
+
     this.grid = grid;
+    objects.chunk = objects.updateChunk(objects.chunk, this, grid.chunk);
 };
 
 objects.prototype.functions.select = function(){
     var _self = this;
-    
+
     if (this.tileset.image_selected) {
         this.image = this.tileset.image_selected;
     };
-    
+
     _self.isSelected = true;
-    _self.$window.show();
+    //_self.$window.show();
 };
 
 objects.prototype.functions.deselect = function(){
     var _self = this;
-    
+
     if (this.tileset.image_selected) {
         this.image = this.tileset;
     }
-    
+
     _self.isSelected = false;
 };
 
@@ -79,7 +108,7 @@ objects.prototype.functions.removeResources = function(resources) {
     for(var resource in resources) {
         if (typeof this.resources[resource] !== 'undefined') {
             this.resources[resource] -= resources[resource];
-            
+
             if (this.resources[resource] < 0) {
                 resources[resource] = this.resources[resource] * -1;
                 this.resources[resource] = 0;
@@ -88,17 +117,17 @@ objects.prototype.functions.removeResources = function(resources) {
             }
         }
     }
-    
+
     return resources;
 };
 
 objects.prototype.functions.animationLoop = function() {
-    setTimeout(this.animationLoop.bind(this),100);
+    //setTimeout(this.animationLoop.bind(this),100);
 
     this.tile = this.animation.array[this.animation.index];
 
 
-    
+
     if (this.animation.index < this.animation.array.length-1) {
         this.animation.index += 1;
     } else {
@@ -108,7 +137,7 @@ objects.prototype.functions.animationLoop = function() {
 
 objects.prototype.functions.setDirection = function(direction) {
     if(!direction) direction = 'NE';
-    
+
     this.animation.array = this.tileset.animations[this.animation.name][direction];
     this.direction = direction;
 };
@@ -122,7 +151,7 @@ objects.prototype.functions.setAnimation = function(animation) {
         if (this.tileset.animations[animation].emitter) {
             this.emitter = new Emitter(0,0, this.tileset.animations[animation].emitter);
         } else {
-            this.emitter = null;    
+            this.emitter = null;
         }
     }
 };
@@ -136,7 +165,7 @@ objects.prototype.functions.walk = function(x,y) {
     } else {
         origin = {x : self.x, y : self.y};
     }
-    
+
     var path = game.getPath(origin,{x:x, y:y});
 
     if (typeof path === 'undefined') return;
@@ -146,14 +175,14 @@ objects.prototype.functions.walk = function(x,y) {
 
         x = leg.x - origin.x;
         y = leg.y - origin.y;
-        
+
         var nbSteps = Math.sqrt(x*x + y*y)/2
-        
+
         leg.step = {
             x : x / nbSteps,
             y : y / nbSteps
         }
-        
+
         var NS,
             WE;
 
@@ -170,7 +199,7 @@ objects.prototype.functions.walk = function(x,y) {
         } else if (y < 0) {
             NS = 'N';
         } else {
-            NS = '';   
+            NS = '';
         }
 
         origin.x = leg.x;
@@ -247,7 +276,7 @@ objects.prototype.functions.targetChop = function(object, amount) {
     this.health = this.health-amount;
 
     if (this.health <= 0) {
-        object.addResources(this.resources); 
+        object.addResources(this.resources);
         this.resources = {};
         this.destroy();
     }
@@ -261,12 +290,14 @@ objects.prototype.functions.restLoop = function() {
 };
 
 objects.prototype.functions.loop = function() {
-    setTimeout(this.loop.bind(this),this.loopSpeed);
-    
-    if (game.variables.pause) {
-        return;    
+//    //setTimeout(this.loop.bind(this),this.loopSpeed);
+//
+    if (game.variables.pause || this.type === 'resource') {
+        return;
     }
-    
+//
+    this.animationLoop.bind(this);
+
     if (this.actions.length > 0) {
         if (this[this.actions[0].action + "Loop"]) {
             this.setAnimation(this.actions[0].action);
@@ -276,49 +307,49 @@ objects.prototype.functions.loop = function() {
             this.actions.shift();
         }
     } else {
-        this.restLoop();    
+        this.restLoop();
     }
 };
 
 objects.prototype.functions.initialise = function(x,y) {
-    var object = new objects.repository[this.name]();
-    
-    var position = common.getCoordinatesFromGrid(x, y);
-    
     //Remove the initialise function.
+    var object = new objects.repository[this.name]();
     object.initialise = undefined;
 
+    var coordinates = common.getCoordinatesFromGrid(x, y);
+    object.grid = common.getGridFromCoordinates(coordinates.x, coordinates.y);
+    object.chunk = {};
 
-    //Initialize the variables:            
-    object.x = position.x;
-    object.y = position.y;
-    
-    object.path = []; 
+    //Initialize the variables:
+    object.x = 0;
+    object.y = 0;
+    object.move(coordinates.x, coordinates.y);
+
+    object.path = [];
     object.animation = {array: []};
     object.actions = [];
-    object.resources = {};             
+    object.resources = {};
 
-    object.grid = {x: x, y: y};
-    
     object.setAnimation(object.tileset.defaultAnimation);
     object.setDirection('NE');
-    setTimeout(object.animationLoop.bind(object),100);
+    object.animationLoop();
     object.loopSpeed = 10; //milliseconds
-    
-    object.$window = common.window(this.name, game.variables.mouseX, game.variables.mouseY).hide();
-    //object.$window.hide();
-    
+
     for (var variable in object.defaults) {
         object[variable] = object.defaults[variable];
     }
-    
+//
+//    if (object.hasWindow) {
+//        object.$window = common.window(this.name, game.variables.mouseX, game.variables.mouseY).hide();
+//    }
+
     // breathe
     object.loop();
 
     objects.add(object);
 
-    
-    
+
+
     return object;
 };
 
@@ -334,14 +365,14 @@ repository.prototype.get = function(name) {
         return objects.repository[name];
     }
     var URI = './assets/objects/' + name + '.json';
-    
+
     var object = common.getJSONFromURI(URI);
-    
+
     if (object === null) {
         console.error("objects.loadObject could not load " + URI);
         return null;
     }
-        
+
     objects.repository[name] = function(){};// = object;
 
     if (object.images) {
@@ -359,15 +390,15 @@ repository.prototype.get = function(name) {
             objects.repository[name].prototype.icon = common.resources.icons.get(name);
         }
     }
-    
+
     if (object.defaults) {
         objects.repository[name].prototype.defaults = object.defaults;
     } else {
-        objects.repository[name].prototype.defaults = {}; 
+        objects.repository[name].prototype.defaults = {};
     }
-    
+
     objects.repository[name].prototype.name = name;
-    
+
     if (object.skills) {
         objects.repository[name].prototype.skills = object.skills;
     }
@@ -387,7 +418,7 @@ repository.prototype.get = function(name) {
             objects.repository.get(resource).icon = common.resources.icons.get(resource);
 
         }
-    }    
+    }
 
     if (typeof object.health !== 'undefined') {
         objects.repository[name].prototype.defaults.health = object.health;
@@ -406,7 +437,7 @@ repository.prototype.get = function(name) {
     objects.repository[name].prototype.addResources = objects.functions.addResources;
 
     objects.repository[name].prototype.removeResources = objects.functions.removeResources;
-    
+
     objects.repository[name].prototype.animationLoop = objects.functions.animationLoop;
 
     objects.repository[name].prototype.setDirection = objects.functions.setDirection;
@@ -414,7 +445,7 @@ repository.prototype.get = function(name) {
     objects.repository[name].prototype.setAnimation = objects.functions.setAnimation;
 
     if(object.skills) {
-        if(object.skills.indexOf("walk") !== -1) {        
+        if(object.skills.indexOf("walk") !== -1) {
             objects.repository[name].prototype.walk = objects.functions.walk;
             objects.repository[name].prototype.walkLoop = objects.functions.walkLoop;
         }
@@ -450,7 +481,7 @@ repository.prototype.get = function(name) {
     objects.repository[name].prototype.initialise = objects.functions.initialise;
 
     objects.repository[name].prototype.destroy = objects.functions.destroy;
-    
+
     return objects.repository[name];
 };
 
@@ -460,7 +491,7 @@ objects.prototype.create = function(name, x, y) {
     object.initialise(x,y);
 
     game.calculatefog();
-    
+
     return object;
 };
 
@@ -468,10 +499,7 @@ objects.prototype.add = function(object) {
     this.array.push(object);
 };
 
-objects.prototype.find = function(lx, ty, rx, by) {    
-    //console.log(lx, ty, rx, by);
-    
-    
+objects.prototype.find = function(lx, ty, rx, by) {
     var array = [];
 
     objects.array.forEach(function(object, index) {
@@ -479,7 +507,21 @@ objects.prototype.find = function(lx, ty, rx, by) {
             array.push(object);
         }
     });
-    
+
+    return array;
+};
+
+objects.prototype.findByChunks = function(chunks) {
+    var array = [];
+
+    chunks.forEach(function(chunk) {
+        var _self = this;
+
+        game.getChunk(chunk.x, chunk.y).objects.forEach(function(object) {
+            array.push(object);
+        });
+    });
+
     return array;
 };
 
@@ -493,5 +535,7 @@ objects.initialise = function() {
     //Interfaces
     game.objectsRepository = objects.repository;
     game.getObjects = objects.list;
-    game.findObject = objects.find;    
+    game.findObject = objects.find;
+    game.findObjectByChunks = objects.findByChunks;
+    game.createObject = objects.create;
 };

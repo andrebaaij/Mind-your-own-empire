@@ -1,0 +1,102 @@
+<!--
+    Test version of simplex algorithms.
+-->
+
+<html>
+
+<head>
+    <title>Simplex</title>
+    <script type="text/javascript" src="./assets/javascript/glMatrix.js"></script>
+    <script type="text/javascript" src="./assets/javascript/2dContext.js"></script>
+    <script id="shader-fs" type="x-shader/x-fragment">
+        precision mediump float;
+
+        varying vec2 vTextureCoord;
+
+        uniform sampler2D uSampler;
+
+        void main(void) {
+            gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+        }
+    </script>
+    <script id="shader-vs" type="x-shader/x-vertex">
+        attribute vec2 aTextureCoord;
+
+        varying vec2 vTextureCoord;
+
+        attribute vec2 a_position;
+        attribute vec2 a_textureposition;
+        uniform vec2 u_resolution;
+        uniform vec2 u_textureresolution;
+
+        void main(void) {
+            // Convert from pixels to clipspace for image position
+            vec2 clipSpace = ((a_position / u_resolution) * 2.0) - 1.0;
+            gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+
+            // Convert from pixels to clipspace for image position
+            vec2 texture_clipSpace = (aTextureCoord / u_textureresolution);
+            vTextureCoord = texture_clipSpace * vec2(1, -1);
+
+            //vTextureCoord = aTextureCoord;
+        }
+    </script>
+</head>
+
+<body id="wrapper" oncontextmenu="return false;">
+    <form>
+        <textarea style="position:fixed; left:0; right:0; width: 400px; height: 200px;" id="stmt">random = new Alea(1500);
+simplex = new SimplexNoise(random);
+result = simplex.noise2D(x/200,y/200)*20;</textarea>
+    </form>
+    <div id="game">
+        <canvas id="canvas"></canvas>
+    </div>
+    <script src="./assets/javascript/jquery-2.1.1.js"></script>
+    <script src="./assets/javascript/simplex-noise.js"></script>
+    <script src="./assets/javascript/common.js"></script>
+
+    <script>
+        $canvas = $("canvas");
+
+
+        tileset = common.resources.tilesets.get('simplex');
+        tilewidth = 64;
+        tileheight = 32;
+        chunkSize = 75;
+
+        $canvas[0].width = tilewidth * chunkSize;
+        $canvas[0].height = tileheight * chunkSize;
+
+        context = new context2d($canvas[0]);
+        context.dimensions(tilewidth * chunkSize, tileheight * chunkSize);
+        stmt = "";
+
+        $('#stmt').blur(function(e) {
+            stmt = $('#stmt').val();
+            context.clearScene();
+            for (var i = 0; i < chunkSize * chunkSize; i++) {
+                var cx = i % chunkSize;
+                var cy = (i - cx) / chunkSize;
+                context.drawImage(tileset,
+                    Math.round(((cx)-(cy))*0.5*tilewidth) + chunkSize /2 * tilewidth,
+                    Math.round(((cx)+(cy))*0.5*tileheight),
+                    calc(cx, cy)
+                );
+            }
+            context.drawScene();
+        });
+
+         calc = function (x, y) {
+            result = eval(stmt)
+
+            result = Math.floor(result)
+
+            result = result > 19 || result < 0 ? 0 : result;
+
+            return result;
+         }
+    </script>
+</body>
+
+</html>

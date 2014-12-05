@@ -2,6 +2,7 @@
     "images" : ["tileset"],
     "skills" : ["walk"],
     "defaults" : {
-        "communicationRadius" : 2   
+        "communicationRadius" : 2,
+        "hasWindow" :  true
     }
 }

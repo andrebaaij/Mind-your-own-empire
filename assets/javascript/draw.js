@@ -69,55 +69,54 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                     var chunkLayer = level.getChunk(x, y).getLayer(layer);
 
                     if(chunkLayer.data.equals([])) {
-                        var chunkSize = layer.size;
-
                         // GENERATE
                         if (layer.generate) {
+                            //console.log("generate", layer.type);
+
                             for (var dataY = 0; dataY < chunkSize; dataY++) {
                                 for (var dataX = 0; dataX < chunkSize; dataX++) {
                                     var i = (dataY * chunkSize + dataX);
 
                                     chunkLayer.data[i] = layer.generate(x * chunkSize + dataX, y * chunkSize + dataY);
+                                    if (layer.type === "resources" && chunkLayer.data[i] > 0) {
+                                        game.createObject(layer.name, x * chunkSize + dataX, y * chunkSize + dataY);
+                                    }
                                 }
                             }
                         }
                     }
 
+                    if (layer.type === "resources") {
+                        continue;
+                    }
+
                     for (var i = 0; i < layer.size * layer.size; i++) {
-                        //x = i % layer.size;
-                        //y = Math.floor(i / layer.size);
+                        if (0 <= chunkLayer.data[i] && chunkLayer.data[i] < layer.tileset.nbTiles) {
 
-                        var sx = chunkLayer.data[i] % layer.tileset.tilesPerRow;
-                        var sy = (chunkLayer.data[i] - sx) / layer.tileset.tilesPerRow;
-                        var cx = i % layer.size;
-                        var cy = (i - cx) / layer.size;
+                            var sx = chunkLayer.data[i] % layer.tileset.tilesPerRow;
+                            var sy = (chunkLayer.data[i] - sx) / layer.tileset.tilesPerRow;
+                            var cx = i % layer.size;
+                            var cy = (i - cx) / layer.size;
 
-//                        canvas.context.drawImage(layer.tileset,
-//                                               sx * tilewidth,
-//                                               sy * tileheight,
-//                                               tilewidth,
-//                                               tileheight,
-//                                               (_self.size * tilewidth / 2) + Math.round(0.5*(x-y)*tilewidth) - (tilewidth / 2),
-//                                               Math.round(0.5*(x+y)*tileheight),
-//                                               tilewidth,
-//                                               tileheight
-//                                            );
-
-                        canvas.context.drawImage(layer.tileset,
-//                                sx * tilewidth,
-//                                sy * tileheight,
-//                                tilewidth,
-//                                tileheight,
+                            canvas.context.drawImage(layer.tileset,
                                 Math.round(((cx+(x*chunkSize))-(cy+(y*chunkSize)))*0.5*tilewidth),
                                 Math.round(((cx+(x*chunkSize))+(cy+(y*chunkSize)))*0.5*tileheight),
                                 chunkLayer.data[i]
-//                                tilewidth,
-//                                tileheight
-                                );
+                            );
+                        }
                     }
                 }
             }
         } else if (layer.type === 'objects') {
+            var chunks = [];
+            for (var x = offsetsLT.chunk.x; x <= offsetsRB.chunk.x; x++) {
+                for (var y = offsetsRT.chunk.y; y <= offsetsLB.chunk.y; y++) {
+                    chunks.push({x: x, y: y});
+                }
+            }
+            //objects = game.findObject(offsetsLT.chunk.x * chunkSize, offsetsRT.chunk.y * chunkSize, (offsetsRB.chunk.x + 1) * chunkSize, (offsetsLB.chunk.y + 1) * chunkSize);
+            objects = game.findObjectByChunks(chunks);
+
             // Sort objects by y position
             objects.sort(function (a,b) {
                 var result = (a.y < b.y) ? -1 : (a.y > b.y) ? 1 : 0;
@@ -137,8 +136,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                         var tilewidth = tileset.grid.width;
                         var tileheight = tileset.grid.height;
 
-                        sx = tileIndex % tileset.tilesPerRow;
-                        sy = (tileIndex - sx) / tileset.tilesPerRow;
+
 
 //                        canvas.context.beginPath();
 //                        canvas.context.moveTo(prevX, prevY);
@@ -147,15 +145,9 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 //                        canvas.context.stroke();
 
                         canvas.context.drawImage(_self.actionTiles,
-//                                           sx * tilewidth,
-//                                           sy * tileheight,
-//                                           tilewidth,
-//                                           tileheight,
                                            Math.round(action.x-tilewidth/2),
                                            Math.round(action.y-tileheight/2),
                                            tileIndex
-//                                           tilewidth,
-//                                           tileheight
                                         );
 
 
@@ -175,23 +167,14 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
                     tileIndex = object.tile;
 
-                    sx = tileIndex % tileset.tilesPerRow;
-                    sy = (tileIndex - sx) / tileset.tilesPerRow;
-
 //                    if (object.emitter && object.crafted === 1) {
 //                        object.emitter.update(canvas, Math.round(object.x), Math.round(object.y));
 //                    }
 
                     canvas.context.drawImage(object.image,
-//                                           sx * tilewidth,
-//                                           sy * tileheight + tileheight * (1-object.crafted),
-//                                           tilewidth,
-//                                           Math.round(tileheight*object.crafted),
-                                           Math.round(object.x - object.center.x),
-                                           Math.round(object.y - object.center.y) + tileheight * (1-object.crafted),
-//                                           tilewidth,
-//                                           Math.round(tileheight*object.crafted)
-                                             tileIndex
+                                            Math.round(object.x - object.center.x),
+                                            Math.round(object.y - object.center.y) + tileheight * (1-object.crafted),
+                                            tileIndex
                                         );
             });
 

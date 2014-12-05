@@ -15,6 +15,8 @@ common.parseQueryString();
 game.variables.seed = game.variables.url.seed;
 
 game.initialise = function() {
+    game.gameLoop();
+
     objects.create("block",0,1);
     objects.create("block",1,1);
     objects.create("block",2,1);
@@ -23,7 +25,7 @@ game.initialise = function() {
     objects.create("tower",10,10);
 
     game.variables.counter= 0;
-    game.gameLoop();
+
     //setInterval(function () {game.gameLoop();}, 2000);
 
 };
@@ -38,8 +40,11 @@ game.gameLoop = function() {
         game.draw();
     }
 
-    common.background.process();
     userInterface.elements.canvas.context.drawScene();
+
+    objects.list().forEach(function(object) {
+        object.loop();
+    });
 };
 
 game.draw = function() {

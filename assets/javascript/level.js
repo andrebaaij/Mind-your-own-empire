@@ -1,37 +1,24 @@
-/* global Image,document,window,setTimeout,console,XMLHttpRequest,common,game */
+/* global Image,document,window,setTimeout,console,XMLHttpRequest,common,game, Alea, SimplexNoise */
 
 /* jshint loopfunc: true */
 
-var level = {};
-level.chunkDrawQueue = new common.background.queue('chunk');
-
-var firstNode = {};
-var currentNode = {};
+var level = {},
+    firstNode = {},
+    currentNode = {};
 
 level.initialise = function() {
     var _self = this;
-    
-    _self.load("west.json");
-    
-    //Interfaces 
+
+    //Interfaces
     game.calculatefog = level.calculatefog;
-    game.getChunk = level.chunks.get;
+    game.getChunk = level.getChunk;
     game.getLevel = level.get;
     game.getPath = level.getPath;
-};
-
-level.load = function (jsonFilename) {
-    var _self = this;
 
     game.variables.tile = {
         width : 64,
         height : 32
     };
-
-    level.emptyChunkLayer = document.createElement('canvas');
-    level.emptyChunkLayer.context = level.emptyChunkLayer.getContext("2d");
-    level.emptyChunkLayer.width = game.variables.chunk.size * game.variables.tile.width; 
-    level.emptyChunkLayer.height = game.variables.chunk.size * game.variables.tile.height;
 
     var random = new Alea(game.variables.seed);
     level.simplex = new SimplexNoise(random);
@@ -50,7 +37,8 @@ level.load = function (jsonFilename) {
         data : [],
         generate : function(x, y) {
             function getType(x, y) {
-                var n = Math.round(_self.simplex.noise2D(x/100,y/100) * 10);
+                var n = Math.round(_self.simplex.noise2D(x/150,y/150) * 20)-15;
+                n = n > 5 || n < 0 ? 0 : n;
 
                 var result;
 
@@ -67,14 +55,14 @@ level.load = function (jsonFilename) {
                     case 3:
                         result = 14;
                         break;
-                    case 4:
-                        result = 5;
-                        break;
-                    case 5:
-                        result = 5;
-                        break;
+//                    case 4:
+//                        result = 5;
+//                        break;
+//                    case 5:
+//                        result = 5;
+//                        break;
                     default:
-                        result = 0;
+                        result = 14;
                 }
                 return result;
             }
@@ -159,19 +147,14 @@ level.load = function (jsonFilename) {
         }
     };
     level.layers.iron = {
-        name : "resources_iron",
+        name : "iron",
         type : "resources",
-        visible : false,
+        visible : true,
         tileset : common.resources.tilesets.get("iron"),
         size : game.variables.chunk.size,
         data : [],
         generate : function(x, y) {
-            var n = _self.simplex.noise2D(x/20,y/20)
-
-            n = Math.cos(n*5);
-
-            var d = Math.round(n * 10);
-            return d < 0 ? -1 : d > 4 ? 4 : d;
+            return _self.simplex.noise2D(x/20,y/20)*15-11;
         }
     };
     level.layers.selection = {
@@ -208,15 +191,13 @@ level.chunk = function(x, y){
     _self.size = game.variables.chunk.size;
 
     _self.layers = {};
+    _self.objects = [];
 };
 
 level.chunk.prototype.getLayer = function(layer) {
     var _self = this;
 
     if (_self.layers[layer.name]) {
-        if (_self.layers[layer.name].canvas === null && layer.type === 'tile') {
-            _self.drawLayer(_self.layers[layer.name]);
-        }
         return _self.layers[layer.name];
     } else {
         return _self.createLayer(layer);
@@ -232,93 +213,16 @@ level.chunk.prototype.createLayer = function(layer) {
         definition : layer
     };
 
-    if (layer.type === 'tile') {
-        _self.drawLayer(_self.layers[layer.name]);
-    }
-
     return _self.layers[layer.name];
-};
-
-level.chunk.prototype.drawLayer = function(layer) {
-    var _self = this;
-
-    layer.canvas = level.emptyChunkLayer;
-
-    //var job = new common.background.job();
-
-    //job.process = function() {
-//        if(layer.data.equals([])) {
-//            var chunkSize = _self.size;
-//
-//            // GENERATE
-//            if (layer.definition.generate) {
-//                for (var y = 0; y < chunkSize; y++) {
-//                    for (var x = 0; x < chunkSize; x++) {
-//                        var i = (y * _self.size + x);
-//                        layer.data[i] = layer.definition.generate(_self.x * chunkSize + x, _self.y * chunkSize + y);
-//                    }
-//                }
-//            }
-//        }
-
-//        var canvasLayer = document.createElement('canvas'); // Create a new canvas, with a render chunk we can just dispose of any pre-existing chunk and create a new canvas element
-//        canvasLayer.context = canvasLayer.getContext("2d");
-//
-//        canvasLayer.width = _self.size * game.variables.tile.width; 
-//        canvasLayer.height = _self.size * game.variables.tile.height;
-//        canvasLayer.stored_width = _self.size * game.variables.tile.width; 
-//        canvasLayer.stored_height = _self.size * game.variables.tile.height;
-//        // Sometimes the tileset is not loaded yet, then we don't have any images to draw the chunk,
-//        // so we can safely return and retry it later.
-//
-//
-//        if (!layer.tileset.isLoaded) {
-//            layer.canvas = null;
-//            return null;
-//        }
-//
-//        // Assign tileset data to variables for easy use.
-//        var tileWidth = game.variables.tile.width;
-//        var tileHeight = game.variables.tile.height;
-//
-//        for (var i = 0; i < _self.size * _self.size; i++) {
-//            var x = i % _self.size;
-//            var y = Math.floor(i / _self.size);
-//
-//            var sx = layer.data[i] % layer.tileset.tilesPerRow;
-//            var sy = (layer.data[i] - sx) / layer.tileset.tilesPerRow;
-//
-//            canvasLayer.context.drawImage(layer.tileset,
-//                                   sx * tileWidth,
-//                                   sy * tileHeight,
-//                                   tileWidth,
-//                                   tileHeight,
-//                                   (_self.size * tileWidth / 2) + Math.round(0.5*(x-y)*tileWidth) - (tileWidth / 2),
-//                                   Math.round(0.5*(x+y)*tileHeight),
-//                                   tileWidth,
-//                                   tileHeight
-//                                );
-//        }
-//
-//        layer.canvas = canvasLayer;
-    //};
-
-    //level.chunkDrawQueue.push(job);
-};
-
-level.chunk.prototype.backgroundProcess = function() {
-
-};
-
-level.collectGarbage = function() {
-
 };
 
 level.getChunk = function(x, y) {
     if(level.chunks[x] && level.chunks[x][y]) {
         return level.chunks[x][y];
     } else {
-        if (!level.chunks[x]) level.chunks[x] = [];
+        if (!level.chunks[x]) {
+            level.chunks[x] = [];
+        }
         level.chunks[x][y] = new level.chunk(x, y);
         return level.chunks[x][y];
     }
@@ -328,217 +232,82 @@ level.get = function() {
     return level.definition;
 };
 
-level.makeNode = function (index, previousNodeOnShortestPath, distance) {
-    return {previous:null, index:index, previousNodeOnShortestPath: previousNodeOnShortestPath, distance:distance, next:null};
-};
-
-level.addNode = function (node) {
-    while (true) {
-        if (currentNode.distance == node.distance) {
-            if (currentNode.next !== null) {
-                currentNode.next.previous = node;
-                node.next = currentNode.next;
-            }
-            currentNode.next = node;
-            node.previous = currentNode;
-            return;
-        } else if (currentNode.distance < node.distance) {
-            if (currentNode.next !== null) {
-                if (currentNode.next.distance >= node.distance) {
-                    currentNode.next.previous = node;
-                    node.next = currentNode.next;
-                    currentNode.next = node;
-                    node.previous = currentNode;
-                    return;
-                } else {
-                    currentNode = currentNode.next;
-                    continue;
-                }
-            } else {
-                currentNode.next = node;
-                node.previous = currentNode;
-                return;
-            }
-        } else if (currentNode.distance > node.distance) {
-            if (currentNode.previous !== null) {
-                if (currentNode.previous.distance <= node.distance) {
-                    currentNode.previous.next = node;
-                    node.previous = currentNode.previous;
-                    currentNode.previous = node;
-                    node.next = currentNode;
-                    return;
-                } else {
-                    currentNode = currentNode.previous;
-                    continue;
-                }
-            } else {
-                currentNode.previous = node;
-                node.next = currentNode;
-                firstNode = node;
-                return;
-            }
-        }
-    }
-};
-
-level.getNeighbours = function (index, distance) {
-    var array = [];
-    array.push({index:index + this.definition.width - 1, distance:2 + distance});
-    array.push({index:index - this.definition.width + 1, distance:2 + distance});
-    array.push({index:index + this.definition.width + 1, distance:1 + distance});
-    array.push({index:index - this.definition.width - 1, distance:1 + distance});
-    array.push({index:index + this.definition.width, distance:0.999 + distance});
-    array.push({index:index + 1, distance:0.999 + distance});
-    array.push({index:index - this.definition.width, distance:0.999 + distance});
-    array.push({index:index - 1, distance:0.999 + distance});
-    return array;
-};
-
-level.printPath = function (node) {
-    var tileset = this.definition.tilesets[0];
-
-    var tilewidth = tileset.tilewidth;
-    var tileheight = tileset.tileheight;
-
-    var array = [];
-
-    while (true) {
-        var right = node.index % this.definition.width;
-        var left = (node.index - right) / this.definition.width;
-        var x = 0.5*tilewidth*(right - left)+ tilewidth*0.5;
-        var y = 0.5*tileheight*(1+left+right);
-        array.push({x:x, y:y});
-
-        node = node.previousNodeOnShortestPath;
-        if (node === null) {
-            array.pop();
-            return array.reverse();
-        }
-    }
-    return array.reverse;
-};
-
 level.getPath = function(object, destination) {
-    //var _self = level;
-
     return [destination];
-
-    /*
-    var tileset = _self.definition.tilesets[0];
-
-    var tilewidth = tileset.tilewidth;
-    var tileheight = tileset.tileheight;
-
-    var left = Math.floor((object.y*tilewidth - object.x*tileheight)/(tilewidth*tileheight));
-    var right = Math.floor((object.y*tilewidth + object.x*tileheight)/(tilewidth*tileheight));
-    var index = level.definition.width * left + right;
-
-    var coordinates = common.getGridFromCoordinates(destination.x, destination.y);
-
-    left = Math.floor((destination.y*tilewidth - destination.x*tileheight)/(tilewidth*tileheight));
-    right = Math.floor((destination.y*tilewidth + destination.x*tileheight)/(tilewidth*tileheight));
-    var destinationIndex = _self.definition.width * left + right;
-
-    destinationIndex = coordinates.index;
-
-    var layer = level.layers.background;
-    var visitedNotes = [];
-
-    var currentPosition = _self.makeNode(index,null,0);
-    visitedNotes[index] = 1;
-    firstNode = currentPosition;
-    currentNode = currentPosition;
-
-    while (visitedNotes[destinationIndex] === undefined) {
-        var neighbours = _self.getNeighbours(firstNode.index, firstNode.distance);
-        while (neighbours.length > 0) {
-            var neighbour = neighbours.pop();
-            if (neighbour.index >= 0 && visitedNotes[neighbour.index] === undefined) {
-                if (layer.data[neighbour.index] < 15) {
-                visitedNotes[neighbour.index] = 1;
-                if (neighbour.index == destinationIndex) {
-                    return _self.printPath(_self.makeNode(neighbour.index, firstNode, neighbour.distance));
-                }
-                _self.addNode(_self.makeNode(neighbour.index, firstNode, neighbour.distance));
-                }
-            }
-        }
-        firstNode.next.previous = null;
-        firstNode = firstNode.next;
-    }
-    */
 };
 
 level.calculatefog = function() {
-    var arrObjects = game.getObjects();
-    var handledObjects = [];
-    var objectsBeingHandled = [];
+    return;
 
-    arrObjects.forEach(function(object) {
-        if (object.name === 'mind') {
-            objectsBeingHandled.push(object);
-        }
-    });
-
-    var thereAreNewObjectsToBeHandled = true;
-
-    while(thereAreNewObjectsToBeHandled) {
-        thereAreNewObjectsToBeHandled = false;
-
-        objectsBeingHandled.forEach(function(object, index) {
-
-            for(var x = object.grid.x - object.communicationRadius; x <= object.grid.x + object.communicationRadius; x++) {
-                for(var y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {
-                    var chunkX = Math.floor(x / game.variables.chunk.size);
-                    var chunkY = Math.floor(y / game.variables.chunk.size);
-
-                    var dx = x % game.variables.chunk.size;
-                    var dy = y % game.variables.chunk.size;
-
-                    if (dx < 0) {
-                        dx = game.variables.chunk.size + dx;
-                    }
-                    if (dy < 0) {
-                        dy = game.variables.chunk.size + dy;
-                    }
-
-                    level.getChunk(chunkX, chunkY).getLayer(level.layers.calculateFog).data[dy * game.variables.chunk.size + dx] = -1;
-                    level.getChunk(chunkX, chunkY).getLayer(level.layers.history).data[dy * game.variables.chunk.size + dx] = 3;
-                }
-            }
-
-            var objectsWithinCommunicationRadius = game.findObject(object.grid.x - object.communicationRadius,
-                                          object.grid.y - object.communicationRadius, 
-                                          object.grid.x + object.communicationRadius,
-                                          object.grid.y + object.communicationRadius);
-
-            objectsWithinCommunicationRadius.forEach(function(objectWithinCommunicationRadius) {
-                if (handledObjects.indexOf(objectWithinCommunicationRadius) === -1 && objectsBeingHandled.indexOf(objectWithinCommunicationRadius) === -1 ) {
-                    objectsBeingHandled.push(objectWithinCommunicationRadius);
-                    thereAreNewObjectsToBeHandled = true;
-
-                }
-            });
-
-            handledObjects.push(object);
-            delete objectsBeingHandled[index];
-        });
-    }
-
-
-    for(var x in level.chunks) {
-        if ((!isNaN(parseFloat(x)) && isFinite(x))) {
-            for (var y in level.chunks[x]) {
-                if ((!isNaN(parseFloat(y)) && isFinite(y))) {
-                    var chunk = level.chunks[x][y];
-                    if (!chunk.getLayer(level.layers.calculateFog).data.equals(chunk.getLayer(level.layers.fog).data)) {
-                        chunk.getLayer(level.layers.fog).data.forEach(function(n, i, array) {
-                            array[i] = chunk.getLayer(level.layers.calculateFog).data[i];
-                        });
-                        chunk.drawLayer(chunk.getLayer(level.layers.fog));
-                    }
-                }
-            }
-        }
-    }
+//    var arrObjects = game.getObjects();
+//    var handledObjects = [];
+//    var objectsBeingHandled = [];
+//
+//    arrObjects.forEach(function(object) {
+//        if (object.name === 'mind') {
+//            objectsBeingHandled.push(object);
+//        }
+//    });
+//
+//    var thereAreNewObjectsToBeHandled = true;
+//
+//    while(thereAreNewObjectsToBeHandled) {
+//        thereAreNewObjectsToBeHandled = false;
+//
+//        objectsBeingHandled.forEach(function(object, index) {
+//
+//            for(var x = object.grid.x - object.communicationRadius; x <= object.grid.x + object.communicationRadius; x++) {
+//                for(var y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {
+//                    var chunkX = Math.floor(x / game.variables.chunk.size);
+//                    var chunkY = Math.floor(y / game.variables.chunk.size);
+//
+//                    var dx = x % game.variables.chunk.size;
+//                    var dy = y % game.variables.chunk.size;
+//
+//                    if (dx < 0) {
+//                        dx = game.variables.chunk.size + dx;
+//                    }
+//                    if (dy < 0) {
+//                        dy = game.variables.chunk.size + dy;
+//                    }
+//
+//                    level.getChunk(chunkX, chunkY).getLayer(level.layers.calculateFog).data[dy * game.variables.chunk.size + dx] = -1;
+//                    level.getChunk(chunkX, chunkY).getLayer(level.layers.history).data[dy * game.variables.chunk.size + dx] = 3;
+//                }
+//            }
+//
+//            var objectsWithinCommunicationRadius = game.findObject(object.grid.x - object.communicationRadius,
+//                                          object.grid.y - object.communicationRadius,
+//                                          object.grid.x + object.communicationRadius,
+//                                          object.grid.y + object.communicationRadius);
+//
+//            objectsWithinCommunicationRadius.forEach(function(objectWithinCommunicationRadius) {
+//                if (handledObjects.indexOf(objectWithinCommunicationRadius) === -1 && objectsBeingHandled.indexOf(objectWithinCommunicationRadius) === -1 ) {
+//                    objectsBeingHandled.push(objectWithinCommunicationRadius);
+//                    thereAreNewObjectsToBeHandled = true;
+//
+//                }
+//            });
+//
+//            handledObjects.push(object);
+//            delete objectsBeingHandled[index];
+//        });
+//    }
+//
+//
+//    for(var x in level.chunks) {
+//        if ((!isNaN(parseFloat(x)) && isFinite(x))) {
+//            for (var y in level.chunks[x]) {
+//                if ((!isNaN(parseFloat(y)) && isFinite(y))) {
+//                    var chunk = level.chunks[x][y];
+//                    if (!chunk.getLayer(level.layers.calculateFog).data.equals(chunk.getLayer(level.layers.fog).data)) {
+//                        chunk.getLayer(level.layers.fog).data.forEach(function(n, i, array) {
+//                            array[i] = chunk.getLayer(level.layers.calculateFog).data[i];
+//                        });
+//                        chunk.drawLayer(chunk.getLayer(level.layers.fog));
+//                    }
+//                }
+//            }
+//        }
+//    }
 };
