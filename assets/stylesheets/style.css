@@ -93,10 +93,15 @@ body {
     position: absolute;
     top: 0;
     height: 25px;
+    width:100%;
     display:inline-block;
-    background-color: #49586E;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.7);
+    background-color: #0a0a0a;
+    line-height: 25px;
 }
+
+.top.menu span {}
+.top.menu img {vertical-align: middle;}
+
 .top.menu .item {
     height: 100%;
     width: 25px;

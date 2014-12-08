@@ -154,7 +154,7 @@ level.initialise = function() {
         size : game.variables.chunk.size,
         data : [],
         generate : function(x, y) {
-            return _self.simplex.noise2D(x/20,y/20)*15-11;
+            return Math.round((Math.sin(_self.simplex.noise2D(x/50,y/250))-0.40)*15000);
         }
     };
     level.layers.selection = {
@@ -192,6 +192,7 @@ level.chunk = function(x, y){
 
     _self.layers = {};
     _self.objects = [];
+    _self.resources = [];
 };
 
 level.chunk.prototype.getLayer = function(layer) {
@@ -210,7 +211,8 @@ level.chunk.prototype.createLayer = function(layer) {
     _self.layers[layer.name] = {
         data : [],
         tileset : layer.tileset,
-        definition : layer
+        definition : layer,
+        resources : []
     };
 
     return _self.layers[layer.name];
@@ -310,4 +312,46 @@ level.calculatefog = function() {
 //            }
 //        }
 //    }
+};
+
+/**
+ * Add resource reference(s) to the level
+ * @param   {Object}   resource
+ * @returns {Array} Array containing reference objects containing the array and corresponding index to where the resource is added to the resource array
+ */
+level.addResource = function(resource) {
+    var grid = common.getGridFromCoordinates(resource.x, resource.y);
+
+    var references = [];
+
+    var referenceChunk = {},
+        referenceChunkLayer = {};
+
+    referenceChunk.array = level.getChunk(grid.chunk.x, grid.chunk.y).resources;
+    referenceChunk.index = referenceChunk.array.push(resource);
+
+    referenceChunkLayer.array = level.getChunk(grid.chunk.x, grid.chunk.y).getLayer(level.layers[resource.name]).resources;
+    referenceChunkLayer.index = referenceChunkLayer.array.push(resource);
+
+    references.push(referenceChunk);
+    references.push(referenceChunkLayer);
+
+    return references;
+};
+
+/**
+ * Finds resources by grid coordinates
+ * @param   {Object} grid common grid coordinates as returned by getGridFrom* functions
+ * @returns {Array}  contains all resources which are on the exact same grid position as
+ */
+level.findResource = function(grid) {
+    var resources = [];
+
+    level.getChunk(grid.chunk.x, grid.chunk.y).resources.forEach(function(resource) {
+        if (resource.grid.x === grid.x && resource.grid.y === grid.y) {
+            resources.push(resource);
+        }
+    });
+
+    return resources;
 };

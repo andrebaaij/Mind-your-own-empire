@@ -19,7 +19,7 @@
 */
 
 
-/* global Image,document,window,setTimeout,console,XMLHttpRequest,common,game */
+/* global resources,Image,document,window,setTimeout,console,XMLHttpRequest,common,game */
 
 function objects() {
     var _self = this;
@@ -32,29 +32,23 @@ objects.prototype.list = function() {
     return objects.array;
 };
 
-objects.prototype.updateChunk = function(chunk, object, newChunk) {
+objects.prototype.updateChunk = function(object, newChunk) {
     if (object.chunk.x !== newChunk.x || object.chunk.y !== newChunk.y) {
         if (object.chunk !== 'undefined') {
             //Remove from the old chunk
-            game.getChunk(object.chunk.x,object.chunk.y).objects.splice(object.chunk.position,1);
+            game.getChunk(object.chunk.x,object.chunk.y).objects.splice(object.chunk.position-1,1);
 
             //Renumber all positions for object later on in the chunk.
-            for(var i = object.chunk.position; i < game.getChunk(object.chunk.x,object.chunk.y).objects.length; i++) {
-                game.getChunk(object.chunk.x,object.chunk.y).objects[i].chunk.position = i;
-            }
+            game.getChunk(object.chunk.x,object.chunk.y).objects.forEach(function(object, index) {
+                object.chunk.position = index + 1;
+            });
         }
 
         object.chunk = newChunk;
-        if(typeof chunk[object.chunk.x] === 'undefined') {
-            chunk[object.chunk.x] = [];
-        }
-        if(typeof chunk[object.chunk.x][object.chunk.y] === 'undefined') {
-            chunk[object.chunk.x][object.chunk.y] = [];
-        }
         object.chunk.position = game.getChunk(object.chunk.x,object.chunk.y).objects.push(object);
     }
 
-    return chunk;
+    return object;
 };
 
 objects.prototype.functions = {};
@@ -70,7 +64,7 @@ objects.prototype.functions.move = function(x,y) {
     }
 
     this.grid = grid;
-    objects.chunk = objects.updateChunk(objects.chunk, this, grid.chunk);
+    objects.chunk = objects.updateChunk(this, grid.chunk);
 };
 
 objects.prototype.functions.select = function(){
@@ -96,11 +90,7 @@ objects.prototype.functions.deselect = function(){
 
 objects.prototype.functions.addResources = function(resources) {
     for(var resource in resources) {
-        if (typeof this.resources[resource] !== 'undefined') {
-            this.resources[resource] += parseInt(resources[resource]);
-        } else {
-            this.resources[resource] = parseInt(resources[resource]);
-        }
+        this.resources[resource] += parseInt(resources[resource]);
     }
 };
 
@@ -237,19 +227,27 @@ objects.prototype.functions.walkLoop = function(action) {
 
 };
 
-objects.prototype.functions.chop = function(object) {
-    this.walk(object.x, object.y);
+/**
+ * Tell the object to add the gather actions to its action list
+ * @param {Object} resource This is the target resource which it will have to gather
+ */
+objects.prototype.functions.gather = function(resource) {
+    this.walk(resource.x, resource.y);
 
-    var action = {action:"chop", x : object.x, y : object.y, object: object};
+    var action = {action:"gather", x : resource.x, y : resource.y, object: resource};
 
     this.actions.push(action);
 };
 
-objects.prototype.functions.chopLoop = function(action) {
-    if (!action.object.isDestroyed) {
-        action.object.targetChop(this, 1);
-    } else {
+/**
+ * While the action 'gather' exists for an object this loop is run
+ * @param {Object} action The action to execute
+ */
+objects.prototype.functions.gatherLoop = function(action) {
+    if (typeof action.object === 'undefined' || !resources.resourceExists(action.object)) {
         this.actions.shift();
+    } else {
+        this.addResources(resources.gatherResource(action.object, 1));
     }
 };
 
@@ -272,7 +270,7 @@ objects.prototype.functions.craftLoop = function(action) {
 };
 
 // Target Actions
-objects.prototype.functions.targetChop = function(object, amount) {
+objects.prototype.functions.targetgather = function(object, amount) {
     this.health = this.health-amount;
 
     if (this.health <= 0) {
@@ -450,9 +448,9 @@ repository.prototype.get = function(name) {
             objects.repository[name].prototype.walkLoop = objects.functions.walkLoop;
         }
 
-        if(object.skills.indexOf("chop") !== -1) {
-            objects.repository[name].prototype.chop = objects.functions.chop;
-            objects.repository[name].prototype.chopLoop = objects.functions.chopLoop;
+        if(object.skills.indexOf("gather") !== -1) {
+            objects.repository[name].prototype.gather = objects.functions.gather;
+            objects.repository[name].prototype.gatherLoop = objects.functions.gatherLoop;
         }
 
         if(object.skills.indexOf("craft") !== -1) {
@@ -465,8 +463,8 @@ repository.prototype.get = function(name) {
     // TargetActions
 
     if(object.targetActions) {
-        if(object.targetActions.indexOf("chop") !== -1) {
-            objects.repository[name].prototype.targetChop = objects.functions.targetChop;
+        if(object.targetActions.indexOf("gather") !== -1) {
+            objects.repository[name].prototype.targetgather = objects.functions.targetgather;
         }
     }
 

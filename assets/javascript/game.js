@@ -3,12 +3,15 @@
 
 
 var game = {
-   variables : {
-       pause : false,
-       chunk : {
-          size : 10
-       }
-   }
+    variables : {
+        pause : false,
+        chunk : {
+            size : 10
+        }
+    },
+    resources : {
+        iron: 1000
+    }
 };
 
 common.parseQueryString();
@@ -30,7 +33,7 @@ game.initialise = function() {
 
 };
 
-common.require('objects','perlin','level','userInterface','draw','particle',game.initialise);
+common.require('objects','resources', 'perlin','level','userInterface','draw','particle',game.initialise);
 
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);

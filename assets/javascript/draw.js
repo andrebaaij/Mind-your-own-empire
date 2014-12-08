@@ -1,4 +1,4 @@
-/* global Image,document,window,setTimeout,console,XMLHttpRequest,common,game */
+/* global resources,Image,document,window,setTimeout,console,XMLHttpRequest,common,game */
 
 /* jshint loopfunc: true */
 
@@ -34,9 +34,6 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     canvas.context.scale(scale,scale);
     canvas.context.translate(canvas.xOffset,canvas.yOffset);
 
-    // Get tileset from level
-    //var tileset_tiles = common.resources.tilesets.get(level.tilesets[0].name);
-
     // Assign tileset data to variables for easy use.
     var chunkSize = game.variables.chunk.size;
     var offsetsLT = common.getGridFromScreen(canvas, 0, 0);
@@ -58,7 +55,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             continue;
         }
 
-        if (layer.type === 'tile' || layer.type === "resources") {
+        if (layer.type === 'tile') {
             tilewidth = game.variables.tile.width;
             tileheight = game.variables.tile.height;
 
@@ -71,30 +68,17 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                     if(chunkLayer.data.equals([])) {
                         // GENERATE
                         if (layer.generate) {
-                            //console.log("generate", layer.type);
-
                             for (var dataY = 0; dataY < chunkSize; dataY++) {
                                 for (var dataX = 0; dataX < chunkSize; dataX++) {
                                     var i = (dataY * chunkSize + dataX);
-
                                     chunkLayer.data[i] = layer.generate(x * chunkSize + dataX, y * chunkSize + dataY);
-                                    if (layer.type === "resources" && chunkLayer.data[i] > 0) {
-                                        game.createObject(layer.name, x * chunkSize + dataX, y * chunkSize + dataY);
-                                    }
                                 }
                             }
                         }
                     }
 
-                    if (layer.type === "resources") {
-                        continue;
-                    }
-
                     for (var i = 0; i < layer.size * layer.size; i++) {
                         if (0 <= chunkLayer.data[i] && chunkLayer.data[i] < layer.tileset.nbTiles) {
-
-                            var sx = chunkLayer.data[i] % layer.tileset.tilesPerRow;
-                            var sy = (chunkLayer.data[i] - sx) / layer.tileset.tilesPerRow;
                             var cx = i % layer.size;
                             var cy = (i - cx) / layer.size;
 
@@ -105,6 +89,40 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                             );
                         }
                     }
+                }
+            }
+        } else if (layer.type === "resources") {
+            tilewidth = game.variables.tile.width;
+            tileheight = game.variables.tile.height;
+
+            for (y = chunkYOffset; y <= maxChunkYOffset; y++) {
+                for (x = chunkXOffset; x <= maxChunkXOffset; x++) {
+                    //level.getChunk(x,y).drawLayer(layer);
+
+                    var chunkLayer = level.getChunk(x, y).getLayer(layer);
+
+                    if(chunkLayer.data.equals([])) {
+                        // GENERATE
+                        if (layer.generate) {
+                            for (var dataY = 0; dataY < chunkSize; dataY++) {
+                                for (var dataX = 0; dataX < chunkSize; dataX++) {
+                                    var i = (dataY * chunkSize + dataX);
+
+                                    var amount = layer.generate(x * chunkSize + dataX, y * chunkSize + dataY);
+                                    resources.createResource(layer.name, amount, x * chunkSize + dataX, y * chunkSize + dataY);
+                                }
+                            }
+                        }
+                        //quick hack to stop regeneration every time.
+                        chunkLayer.data = [1];
+                    }
+                    chunkLayer.resources.forEach( function(resource) {
+                        canvas.context.drawImage(layer.tileset,
+                            resource.x - tilewidth/2,
+                            resource.y - tileheight/2,
+                            resource.level
+                        );
+                    });
                 }
             }
         } else if (layer.type === 'objects') {
@@ -162,7 +180,6 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                     object.crafted = typeof object.crafted !== 'undefined' && object.crafted < 1 ? object.crafted : 1;
 
                     tileset = object.tileset;
-                    var tilewidth = tileset.grid.width;
                     var tileheight = tileset.grid.height;
 
                     tileIndex = object.tile;
@@ -219,8 +236,6 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             y = game.variables.mouseY;
 
             tileIndex = 0;
-            var sx = tileIndex % tilesPerRow;
-            var sy = (tileIndex - sx) / tilesPerRow;
 
             for (x = selectGrid.lx; x <= selectGrid.rx; x++) {
                 for (y = selectGrid.ty; y <= selectGrid.by; y++) {

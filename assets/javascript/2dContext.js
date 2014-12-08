@@ -45,8 +45,8 @@ context2d.prototype.scale = function(scaleX,scaleY) {};
 
 context2d.prototype.translate = function(xOffset,yOffset) {
     var _self = this;
-    _self.variables.offset.x = xOffset;
-    _self.variables.offset.y = yOffset;
+    _self.xOffset = _self.variables.offset.x = xOffset;
+    _self.yOffset = _self.variables.offset.y = yOffset;
 };
 
 context2d.prototype.dimensions = function(width, height) {
@@ -123,8 +123,8 @@ context2d.prototype.initTexture = function(image) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.bindTexture(gl.TEXTURE_2D, null);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.enable(gl.BLEND);
+//    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+//    gl.enable(gl.BLEND);
 
     image.gl.numberOfDrawCalls = -1;
     image.gl.vertexPositionBuffer = [];
@@ -255,19 +255,21 @@ context2d.prototype.drawImage = function (image, x, y, tileIndex) {
 
     var tile = image.tile[tileIndex],
         i8 = i * 8;
+    try {
+        image.gl.textureCoordinationBuffer[i8] = tile.lx;
+        image.gl.textureCoordinationBuffer[i8+1] = tile.ty;
 
-    image.gl.textureCoordinationBuffer[i8] = tile.lx;
-    image.gl.textureCoordinationBuffer[i8+1] = tile.ty;
+        image.gl.textureCoordinationBuffer[i8+2] = tile.rx;
+        image.gl.textureCoordinationBuffer[i8+3] = tile.ty;
 
-    image.gl.textureCoordinationBuffer[i8+2] = tile.rx;
-    image.gl.textureCoordinationBuffer[i8+3] = tile.ty;
+        image.gl.textureCoordinationBuffer[i8+4] = tile.rx;
+        image.gl.textureCoordinationBuffer[i8+5] = tile.by;
 
-    image.gl.textureCoordinationBuffer[i8+4] = tile.rx;
-    image.gl.textureCoordinationBuffer[i8+5] = tile.by;
-
-    image.gl.textureCoordinationBuffer[i8+6] = tile.lx;
-    image.gl.textureCoordinationBuffer[i8+7] = tile.by;
-
+        image.gl.textureCoordinationBuffer[i8+6] = tile.lx;
+        image.gl.textureCoordinationBuffer[i8+7] = tile.by;
+    } catch (e) {
+        console.log(image, tileIndex);
+    };
     //Vertices index
 
     var i4 = i*4,

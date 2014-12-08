@@ -1,4 +1,4 @@
-/* global Image,document,window,setTimeout,console,XMLHttpRequest,requestAnimationFrame,common,game */
+/* global $,level,resources,Image,document,window,setTimeout,console,XMLHttpRequest,requestAnimationFrame,common,game */
 
 var userInterface = {};
 userInterface.elements = {};
@@ -21,7 +21,7 @@ game.variables.scale = {
     speed: 2,
     minLevel : 1,
     maxLevel : 4
-}
+};
 
 userInterface.initialise = function () {
     /* Elements */
@@ -104,6 +104,15 @@ userInterface.initialise = function () {
     userInterface.elements.canvas.xOffset = 0;
     userInterface.elements.canvas.yOffset = 0;
     window.onresize();
+    userInterface.updateResources(game.resources);
+};
+
+userInterface.updateResources = function(resources) {
+    userInterface.updateIron(resources.iron);
+}
+
+userInterface.updateIron = function(amount) {
+    $('#iron').text(amount);
 };
 
 userInterface.setVariable = function(name, value) {
@@ -384,16 +393,16 @@ userInterface.canvasClickListener = function(event) {
             var craftedObject = game.variables.craftObject.prototype.initialise(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
             game.variables.craftObject = null;
 
-            var resources = {};
+            var resourcesx = {};
 
             for(var resource in craftedObject.craftInformation) {
-                resources[resource] = craftedObject.craftInformation[resource];
+                resourcesx[resource] = craftedObject.craftInformation[resource];
             }
 
             game.variables.selectedObjects.forEach(function(object, index) {
                 if (object.craft) {
                     object.craft(craftedObject);
-                    resources = object.removeResources(resources);
+                    resourcesx = object.removeResources(resources);
                 }
             });
 
@@ -467,15 +476,43 @@ userInterface.canvasClickListener = function(event) {
                 });
             });
 
+            var targetedResources = [];
+
+            // check for available resources
+            if (targetActions.length === 0) {
+                var grid = common.getGridFromScreen(userInterface.elements.canvas, mouseX, mouseY);
+                targetedResources = level.findResource(grid);
+//                console.log(grid);
+//                console.log(targetedResources);
+//
+//                console.log(common.getCoordinatesFromScreen(userInterface.elements.canvas, mouseX, mouseY));
+//                console.log(userInterface.elements.canvas.xOffset, userInterface.elements.canvas.yOffset);
+//                console.log(mouseX, mouseY);
+            }
+
+
+
+            // First check for actions on objects
             if (targetActions.length > 1) {
                 console.log(targetActions);
             } else if (targetActions.length === 1) {
-                game.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
-                    if(!selectedObject[targetActions[0].skill]) return;
+                game.variables.selectedObjects.forEach(function(selectedObject) {
+                    if(!selectedObject[targetActions[0].skill]) {
+                        return;
+                    }
+
                     selectedObject[targetActions[0].skill](targetActions[0].object);
                 });
+            } else if (targetedResources.length > 0) {
+                game.variables.selectedObjects.forEach(function(selectedObject) {
+                    if(typeof selectedObject.gather === 'undefined') {
+                        return;
+                    }
+
+                    selectedObject.gather(targetedResources[0]);
+                });
             } else {
-                game.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
+                game.variables.selectedObjects.forEach(function(selectedObject) {
                     if (selectedObject.walk) {
                         var coordinates = common.getCoordinatesFromScreen(userInterface.elements.canvas,mouseX,mouseY);
                         selectedObject.walk(coordinates.x,coordinates.y);
