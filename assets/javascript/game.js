@@ -10,7 +10,8 @@ var game = {
         }
     },
     resources : {
-        iron: 1000
+        iron: 1000,
+        electricity: 0
     }
 };
 
@@ -25,7 +26,15 @@ game.initialise = function() {
     objects.create("block",2,1);
 
     objects.create("mind",5,5);
+
     objects.create("tower",10,10);
+
+    objects.create("solar",11,4);
+    objects.create("solar",11,5);
+    objects.create("solar",11,6);
+    objects.create("solar",10,4);
+    objects.create("solar",10,5);
+    objects.create("solar",10,6);
 
     game.variables.counter= 0;
 

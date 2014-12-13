@@ -38,6 +38,8 @@ function context2d(canvas) {
 
     _self.gl.activeTexture(_self.gl.TEXTURE0);
     _self.gl.bindBuffer(_self.gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+
+    _self.translate(0,0);
 }
 
 /* Placeholders */
@@ -45,8 +47,7 @@ context2d.prototype.scale = function(scaleX,scaleY) {};
 
 context2d.prototype.translate = function(xOffset,yOffset) {
     var _self = this;
-    _self.xOffset = _self.variables.offset.x = xOffset;
-    _self.yOffset = _self.variables.offset.y = yOffset;
+    this.gl.uniform2f(shaderProgram.translate, xOffset, yOffset);
 };
 
 context2d.prototype.dimensions = function(width, height) {
@@ -89,6 +90,8 @@ context2d.prototype.initShaders = function() {
 
     // set the resolution
     shaderProgram.textureresolution = gl.getUniformLocation(shaderProgram, "u_textureresolution");
+    shaderProgram.translate = gl.getUniformLocation(shaderProgram, "u_translate");
+
     gl.uniform2f(shaderProgram.resolutionLocation, _self.height,_self.width);
 
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -96,8 +99,6 @@ context2d.prototype.initShaders = function() {
 
     shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
 };
-
-
 
 context2d.prototype.initTexture = function(image) {
    // console.log('initTexture:start', image);
@@ -126,14 +127,20 @@ context2d.prototype.initTexture = function(image) {
 //    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 //    gl.enable(gl.BLEND);
 
-    image.gl.numberOfDrawCalls = -1;
+    image.gl.totalNumberOfDrawCalls = 0;
+    image.gl.previousTotalNumberOfDrawCalls = 0;
+    image.gl.currentNumberOfDrawCalls = 0;
     image.gl.vertexPositionBuffer = [];
     image.gl.textureCoordinationBuffer = [];
     image.gl.vertexIndexBuffer = [];
+    image.gl.objects = [];
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, image.gl.texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image.gl.texture.image);
+
+    image.gl.cubeVertexPositionBuffer = gl.createBuffer();
+    image.gl.cubeVertexTextureCoordBuffer = gl.createBuffer();
 
     return image.gl;
 };
@@ -142,18 +149,7 @@ context2d.prototype.initBuffers = function() {
     var _self = this;
     var gl = _self.gl;
 
-    cubeVertexPositionBuffer = gl.createBuffer();
-    cubeVertexPositionBuffer.itemSize = 3;
-    cubeVertexPositionBuffer.numItems = 4;
-
     cubeVertexIndexBuffer = gl.createBuffer();
-    cubeVertexIndexBuffer.itemSize = 1;
-    cubeVertexIndexBuffer.numItems = 6;
-
-    cubeVertexTextureCoordBuffer = gl.createBuffer();
-    cubeVertexTextureCoordBuffer.itemSize = 2;
-    cubeVertexTextureCoordBuffer.numItems = 4;
-
 };
 
 context2d.prototype.getShader = function(gl, id) {
@@ -193,97 +189,159 @@ context2d.prototype.getShader = function(gl, id) {
     return shader;
 };
 
-/*
-
-    Extra
-
-*/
-
-
-context2d.prototype.drawImage = function (image, x, y, tileIndex) {
-    //console.log('drawImage:start');
-
+context2d.prototype.drawTile = function (texture, x, y, tileIndex, object) {
     var _self = this;
 
-    // If the image is not loaded yet, we don't have anything to draw, so let's quit the execution of this function.
-    if (!image.isLoaded) {
+    // If the texture is not loaded yet, we don't have anything to draw, so let's quit the execution of this function.
+    if (!texture.isLoaded) {
         return;
     }
 
-    //TODO: Migrate this to the gl camera.
-    //Draw the images with an offset because of scrolling throug the field.
-    x += _self.variables.offset.x;
-    y += _self.variables.offset.y;
-
-    // If the image is not initialised yet, buffer it now.
-    if (!image.gl) {
-        _self.initTexture(image);
+    // If the texture is not initialised yet, buffer it now.
+    if (!texture.gl) {
+        _self.initTexture(texture);
     }
 
     // For this scene, this is the nth drawcall:
-    var i = image.gl.numberOfDrawCalls += 1;
+    var i = texture.gl.totalNumberOfDrawCalls;
 
     // Add this texture to the scene if this is its first drawcall.
-    if (typeof i === 'undefined' || i === 0) {
-        _self.textures.push(image);
+    if (typeof texture.gl.currentNumberOfDrawCalls === 'undefined' || texture.gl.currentNumberOfDrawCalls === 0) {
+        _self.textures.push(texture);
     }
 
-    //Vertices px positions
+    if(typeof object.gl === 'undefined') {
+        texture.gl.objects.push(object);
 
-    var xwidth = x + image.grid.width,
-        yheight = y + image.grid.height;
+        object.gl = {
+            index : i
+        };
 
+        var buffers = {
+            vertex : texture.gl.vertexPositionBuffer,
+            texture : texture.gl.textureCoordinationBuffer,
+            vertexIndex : texture.gl.vertexIndexBuffer
+        };
 
-    var i12 = i * 12;
-    image.gl.vertexPositionBuffer[i12] = x;
-    image.gl.vertexPositionBuffer[i12+1] = y;
-    image.gl.vertexPositionBuffer[i12+2] = i;
+        var tile = texture.tile[tileIndex];
+        this.bufferDraw(buffers, i, x, y, texture, tile);
 
-    image.gl.vertexPositionBuffer[i12+3] = xwidth;
-    image.gl.vertexPositionBuffer[i12+4] = y;
-    image.gl.vertexPositionBuffer[i12+5] = i;
+        texture.gl.totalNumberOfDrawCalls += 1;
+    }
 
-    image.gl.vertexPositionBuffer[i12+6] = xwidth;
-    image.gl.vertexPositionBuffer[i12+7] = yheight;
-    image.gl.vertexPositionBuffer[i12+8] = i;
+    i = texture.gl.currentNumberOfDrawCalls;
 
-    image.gl.vertexPositionBuffer[i12+9] = x;
-    image.gl.vertexPositionBuffer[i12+10] = yheight;
-    image.gl.vertexPositionBuffer[i12+11] = i;
-
-    //Texture px positions
-
-    var tile = image.tile[tileIndex],
-        i8 = i * 8;
-    try {
-        image.gl.textureCoordinationBuffer[i8] = tile.lx;
-        image.gl.textureCoordinationBuffer[i8+1] = tile.ty;
-
-        image.gl.textureCoordinationBuffer[i8+2] = tile.rx;
-        image.gl.textureCoordinationBuffer[i8+3] = tile.ty;
-
-        image.gl.textureCoordinationBuffer[i8+4] = tile.rx;
-        image.gl.textureCoordinationBuffer[i8+5] = tile.by;
-
-        image.gl.textureCoordinationBuffer[i8+6] = tile.lx;
-        image.gl.textureCoordinationBuffer[i8+7] = tile.by;
-    } catch (e) {
-        console.log(image, tileIndex);
-    };
     //Vertices index
-
-    var i4 = i*4,
+    var i4 = object.gl.index*4, //object.gl.index
         i6 = i*6;
 
-    image.gl.vertexIndexBuffer[i6] = i4;
-    image.gl.vertexIndexBuffer[i6+1] = i4+1;
-    image.gl.vertexIndexBuffer[i6+2] = i4+2;
+    texture.gl.vertexIndexBuffer[i6] = i4;
+    texture.gl.vertexIndexBuffer[i6+1] = i4+1;
+    texture.gl.vertexIndexBuffer[i6+2] = i4+2;
 
-    image.gl.vertexIndexBuffer[i6+3] = i4;
-    image.gl.vertexIndexBuffer[i6+4] = i4+2;
-    image.gl.vertexIndexBuffer[i6+5] = i4+3;
+    texture.gl.vertexIndexBuffer[i6+3] = i4;
+    texture.gl.vertexIndexBuffer[i6+4] = i4+2;
+    texture.gl.vertexIndexBuffer[i6+5] = i4+3;
+
+    texture.gl.currentNumberOfDrawCalls += 1;
 };
 
+context2d.prototype.drawObject = function (texture, x, y, tileIndex, object) {
+     var _self = this;
+
+    // If the texture is not loaded yet, we don't have anything to draw, so let's quit the execution of this function.
+    if (!texture.isLoaded) {
+        return;
+    }
+
+    // If the texture is not initialised yet, buffer it now.
+    if (!texture.gl) {
+        _self.initTexture(texture);
+    }
+
+    // For this scene, this is the nth drawcall:
+    var i = texture.gl.totalNumberOfDrawCalls;
+
+    // Add this texture to the scene if this is its first drawcall.
+    if (typeof texture.gl.currentNumberOfDrawCalls === 'undefined' || texture.gl.currentNumberOfDrawCalls === 0) {
+        _self.textures.push(texture);
+        texture.gl.previousTotalNumberOfDrawCalls = 0;
+        texture.gl.totalNumberOfDrawCalls = 0;
+        texture.gl.objects = [];
+    }
+
+    texture.gl.objects.push(object);
+
+    object.gl = {
+        index : i
+    };
+
+    var buffers = {
+        vertex : texture.gl.vertexPositionBuffer,
+        texture : texture.gl.textureCoordinationBuffer,
+        vertexIndex : texture.gl.vertexIndexBuffer
+    };
+
+    var tile = texture.tile[tileIndex];
+    this.bufferDraw(buffers, i, x, y, texture, tile);
+
+    texture.gl.totalNumberOfDrawCalls += 1;
+
+    i = texture.gl.currentNumberOfDrawCalls;
+
+    //Vertices index
+    var i4 = object.gl.index*4, //object.gl.index
+        i6 = i*6;
+
+    texture.gl.vertexIndexBuffer[i6] = i4;
+    texture.gl.vertexIndexBuffer[i6+1] = i4+1;
+    texture.gl.vertexIndexBuffer[i6+2] = i4+2;
+
+    texture.gl.vertexIndexBuffer[i6+3] = i4;
+    texture.gl.vertexIndexBuffer[i6+4] = i4+2;
+    texture.gl.vertexIndexBuffer[i6+5] = i4+3;
+
+    texture.gl.currentNumberOfDrawCalls += 1;
+};
+
+context2d.prototype.bufferDraw = function (buffers, i, x, y, texture, tile) {
+    var xwidth = x + texture.grid.width,
+        yheight = y + texture.grid.height;
+
+    var i12 = i * 12,
+        i8 = i * 8;
+    buffers.vertex[i12] = x;
+    buffers.vertex[i12+1] = y;
+    buffers.vertex[i12+2] = i;
+
+    buffers.vertex[i12+3] = xwidth;
+    buffers.vertex[i12+4] = y;
+    buffers.vertex[i12+5] = i;
+
+    buffers.vertex[i12+6] = xwidth;
+    buffers.vertex[i12+7] = yheight;
+    buffers.vertex[i12+8] = i;
+
+    buffers.vertex[i12+9] = x;
+    buffers.vertex[i12+10] = yheight;
+    buffers.vertex[i12+11] = i;
+
+
+
+    buffers.texture[i8] = tile.lx;
+    buffers.texture[i8+1] = tile.ty;
+
+    buffers.texture[i8+2] = tile.rx;
+    buffers.texture[i8+3] = tile.ty;
+
+    buffers.texture[i8+4] = tile.rx;
+    buffers.texture[i8+5] = tile.by;
+
+    buffers.texture[i8+6] = tile.lx;
+    buffers.texture[i8+7] = tile.by;
+
+    return buffers;
+};
 
 context2d.prototype.drawScene = function() {
     var _self = this;
@@ -304,33 +362,31 @@ context2d.prototype.drawTextures = function(gl, textures) {
 };
 
 context2d.prototype.drawTexture = function(gl, texture) {
-    //console.log('drawTexture:start');
+    if (texture.gl.currentNumberOfDrawCalls > 0) {
+        //gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture.gl.texture);
+        gl.uniform2f(shaderProgram.textureresolution, texture.gl.texture.image.width, texture.gl.texture.image.height);
 
+        if (texture.gl.totalNumberOfDrawCalls > texture.gl.previousTotalNumberOfDrawCalls) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, texture.gl.cubeVertexPositionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texture.gl.vertexPositionBuffer), gl.STATIC_DRAW);
 
+            gl.bindBuffer(gl.ARRAY_BUFFER, texture.gl.cubeVertexTextureCoordBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texture.gl.textureCoordinationBuffer), gl.STATIC_DRAW);
+        }
 
-    //gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture.gl.texture);
-    gl.uniform2f(shaderProgram.textureresolution, texture.gl.texture.image.width, texture.gl.texture.image.height);
+        //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(texture.gl.vertexIndexBuffer), gl.STATIC_DRAW);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texture.gl.vertexPositionBuffer), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, texture.gl.cubeVertexPositionBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texture.gl.textureCoordinationBuffer), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, texture.gl.cubeVertexTextureCoordBuffer);
+        gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
 
-    //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(texture.gl.vertexIndexBuffer), gl.STATIC_DRAW);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
-    gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
-
-    //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
-    gl.drawElements(gl.TRIANGLES, (texture.gl.numberOfDrawCalls + 1) * 6, gl.UNSIGNED_SHORT, 0);
-
-    //console.log('drawTexture:end');
+        //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+        gl.drawElements(gl.TRIANGLES, (texture.gl.currentNumberOfDrawCalls) * 6, gl.UNSIGNED_SHORT, 0);
+    }
 };
 
 // Resets all data.
@@ -355,13 +411,21 @@ context2d.prototype.clearTextures = function(textures) {
 
 // Resets all current drawcalls for the supplied texture
 context2d.prototype.clearTexture = function(texture) {
-    //console.log('clearTexture:start', texture);
+    texture.gl.previousTotalNumberOfDrawCalls = texture.gl.totalNumberOfDrawCalls;
+    texture.gl.currentNumberOfDrawCalls = 0;
+    texture.gl.vertexIndexBuffer = [];//new Array(texture.gl.vertexIndexBuffer.length);
 
-    //Set the current drawcalls to 0
-    texture.gl.numberOfDrawCalls = -1;
-    texture.gl.vertexPositionBuffer = new Array(texture.gl.vertexPositionBuffer.length);
-    texture.gl.textureCoordinationBuffer = new Array(texture.gl.textureCoordinationBuffer.length);
-    texture.gl.vertexIndexBuffer = new Array(texture.gl.vertexIndexBuffer.length);
+    if (texture.gl.totalNumberOfDrawCalls > 10000) {
+        texture.gl.totalNumberOfDrawCalls = 0;
+        texture.gl.previousTotalNumberOfDrawCalls = 0;
+        texture.gl.currentNumberOfDrawCalls = 0;
+        texture.gl.vertexPositionBuffer = [];
+        texture.gl.textureCoordinationBuffer = [];
+        texture.gl.vertexIndexBuffer = [];
 
+        texture.gl.objects.forEach(function(object) {
+            object.gl = undefined;
+        });
+    }
     return texture;
 };

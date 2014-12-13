@@ -71,24 +71,36 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                             for (var dataY = 0; dataY < chunkSize; dataY++) {
                                 for (var dataX = 0; dataX < chunkSize; dataX++) {
                                     var i = (dataY * chunkSize + dataX);
-                                    chunkLayer.data[i] = layer.generate(x * chunkSize + dataX, y * chunkSize + dataY);
+                                    tileIndex = layer.generate(x * chunkSize + dataX, y * chunkSize + dataY);
+                                    var tile = level.createTile(x * chunkSize + dataX, y * chunkSize + dataY, tileIndex)
+                                    level.addTileToChunkLayer(chunkLayer, tile);
                                 }
                             }
                         }
+                        chunkLayer.data = [1];
                     }
 
-                    for (var i = 0; i < layer.size * layer.size; i++) {
-                        if (0 <= chunkLayer.data[i] && chunkLayer.data[i] < layer.tileset.nbTiles) {
-                            var cx = i % layer.size;
-                            var cy = (i - cx) / layer.size;
+                    chunkLayer.tiles.forEach( function(tile) {
+                        canvas.context.drawTile(layer.tileset,
+                            tile.x - tilewidth/2,
+                            tile.y - tileheight/2,
+                            tile.tile,
+                            tile
+                        );
+                    });
 
-                            canvas.context.drawImage(layer.tileset,
-                                Math.round(((cx+(x*chunkSize))-(cy+(y*chunkSize)))*0.5*tilewidth),
-                                Math.round(((cx+(x*chunkSize))+(cy+(y*chunkSize)))*0.5*tileheight),
-                                chunkLayer.data[i]
-                            );
-                        }
-                    }
+//                    for (var i = 0; i < layer.size * layer.size; i++) {
+//                        if (0 <= chunkLayer.data[i] && chunkLayer.data[i] < layer.tileset.nbTiles) {
+//                            var cx = i % layer.size;
+//                            var cy = (i - cx) / layer.size;
+//
+//                            canvas.context.drawImage(layer.tileset,
+//                                Math.round(((cx+(x*chunkSize))-(cy+(y*chunkSize)))*0.5*tilewidth),
+//                                Math.round(((cx+(x*chunkSize))+(cy+(y*chunkSize)))*0.5*tileheight),
+//                                chunkLayer.data[i]
+//                            );
+//                        }
+//                    }
                 }
             }
         } else if (layer.type === "resources") {
@@ -117,10 +129,11 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                         chunkLayer.data = [1];
                     }
                     chunkLayer.resources.forEach( function(resource) {
-                        canvas.context.drawImage(layer.tileset,
+                        canvas.context.drawTile(layer.tileset,
                             resource.x - tilewidth/2,
                             resource.y - tileheight/2,
-                            resource.level
+                            resource.level,
+                            resource
                         );
                     });
                 }
@@ -162,10 +175,11 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 //                        canvas.context.strokeStyle="rgba(0,0,0,0.5)";
 //                        canvas.context.stroke();
 
-                        canvas.context.drawImage(_self.actionTiles,
+                        canvas.context.drawTile(_self.actionTiles,
                                            Math.round(action.x-tilewidth/2),
                                            Math.round(action.y-tileheight/2),
-                                           tileIndex
+                                           tileIndex,
+                                           action
                                         );
 
 
@@ -188,10 +202,11 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 //                        object.emitter.update(canvas, Math.round(object.x), Math.round(object.y));
 //                    }
 
-                    canvas.context.drawImage(object.image,
+                    canvas.context.drawObject(object.image,
                                             Math.round(object.x - object.center.x),
                                             Math.round(object.y - object.center.y) + tileheight * (1-object.crafted),
-                                            tileIndex
+                                            tileIndex,
+                                            object
                                         );
             });
 
@@ -239,16 +254,11 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
             for (x = selectGrid.lx; x <= selectGrid.rx; x++) {
                 for (y = selectGrid.ty; y <= selectGrid.by; y++) {
-                    canvas.context.drawImage(tileset,
-//                                       sx * tilewidth,
-//                                       sy * tileheight,
-//                                       tilewidth,
-//                                       tileheight,
-                                       Math.round(0.5*(x-y)*tilewidth),
-                                       Math.round(0.5*(x+y)*tileheight),
-//                                       tilewidth,
-//                                       tileheight
-                                        tileIndex
+                    canvas.context.drawObject(tileset,
+                                        Math.round(0.5*(x-y)*tilewidth),
+                                        Math.round(0.5*(x+y)*tileheight),
+                                        tileIndex,
+                                        {}
                                     );
                 }
             }
