@@ -1,0 +1,8 @@
+{
+    "images" : ["tileset"],
+    "targetActions" : [],
+    "defaults" : {
+        "communicationRadius" : 0,
+        "hasWindow" :  true
+    }
+}

@@ -212,7 +212,8 @@ level.chunk.prototype.createLayer = function(layer) {
         data : [],
         tileset : layer.tileset,
         definition : layer,
-        resources : []
+        resources : [],
+        tiles : []
     };
 
     return _self.layers[layer.name];
@@ -354,4 +355,24 @@ level.findResource = function(grid) {
     });
 
     return resources;
+};
+
+level.createTile = function(x, y, tileIndex) {
+    var coordinates = common.getCoordinatesFromGrid(x, y);
+
+    var tile = {
+        tile : tileIndex,
+        x : coordinates.x,
+        y : coordinates.y
+    };
+
+    return tile;
+};
+
+level.addTileToChunkLayer = function(chunkLayer, tile) {
+    chunkLayer.tiles.push(tile);
+};
+
+level.getLayer = function(layername) {
+    return level.layers[layername];
 };

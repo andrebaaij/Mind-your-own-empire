@@ -109,10 +109,15 @@ userInterface.initialise = function () {
 
 userInterface.updateResources = function(resources) {
     userInterface.updateIron(resources.iron);
-}
+    userInterface.updateElectricity(resources.electricity);
+};
 
 userInterface.updateIron = function(amount) {
     $('#iron').text(amount);
+};
+
+userInterface.updateElectricity = function(amount) {
+    $('#electricity').text(amount);
 };
 
 userInterface.setVariable = function(name, value) {

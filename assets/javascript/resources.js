@@ -110,23 +110,6 @@ resources.addReference = function(resource, array, index) {
     return resource;
 };
 
-resources.removeReferences = function(resource) {
-    resource.references.forEach(function(reference) {
-        resources.removeReference(reference);
-    });
-
-    resource.references = [];
-    return resource;
-};
-
-resources.removeReference = function(reference) {
-    //Remove this reference
-    reference.array.splice(reference.index-1,1);
-
-    //Recalculate all indexes for object in the reference.
-    resources.recalculateReferenceIndexes(reference.array);
-};
-
 /**
  * This function returns whether the resources still exists or is destroyed
  * @param   {Object}  resource
@@ -155,4 +138,21 @@ resources.updateReference = function(resource, array, index) {
             reference.index = index;
         }
     });
+};
+
+resources.removeReferences = function(resource) {
+    resource.references.forEach(function(reference) {
+        resources.removeReference(reference);
+    });
+
+    resource.references = [];
+    return resource;
+};
+
+resources.removeReference = function(reference) {
+    //Remove this reference
+    reference.array.splice(reference.index-1,1);
+
+    //Recalculate all indexes for object in the reference.
+    resources.recalculateReferenceIndexes(reference.array);
 };
