@@ -1,4 +1,4 @@
-/* global $,level,resources,Image,document,window,setTimeout,console,XMLHttpRequest,requestAnimationFrame,common,game */
+/* global $,level,resources,document,window,console,requestAnimationFrame,common,game,contextGL */
 
 var userInterface = {};
 userInterface.elements = {};
@@ -98,9 +98,8 @@ userInterface.initialise = function () {
     userInterface.scrollLoop();
 
     /* initialise */
-    //userInterface.elements.canvas.context = canvas.getContext('2d');
-    userInterface.elements.canvas.context = new context2d(userInterface.elements.canvas);
-    userInterface.elements.canvas.context.dimensions(window.innerWidth, window.innerHeight);
+    userInterface.elements.canvas.context = contextGL.get(userInterface.elements.canvas);
+    contextGL.dimensions(userInterface.elements.canvas.context, window.innerWidth, window.innerHeight);
     userInterface.elements.canvas.xOffset = 0;
     userInterface.elements.canvas.yOffset = 0;
     window.onresize();
@@ -109,15 +108,15 @@ userInterface.initialise = function () {
 
 userInterface.updateResources = function(resources) {
     userInterface.updateIron(resources.iron);
-    userInterface.updateElectricity(resources.electricity);
+    userInterface.updateEnergy(resources.energy);
 };
 
 userInterface.updateIron = function(amount) {
     $('#iron').text(amount);
 };
 
-userInterface.updateElectricity = function(amount) {
-    $('#electricity').text(amount);
+userInterface.updateEnergy = function(amount) {
+    $('#energy').text(amount);
 };
 
 userInterface.setVariable = function(name, value) {
@@ -303,8 +302,8 @@ window.onresize = function() {
 
     var scale = common.scaleNumber(1);
 
-    userInterface.elements.canvas.context.dimensions(window.innerWidth, window.innerHeight);
-    userInterface.elements.canvas.context.scale(scale,scale);
+    contextGL.dimensions(userInterface.elements.canvas.context, window.innerWidth, window.innerHeight);
+    contextGL.scale(userInterface.elements.canvas.context, scale);
 
     if (game.variables.pause) {
         game.draw();

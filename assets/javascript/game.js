@@ -35,14 +35,9 @@ game.initialise = function() {
     objects.create("solar",10,4);
     objects.create("solar",10,5);
     objects.create("solar",10,6);
-
-    game.variables.counter= 0;
-
-    //setInterval(function () {game.gameLoop();}, 2000);
-
 };
 
-common.require('objects','resources', 'perlin','level','userInterface','draw','particle',game.initialise);
+common.require('contextGL', 'objects','resources', 'perlin', 'level', 'userInterface', 'draw', 'particle', game.initialise);
 
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);
