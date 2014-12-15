@@ -3,6 +3,7 @@
     "targetActions" : [],
     "defaults" : {
         "communicationRadius" : 3,
-        "hasWindow" :  true
+        "hasWindow" :  true,
+        "energy" : -2
     }
 }

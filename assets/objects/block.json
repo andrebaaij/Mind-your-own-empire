@@ -3,6 +3,7 @@
     "skills" : ["walk", "gather"],
     "defaults" : {
         "communicationRadius" : 2,
-        "hasWindow" :  true
+        "hasWindow" :  true,
+        "energy" : -1
     }
 }

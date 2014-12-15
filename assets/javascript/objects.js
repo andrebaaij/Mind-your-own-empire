@@ -19,7 +19,7 @@
 */
 
 
-/* global resources,Image,document,window,setTimeout,console,XMLHttpRequest,common,game */
+/* global resources,console,common,game,userInterface */
 
 function objects() {
     var _self = this;
@@ -72,7 +72,7 @@ objects.prototype.functions.select = function(){
 
     if (this.tileset.image_selected) {
         this.image = this.tileset.image_selected;
-    };
+    }
 
     _self.isSelected = true;
     //_self.$window.show();
@@ -126,7 +126,9 @@ objects.prototype.functions.animationLoop = function() {
 };
 
 objects.prototype.functions.setDirection = function(direction) {
-    if(!direction) direction = 'NE';
+    if(!direction) {
+        direction = 'NE';
+    }
 
     this.animation.array = this.tileset.animations[this.animation.name][direction];
     this.direction = direction;
@@ -336,7 +338,10 @@ objects.prototype.functions.initialise = function(x,y) {
     for (var variable in object.defaults) {
         object[variable] = object.defaults[variable];
     }
-//
+
+    game.resources.energy += object.energy;
+    userInterface.updateEnergy(game.resources.energy);
+
 //    if (object.hasWindow) {
 //        object.$window = common.window(this.name, game.variables.mouseX, game.variables.mouseY).hide();
 //    }
@@ -362,6 +367,7 @@ repository.prototype.get = function(name) {
     if (typeof objects.repository[name] !== 'undefined') {
         return objects.repository[name];
     }
+
     var URI = './assets/objects/' + name + '.json';
 
     var object = common.getJSONFromURI(URI);

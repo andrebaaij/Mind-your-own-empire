@@ -1,4 +1,4 @@
-/* global resources,Image,document,window,setTimeout,console,XMLHttpRequest,common,game */
+/* global contextGL,resources,Image,document,window,setTimeout,console,XMLHttpRequest,common,game */
 
 /* jshint loopfunc: true */
 
@@ -31,8 +31,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     canvas.height = window.innerHeight;
 
     var scale = common.scaleNumber(1);
-    canvas.context.scale(scale,scale);
-    canvas.context.translate(canvas.xOffset,canvas.yOffset);
+    contextGL.scale(canvas.context, scale);
+    contextGL.translate(canvas.context, canvas.xOffset, canvas.yOffset);
 
     // Assign tileset data to variables for easy use.
     var chunkSize = game.variables.chunk.size;
@@ -81,7 +81,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                     }
 
                     chunkLayer.tiles.forEach( function(tile) {
-                        canvas.context.drawTile(layer.tileset,
+                        contextGL.drawTile(canvas.context,
+                            layer.tileset,
                             tile.x - tilewidth/2,
                             tile.y - tileheight/2,
                             tile.tile,
@@ -129,7 +130,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                         chunkLayer.data = [1];
                     }
                     chunkLayer.resources.forEach( function(resource) {
-                        canvas.context.drawTile(layer.tileset,
+                        contextGL.drawTile(canvas.context,
+                            layer.tileset,
                             resource.x - tilewidth/2,
                             resource.y - tileheight/2,
                             resource.level,
@@ -175,7 +177,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 //                        canvas.context.strokeStyle="rgba(0,0,0,0.5)";
 //                        canvas.context.stroke();
 
-                        canvas.context.drawTile(_self.actionTiles,
+                        contextGL.drawTile(canvas.context,
+                                           _self.actionTiles,
                                            Math.round(action.x-tilewidth/2),
                                            Math.round(action.y-tileheight/2),
                                            tileIndex,
@@ -202,7 +205,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 //                        object.emitter.update(canvas, Math.round(object.x), Math.round(object.y));
 //                    }
 
-                    canvas.context.drawObject(object.image,
+                    contextGL.drawObject(canvas.context,
+                                            object.image,
                                             Math.round(object.x - object.center.x),
                                             Math.round(object.y - object.center.y) + tileheight * (1-object.crafted),
                                             tileIndex,
@@ -254,7 +258,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
             for (x = selectGrid.lx; x <= selectGrid.rx; x++) {
                 for (y = selectGrid.ty; y <= selectGrid.by; y++) {
-                    canvas.context.drawObject(tileset,
+                    contextGL.drawObject(canvas.context,
+                                        tileset,
                                         Math.round(0.5*(x-y)*tilewidth),
                                         Math.round(0.5*(x+y)*tileheight),
                                         tileIndex,

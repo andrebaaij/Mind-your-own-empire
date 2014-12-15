@@ -1,4 +1,4 @@
-/* global Image,document,window,setTimeout,console,XMLHttpRequest,requestAnimationFrame,common,draw,level,objects,userInterface */
+/* global requestAnimationFrame, common, draw, level, objects, userInterface, contextGL */
 
 
 
@@ -11,7 +11,7 @@ var game = {
     },
     resources : {
         iron: 1000,
-        electricity: 0
+        energy: 0
     }
 };
 
@@ -47,12 +47,12 @@ common.require('objects','resources', 'perlin','level','userInterface','draw','p
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);
 
-    userInterface.elements.canvas.context.clearScene();
+    contextGL.clearScene(userInterface.elements.canvas.context);
     if (!game.variables.pause) {
         game.draw();
     }
 
-    userInterface.elements.canvas.context.drawScene();
+    contextGL.drawScene(userInterface.elements.canvas.context);
 
     objects.list().forEach(function(object) {
         object.loop();
