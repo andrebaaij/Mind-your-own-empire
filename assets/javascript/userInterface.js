@@ -378,6 +378,8 @@ userInterface.canvasClickListener = function(event) {
 
     var mouseX = game.variables.mouseX = event.pageX;
     var mouseY = game.variables.mouseY = event.pageY;
+    var grid = common.getGridFromScreen(userInterface.elements.canvas, game.variables.mouseX, game.variables.mouseY);
+    var coordinates = common.getCoordinatesFromGrid(grid.x, grid.y);
 
     /* IE case */
     if (event.which === null) {
@@ -394,21 +396,8 @@ userInterface.canvasClickListener = function(event) {
         // If we have one craft object selected it means we are in build mode.
         if (game.variables.craftObject !== null) {
             // Build the object
-            var craftedObject = game.variables.craftObject.prototype.initialise(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
+            game.variables.craftObject.prototype.initialise(grid.x, grid.y);
             game.variables.craftObject = null;
-
-            var resourcesx = {};
-
-            for(var resource in craftedObject.craftInformation) {
-                resourcesx[resource] = craftedObject.craftInformation[resource];
-            }
-
-            game.variables.selectedObjects.forEach(function(object, index) {
-                if (object.craft) {
-                    object.craft(craftedObject);
-                    resourcesx = object.removeResources(resources);
-                }
-            });
 
             return;
         }
@@ -458,10 +447,10 @@ userInterface.canvasClickListener = function(event) {
             var array = game.findObject(mouseX+userInterface.elements.canvas.xOffset,mouseY+userInterface.elements.canvas.yOffset);
 
             //Loop through target objects
-            array.forEach(function(targetObject, targetObjectIndex) {
+            array.forEach(function(targetObject) {
                 if (!targetObject.targetActions) return;
 
-                game.variables.selectedObjects.forEach(function(selectedObject, selectedObjectIndex) {
+                game.variables.selectedObjects.forEach(function(selectedObject) {
                     if (!selectedObject.skills) return;
 
                     selectedObject.skills.forEach(function(skill) {

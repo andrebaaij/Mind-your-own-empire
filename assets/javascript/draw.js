@@ -214,33 +214,21 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                                         );
             });
 
-//            if (craftObject) {
-//                tileset = craftObject.prototype.tileset;
-//
-//                var tilewidth = tileset.grid.width;
-//                var tileheight = tileset.grid.height;
-//
-//                tileIndex = 0;
-//
-//                sx = tileIndex % tileset.tilesPerRow;
-//                sy = (tileIndex - sx) / tileset.tilesPerRow;
-//
-//                canvas.context.save();
-//                canvas.context.globalAlpha = 0.7;
-//
-//                canvas.context.drawImage(craftObject.prototype.image,
-//                                       sx * tilewidth,
-//                                       sy * tileheight,
-//                                       tilewidth,
-//                                       tileheight,
-//                                       game.variables.mouseX - craftObject.prototype.center.x,
-//                                       game.variables.mouseY - craftObject.prototype.center.y,
-//                                       tilewidth,
-//                                       tileheight
-//                                    );
-//
-//                canvas.context.restore();
-//            }
+            if (craftObject) {
+                var grid = common.getGridFromScreen(canvas, game.variables.mouseX, game.variables.mouseY);
+                var coordinates = common.getCoordinatesFromGrid(grid.x, grid.y);
+
+                tileset = craftObject.prototype.tileset;
+
+                tileIndex = 0;
+                contextGL.drawObject(canvas.context,
+                    craftObject.prototype.image,
+                       coordinates.x - craftObject.prototype.center.x,
+                       coordinates.y - craftObject.prototype.center.y,
+                       tileIndex,
+                       {}
+                    );
+            }
         } else if (layer.type === 'selection') {
         // Draw selection box:
 
