@@ -292,7 +292,7 @@ objects.prototype.functions.restLoop = function() {
 objects.prototype.functions.loop = function() {
 //    //setTimeout(this.loop.bind(this),this.loopSpeed);
 //
-    if (game.variables.pause || this.type === 'resource') {
+    if (data.pause || this.type === 'resource') {
         return;
     }
 //
@@ -339,11 +339,11 @@ objects.prototype.functions.initialise = function(x,y) {
         object[variable] = object.defaults[variable];
     }
 
-    game.resources.energy += object.energy;
-    userInterface.updateEnergy(game.resources.energy);
+    data.resources.energy += object.energy;
+    ui.updateEnergy(data.resources.energy);
 
 //    if (object.hasWindow) {
-//        object.$window = common.window(this.name, game.variables.mouseX, game.variables.mouseY).hide();
+//        object.$window = common.window(this.name, data.mouseX, data.mouseY).hide();
 //    }
 
     // breathe

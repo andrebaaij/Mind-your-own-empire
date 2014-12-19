@@ -15,12 +15,12 @@ level.initialise = function() {
     game.getLevel = level.get;
     game.getPath = level.getPath;
 
-    game.variables.tile = {
+    data.tile = {
         width : 64,
         height : 32
     };
 
-    var random = new Alea(game.variables.seed);
+    var random = new Alea(data.seed);
     level.simplex = new SimplexNoise(random);
 
     level.chunks = []; //2d Array
@@ -33,7 +33,7 @@ level.initialise = function() {
         type : "tile",
         visible : true,
         tileset : common.resources.tilesets.get("tiles"),
-        size : game.variables.chunk.size,
+        size : data.chunk.size,
         data : [],
         generate : function(x, y) {
             function getType(x, y) {
@@ -129,7 +129,7 @@ level.initialise = function() {
         type : "data",
         visible : false,
         tileset : common.resources.tilesets.get("gameTiles"),
-        size : game.variables.chunk.size,
+        size : data.chunk.size,
         data : [],
         generate : function(x, y) {
             return 1;
@@ -140,7 +140,7 @@ level.initialise = function() {
         type : "data",
         visible : false,
         tileset : common.resources.tilesets.get("gameTiles"),
-        size : game.variables.chunk.size,
+        size : data.chunk.size,
         data : [],
         generate : function(x, y) {
             return 1;
@@ -151,7 +151,7 @@ level.initialise = function() {
         type : "resources",
         visible : true,
         tileset : common.resources.tilesets.get("iron"),
-        size : game.variables.chunk.size,
+        size : data.chunk.size,
         data : [],
         generate : function(x, y) {
             return Math.round((Math.sin(_self.simplex.noise2D(x/50,y/250))-0.40)*15000);
@@ -161,20 +161,20 @@ level.initialise = function() {
         name : "selection",
         type : "selection",
         visible : true,
-        size : game.variables.chunk.size
+        size : data.chunk.size
     };
     level.layers.objects = {
         name : "objects",
         type : "objects",
         visible : true,
-        size : game.variables.chunk.size
+        size : data.chunk.size
     };
     level.layers.fog = {
         name : "fog",
         type : "tile",
         visible : false,
         tileset : common.resources.tilesets.get("gameTiles"),
-        size : game.variables.chunk.size,
+        size : data.chunk.size,
         data : [],
         generate : function(x, y) {
             return 1;
@@ -188,7 +188,7 @@ level.chunk = function(x, y){
     _self.x = x;
     _self.y = y;
 
-    _self.size = game.variables.chunk.size;
+    _self.size = data.chunk.size;
 
     _self.layers = {};
     _self.objects = [];
@@ -261,21 +261,21 @@ level.calculatefog = function() {
 //
 //            for(var x = object.grid.x - object.communicationRadius; x <= object.grid.x + object.communicationRadius; x++) {
 //                for(var y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {
-//                    var chunkX = Math.floor(x / game.variables.chunk.size);
-//                    var chunkY = Math.floor(y / game.variables.chunk.size);
+//                    var chunkX = Math.floor(x / data.chunk.size);
+//                    var chunkY = Math.floor(y / data.chunk.size);
 //
-//                    var dx = x % game.variables.chunk.size;
-//                    var dy = y % game.variables.chunk.size;
+//                    var dx = x % data.chunk.size;
+//                    var dy = y % data.chunk.size;
 //
 //                    if (dx < 0) {
-//                        dx = game.variables.chunk.size + dx;
+//                        dx = data.chunk.size + dx;
 //                    }
 //                    if (dy < 0) {
-//                        dy = game.variables.chunk.size + dy;
+//                        dy = data.chunk.size + dy;
 //                    }
 //
-//                    level.getChunk(chunkX, chunkY).getLayer(level.layers.calculateFog).data[dy * game.variables.chunk.size + dx] = -1;
-//                    level.getChunk(chunkX, chunkY).getLayer(level.layers.history).data[dy * game.variables.chunk.size + dx] = 3;
+//                    level.getChunk(chunkX, chunkY).getLayer(level.layers.calculateFog).data[dy * data.chunk.size + dx] = -1;
+//                    level.getChunk(chunkX, chunkY).getLayer(level.layers.history).data[dy * data.chunk.size + dx] = 3;
 //                }
 //            }
 //

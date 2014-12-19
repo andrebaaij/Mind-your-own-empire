@@ -1,13 +1,32 @@
-/* global requestAnimationFrame, common, draw, level, objects, userInterface, contextGL */
+/* global requestAnimationFrame, common, draw, level, objects, contextGL, game:true, ui */
 
+game = {};
 
-
-var game = {
-    variables : {
-        pause : false,
-        chunk : {
-            size : 10
-        }
+var data = {
+    scroll : {
+        speed : 5,
+        x : 0,
+        y : 0
+    },
+    selectedObjects : [],
+    resourcesFromSelectedObjects : {},
+    craftObject : null,
+    selectGrid : {
+            ty : null,
+            by : null,
+            lx : null,
+            rx : null
+        },
+    mouseDown : false,
+    scale : {
+        level: 1,
+        speed: 2,
+        minLevel : 1,
+        maxLevel : 4
+    },
+    pause : false,
+    chunk : {
+        size : 10
     },
     resources : {
         iron: 1000,
@@ -16,7 +35,8 @@ var game = {
 };
 
 common.parseQueryString();
-game.variables.seed = game.variables.url.seed;
+
+data.seed = data.url.seed;
 
 game.initialise = function() {
     game.gameLoop();
@@ -37,23 +57,25 @@ game.initialise = function() {
     objects.create("solar",10,6);
 };
 
-common.require('contextGL', 'objects','resources', 'perlin', 'level', 'userInterface', 'draw', 'particle', game.initialise);
+common.require('contextGL', 'objects','resources', 'perlin', 'level', 'ui', 'draw', 'particle', game.initialise);
 
 game.gameLoop = function() {
     requestAnimationFrame(game.gameLoop);
 
-    contextGL.clearScene(userInterface.elements.canvas.context);
-    if (!game.variables.pause) {
+    contextGL.clearScene(data.DOM.canvas.context);
+
+    if (!data.pause) {
+        ui.scrollLoop(data.DOM.canvas, data.scroll);
         game.draw();
+
+        objects.list().forEach(function(object) {
+            object.loop();
+        });
     }
 
-    contextGL.drawScene(userInterface.elements.canvas.context);
-
-    objects.list().forEach(function(object) {
-        object.loop();
-    });
+    contextGL.drawScene(data.DOM.canvas.context);
 };
 
 game.draw = function() {
-    draw.draw(userInterface.elements.canvas, level, objects.list(), game.variables.craftObject, game.variables.selectGrid);
+    draw.draw(data.DOM.canvas, level, objects.list(), data.craftObject, data.selectGrid);
 };

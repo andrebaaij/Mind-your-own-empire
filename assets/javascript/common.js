@@ -3,12 +3,12 @@
 */
 
 
-/* global Image,document,window,console,XMLHttpRequest,game,$ */
+/* global common:true, Image,document,window,console,XMLHttpRequest,game,$,data */
 
 
 /* Technical functions */
 
-var common = {};
+common = {};
 
 common.getJSONFromURI = function(URI) {
     var request = new XMLHttpRequest();
@@ -97,7 +97,7 @@ common.parseQueryString = function() {
            urlParams[decode(match[1])] = decode(match[2]);
         }
 
-        game.variables.url = urlParams;
+        data.url = urlParams;
 };
 
 /* Resources */
@@ -324,11 +324,11 @@ common.scaleNumber = function(number, invert) {
 
     invert = typeof invert !== 'undefined' ? invert : false;
 
-    for (var i = game.variables.scale.minLevel; i < game.variables.scale.level; i++) {
+    for (var i = data.scale.minLevel; i < data.scale.level; i++) {
         if(invert) {
-            number *= game.variables.scale.speed;
+            number *= data.scale.speed;
         } else {
-            number /= game.variables.scale.speed;
+            number /= data.scale.speed;
         }
     }
 
@@ -341,8 +341,8 @@ common.getGridFromScreen = function(canvas, x, y) {
 };
 
 common.getGridFromCoordinates = function(x, y) {
-    var tileWidth = game.variables.tile.width;
-    var tileHeight = game.variables.tile.height;
+    var tileWidth = data.tile.width;
+    var tileHeight = data.tile.height;
 
     x = x - tileWidth/2;
 
@@ -352,10 +352,10 @@ common.getGridFromCoordinates = function(x, y) {
     gx = parseInt(gx,10);
     gy = parseInt(gy,10);
 
-    var chunkX = Math.floor(gx/game.variables.chunk.size);
-    var chunkY = Math.floor(gy/game.variables.chunk.size);
+    var chunkX = Math.floor(gx/data.chunk.size);
+    var chunkY = Math.floor(gy/data.chunk.size);
 
-    var i = (gx - chunkX * game.variables.chunk.size) + ((gy - chunkY * game.variables.chunk.size) * game.variables.chunk.size);
+    var i = (gx - chunkX * data.chunk.size) + ((gy - chunkY * data.chunk.size) * data.chunk.size);
     return {
         chunk : {
             x : chunkX,
@@ -375,8 +375,8 @@ common.getCoordinatesFromScreen = function(canvas, x, y) {
 };
 
 common.getCoordinatesFromGrid = function(x, y) {
-    var tileWidth = game.variables.tile.width;
-    var tileHeight = game.variables.tile.height;
+    var tileWidth = data.tile.width;
+    var tileHeight = data.tile.height;
 
     var sx = ((parseInt(x,10) - parseInt(y,10)) * (tileWidth / 2)) + tileWidth/2;
     var sy = ((parseInt(x,10) + parseInt(y,10)) * (tileHeight / 2)) + tileHeight/2;
@@ -384,8 +384,8 @@ common.getCoordinatesFromGrid = function(x, y) {
 };
 
 common.getTileCoordinatesFromGrid = function(x, y) {
-    var tileWidth = game.variables.tile.width;
-    var tileHeight = game.variables.tile.height;
+    var tileWidth = data.tile.width;
+    var tileHeight = data.tile.height;
 
     var coordinates = common.getCoordinatesFromGrid(x, y);
 
@@ -434,8 +434,8 @@ common.window = function(header, x, y) {
                 handles: "se"
             })
             .hover(function () {
-                game.variables.scrollX = 0;
-                game.variables.scrollY = 0;
+                data.scrollX = 0;
+                data.scrollY = 0;
             });
 
     $game.append($window);
@@ -467,4 +467,23 @@ common.windowRowCell = function(width, height) {
         .attr('style','width: ' + width + '; height: ' + height);
 
     return $cell;
+};
+
+common.RunPrefixMethod = function(obj, method) {
+    var pfx = ["webkit", "moz", "ms", "o", ""];
+
+    var p = 0, m, t;
+    while (p < pfx.length && !obj[m]) {
+        m = method;
+        if (pfx[p] === "") {
+            m = m.substr(0,1).toLowerCase() + m.substr(1);
+        }
+        m = pfx[p] + m;
+        t = typeof obj[m];
+        if (t != "undefined") {
+            pfx = [pfx[p]];
+            return (t == "function" ? obj[m]() : obj[m]);
+        }
+        p++;
+    }
 };

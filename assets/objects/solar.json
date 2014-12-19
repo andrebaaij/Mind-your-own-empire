@@ -4,6 +4,9 @@
     "defaults" : {
         "communicationRadius" : 0,
         "hasWindow" :  true,
-        "energy" : 2
+        "energy" : 2,
+        "cost" : {
+            "iron" : 10000
+        }
     }
 }

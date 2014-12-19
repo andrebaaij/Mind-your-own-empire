@@ -35,7 +35,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     contextGL.translate(canvas.context, canvas.xOffset, canvas.yOffset);
 
     // Assign tileset data to variables for easy use.
-    var chunkSize = game.variables.chunk.size;
+    var chunkSize = data.chunk.size;
     var offsetsLT = common.getGridFromScreen(canvas, 0, 0);
     var offsetsRT = common.getGridFromScreen(canvas, canvasWidth, 0);
     var offsetsLB = common.getGridFromScreen(canvas, 0, canvasHeight);
@@ -45,8 +45,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     var chunkYOffset = Math.min(offsetsLT.chunk.y, offsetsRT.chunk.y, offsetsLB.chunk.y, offsetsRB.chunk.y);
     var maxChunkXOffset = Math.max(offsetsLT.chunk.x, offsetsRT.chunk.x, offsetsLB.chunk.x, offsetsRB.chunk.x);
     var maxChunkYOffset = Math.max(offsetsLT.chunk.y, offsetsRT.chunk.y, offsetsLB.chunk.y, offsetsRB.chunk.y);
-    tilewidth = game.variables.tile.width;
-    tileheight = game.variables.tile.height;
+    tilewidth = data.tile.width;
+    tileheight = data.tile.height;
 
 
     for (var l in level.layers) {
@@ -56,8 +56,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
         }
 
         if (layer.type === 'tile') {
-            tilewidth = game.variables.tile.width;
-            tileheight = game.variables.tile.height;
+            tilewidth = data.tile.width;
+            tileheight = data.tile.height;
 
             for (y = chunkYOffset; y <= maxChunkYOffset; y++) {
                 for (x = chunkXOffset; x <= maxChunkXOffset; x++) {
@@ -105,8 +105,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                 }
             }
         } else if (layer.type === "resources") {
-            tilewidth = game.variables.tile.width;
-            tileheight = game.variables.tile.height;
+            tilewidth = data.tile.width;
+            tileheight = data.tile.height;
 
             for (y = chunkYOffset; y <= maxChunkYOffset; y++) {
                 for (x = chunkXOffset; x <= maxChunkXOffset; x++) {
@@ -215,7 +215,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             });
 
             if (craftObject) {
-                var grid = common.getGridFromScreen(canvas, game.variables.mouseX, game.variables.mouseY);
+                var grid = common.getGridFromScreen(canvas, data.mouseX, data.mouseY);
                 var coordinates = common.getCoordinatesFromGrid(grid.x, grid.y);
 
                 tileset = craftObject.prototype.tileset;
@@ -239,8 +239,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
             tilesPerRow = tileset.tilesPerRow;
 
-            x = game.variables.mouseX;
-            y = game.variables.mouseY;
+            x = data.mouseX;
+            y = data.mouseY;
 
             tileIndex = 0;
 
