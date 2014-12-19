@@ -19,7 +19,7 @@
 */
 
 
-/* global resources,console,common,game,userInterface */
+/* global resources,console,common,game, ui, data, Emitter */
 
 function objects() {
     var _self = this;
@@ -168,12 +168,12 @@ objects.prototype.functions.walk = function(x,y) {
         x = leg.x - origin.x;
         y = leg.y - origin.y;
 
-        var nbSteps = Math.sqrt(x*x + y*y)/2
+        var nbSteps = Math.sqrt(x*x + y*y)/2;
 
         leg.step = {
             x : x / nbSteps,
             y : y / nbSteps
-        }
+        };
 
         var NS,
             WE;

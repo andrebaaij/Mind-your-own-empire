@@ -18,9 +18,9 @@ ui.initialise = function () {
     };
 
     /* EventListeners assignment*/
-    data.DOM.$canvas.mousemove(ui.eventCanvasMousemove);
-    data.DOM.$canvas.mousedown(ui.eventCanvasMousedown);
-    data.DOM.$canvas.mouseup(ui.eventCanvasMouseup);
+    data.DOM.$canvas.mousemove( function(e) { ui.eventCanvasMousemove(e, data.mouse);});
+    data.DOM.$canvas.mousedown( function(e) { ui.eventCanvasMousedown(e, data.mouse, data.scroll); });
+    data.DOM.$canvas.mouseup(   function(e) { ui.eventCanvasMouseup(e, data.mouse);});
     data.DOM.pauseContinue.addEventListener('click',    function () {ui.showPause(false); });
     data.DOM.pauseFullscreen.addEventListener('click',  function () {ui.showFullscreen(); });
     data.DOM.menu_pause.addEventListener('click',       function () {ui.showPause(true); });
@@ -28,8 +28,8 @@ ui.initialise = function () {
         data.mouseDown = false;
         ui.showPause(true);
     });
-    data.DOM.$document.keydown(function(e) {ui.eventDocumentKeydown(e, data.scroll);});
-    data.DOM.$document.keyup(function(e) {ui.eventDocumentKeyup(e, data.scroll);});
+    data.DOM.$document.keydown(function(e) {ui.eventDocumentKeydown(e, data.keyboard);});
+    data.DOM.$document.keyup(function(e) {ui.eventDocumentKeyup(e, data.keyboard);});
 
     /* initialise */
     data.DOM.canvas.context = contextGL.get(data.DOM.canvas);
@@ -68,203 +68,137 @@ ui.showPause = function(show) {
 
 /* Canvas */
 
-ui.eventCanvasMousemove = function(event) {
-    console.log(event);
+ui.eventCanvasMousemove = function(event, mouse) {
+    mouse.x = event.pageX;
+    mouse.y = event.pageY;
 
-    var mouseX = data.mouseX = event.pageX;
-    var mouseY = data.mouseY = event.pageY;
+    var grid = common.getGridFromScreen(data.scroll, mouse.x, mouse.y);
 
-    var grid = common.getGridFromScreen(data.DOM.canvas, mouseX, mouseY);
-
-    if (data.mouseDown) {
-        if (data.selectGrid.y < grid.y) {
-            data.selectGrid.ty = data.selectGrid.y;
-            data.selectGrid.by = grid.y;
+    if (mouse.left) {
+        if (mouse.selection.grid.y < grid.y) {
+            mouse.selection.ty = mouse.selection.grid.y;
+            mouse.selection.by = grid.y;
         } else {
-            data.selectGrid.by = data.selectGrid.y;
-            data.selectGrid.ty = grid.y;
+            mouse.selection.by = mouse.selection.grid.y;
+            mouse.selection.ty = grid.y;
         }
 
-        if (data.selectGrid.x < grid.x) {
-            data.selectGrid.rx = grid.x;
-            data.selectGrid.ly = data.selectGrid.x;
+        if (mouse.selection.grid.x < grid.x) {
+            mouse.selection.rx = grid.x;
+            mouse.selection.ly = mouse.selection.grid.x;
         } else {
-            data.selectGrid.lx = grid.x;
-            data.selectGrid.rx = data.selectGrid.x;
+            mouse.selection.lx = grid.x;
+            mouse.selection.rx = mouse.selection.grid.x;
         }
 
     } else {
-        data.selectGrid.ty = grid.y;
-        data.selectGrid.by = grid.y;
-        data.selectGrid.lx = grid.x;
-        data.selectGrid.rx = grid.x;
+        mouse.selection.ty = grid.y;
+        mouse.selection.by = grid.y;
+        mouse.selection.lx = grid.x;
+        mouse.selection.rx = grid.x;
     }
 };
 
-ui.eventCanvasMousedown = function(event) {
-    if (!data.mouseDown) {
-        var mouseX = data.mouseX = event.pageX;
-        var mouseY = data.mouseY = event.pageY;
+ui.eventCanvasMousedown = function(event, mouse, scroll) {
+    if (event.which === 1) {
+        mouse.left = true;
+    } else if (event.which === 2) {
+        mouse.middle = true;
+    } else if (event.which === 3) {
+        mouse.right = true;
+    }
+        
+    if (mouse.left) {
+        mouse.x = event.pageX;
+        mouse.y = event.pageY;
 
-        var grid = common.getGridFromScreen(data.DOM.canvas, mouseX, mouseY);
-
-        data.selectGrid.x = grid.x;
-        data.selectGrid.y = grid.y;
-
-        data.mouseDown = true;
+        mouse.selection.grid = common.getGridFromScreen(scroll, mouse.x, mouse.y);
     }
 };
 
-ui.eventCanvasMouseup = function(event) {
-    var button;
-
-    data.mouseDown = false;
-
-    var mouseX = data.mouseX = event.pageX;
-    var mouseY = data.mouseY = event.pageY;
-    var grid = common.getGridFromScreen(data.DOM.canvas, data.mouseX, data.mouseY);
-    var coordinates = common.getCoordinatesFromGrid(grid.x, grid.y);
-
-    /* IE case */
-    if (event.which === null) {
-        button = (event.button < 2) ? "LEFT" : ((event.button == 4) ? "MIDDLE" : "RIGHT");
-    } else { /* All others */
-        button = (event.which < 2) ? "LEFT" : ((event.which == 2) ? "MIDDLE" : "RIGHT");
+ui.eventCanvasMouseup = function(event, mouse) {
+    if (event.which === 1) {
+        mouse.left = false;
+    } else if (event.which === 2) {
+        mouse.middle = false;
+    } else if (event.which === 3) {
+        mouse.right = false;
     }
 
-    if (button === "LEFT") {
-        // Reset all flags that will be evaluated later
-        var aSelectedObjectCanCraft = false,
-            resourcesFromSelectedObjects = {};
+    mouse.x = event.pageX;
+    mouse.y = event.pageY;
+    
+    if (mouse.left) {
+        ui.eventCanvasMouseup_left(mouse);
+    } else if (mouse.right) {
+        ui.eventCanvasMouseup_right(mouse);
+    }
+};
 
-        // If we have one craft object selected it means we are in build mode.
-        if (data.craftObject !== null) {
-            // Build the object
-            if (data.resources.iron > data.craftObject.defaults.cost.iron) {
-                data.resources.iron -= data.craftObject.defaults.cost.iron;
-                ui.updateIron(data.resources.iron);
+ui.eventCanvasMouseup_left = function (mouse) {
+    // If we have a craft object selected it means we are in build mode.
+    if (data.craftObject !== null) {
+        // Build the object
 
-                data.craftObject.prototype.initialise(grid.x, grid.y);
+        // Are there enough resources available?
+        if (data.resources.iron >= data.craftObject.prototype.defaults.cost.iron) {
+            // Subract the resources
+            data.resources.iron -= data.craftObject.prototype.defaults.cost.iron;
+
+            // Update the resources ui
+            ui.updateIron(data.resources.iron);
+
+            data.craftObject.prototype.initialise(grid.x, grid.y);
+            
+            if(!keyboard.shift) {
                 data.craftObject = null;
-            } else {
-                //ui.log()
-                console.log("Not enough resources");
             }
-            return;
-        }
-
-        game.getObjects().forEach(function(object, index) {
-            object.deselect();
-        });
-
-        data.selectedObjects = game.findObject(data.selectGrid.lx,data.selectGrid.ty, data.selectGrid.rx, data.selectGrid.by);
-
-        data.selectedObjects.forEach(function(object, index) {
-            object.select();
-
-            // If one of the objects can craft, turn the flag aSelectedObjectCanCraft to true;
-            if (object.skills && object.skills.indexOf("craft") !== -1) {
-                aSelectedObjectCanCraft = true;
-
-                if (object.resources) {
-                    var resource;
-                    for (resource in object.resources) {
-                        if (resourcesFromSelectedObjects[resource]) resourcesFromSelectedObjects[resource] += object.resources[resource];
-                        else resourcesFromSelectedObjects[resource] = object.resources[resource];
-                    }
-                }
-            }
-
-            data.resourcesFromSelectedObjects = resourcesFromSelectedObjects;
-        });
-
-        // if aSelectedObjectCanCraft equals true, make the
-        if (aSelectedObjectCanCraft) {
-            data.DOM.menu_craft.setAttribute("class","item");
         } else {
-            data.DOM.menu_craft.setAttribute("class","item off");
+            console.log("Not enough resources", data.resources.iron, data.craftObject.prototype.defaults.cost.iron);
         }
-    } else if (button === "RIGHT") {
+        return;
+    }
+    
+    // Deselect all currently selected objects
+    mouse.selection.objects.forEach(function(object) {
+        object.deselect();
+    });
 
-        // If we have one object selected which can be initialised, it means we are in build mode.
-        if (data.selectedObjects.length === 1 && typeof data.selectedObjects[0].initialise !== 'undefined') {
-            // Do nothing on right click
-            data.craftObject = null;
-        }
+    // Select objects based on the selection grid.
+    mouse.selection.objects = objects.find(mouse.selection.lx, mouse.selection.ty, mouse.selection.rx, mouse.selection.by);
+    
+    // Select the found objects.
+    mouse.selection.objects.forEach(function(object) {
+        object.select();
+    });
 
-        if (data.selectedObjects.length > 0) {
-            var targetActions = [];
+};
 
-            var array = game.findObject(mouseX+data.DOM.canvas.xOffset,mouseY+data.DOM.canvas.yOffset);
+ui.eventCanvasMouseup_right = function (mouse, craftObject, selectedObjects) {
+    var grid = common.getGridFromScreen(data.scroll, mouse.x, mouse.y);
+    
+    if (mouse.selection.objects.length > 0) {
+        var resources = [];
 
-            //Loop through target objects
-            array.forEach(function(targetObject) {
-                if (!targetObject.targetActions) return;
+        resources = level.findResource(grid);
 
-                data.selectedObjects.forEach(function(selectedObject) {
-                    if (!selectedObject.skills) return;
+        if (resources.length > 0) {
+            mouse.selection.objects.forEach(function(object) {
+                if(typeof object.gather === 'undefined') {
+                    return;
+                }
 
-                    selectedObject.skills.forEach(function(skill) {
-                        if (targetObject.targetActions.indexOf(skill) !== -1 && targetActions.indexOf(skill) === -1) {
-                            var targetActionAlreadyExists = false;
-                            targetActions.forEach(function(action) {
-                                if (action.skill === skill) {
-                                    targetActionAlreadyExists = true;
-                                }
-                            });
-                            if (!targetActionAlreadyExists) {
-                                targetActions.push({skill : skill, object : targetObject});
-                            }
-                        }
-                    });
+                resources.forEach(function(resource) {
+                    object.gather(resource); 
                 });
             });
-
-            var targetedResources = [];
-
-            // check for available resources
-            if (targetActions.length === 0) {
-                var grid = common.getGridFromScreen(data.DOM.canvas, mouseX, mouseY);
-                targetedResources = level.findResource(grid);
-//                console.log(grid);
-//                console.log(targetedResources);
-//
-//                console.log(common.getCoordinatesFromScreen(data.DOM.canvas, mouseX, mouseY));
-//                console.log(data.DOM.canvas.xOffset, data.DOM.canvas.yOffset);
-//                console.log(mouseX, mouseY);
-            }
-
-
-
-            // First check for actions on objects
-            if (targetActions.length > 1) {
-                console.log(targetActions);
-            } else if (targetActions.length === 1) {
-                data.selectedObjects.forEach(function(selectedObject) {
-                    if(!selectedObject[targetActions[0].skill]) {
-                        return;
-                    }
-
-                    selectedObject[targetActions[0].skill](targetActions[0].object);
-                });
-            } else if (targetedResources.length > 0) {
-                data.selectedObjects.forEach(function(selectedObject) {
-                    if(typeof selectedObject.gather === 'undefined') {
-                        return;
-                    }
-
-                    selectedObject.gather(targetedResources[0]);
-                });
-            } else {
-                data.selectedObjects.forEach(function(selectedObject) {
-                    if (selectedObject.walk) {
-                        var coordinates = common.getCoordinatesFromScreen(data.DOM.canvas,mouseX,mouseY);
-                        selectedObject.walk(coordinates.x,coordinates.y);
-                    }
-                });
-            }
-
-
+        } else {
+            mouse.selection.objects.forEach(function(selectedObject) {
+                if (selectedObject.walk) {
+                    var coordinates = common.getCoordinatesFromScreen(data.scroll,mouseX,mouseY);
+                    selectedObject.walk(coordinates.x,coordinates.y);
+                }
+            });
         }
     }
 };
@@ -283,26 +217,26 @@ ui.updateIron = function(amount) {
 
 /* Keyboard */
 
-ui.eventDocumentKeydown = function(e, scroll) {
+ui.eventDocumentKeydown = function(e, keyboard) {
     switch(e.which) {
         case 65: // left
-        scroll.x = 1;
+        keyboard.a = true;
         break;
 
         case 87: // up
-        scroll.y = 1;
+        keyboard.w = true;
         break;
 
         case 68: // right
-        scroll.x = -1;
+        keyboard.d = true;
         break;
 
         case 83: // down
-        scroll.y = -1;
+        keyboard.s = true;
         break;
 
         case 16: // shift
-        scroll.speed = 15;
+        keyboard.shift = true;
         break;
 
         default: return; // exit this handler for other keys
@@ -312,31 +246,29 @@ ui.eventDocumentKeydown = function(e, scroll) {
     e.preventDefault(); // prevent the default action (scroll / move caret)
 };
 
-ui.eventDocumentKeyup = function(e, scroll) {
+ui.eventDocumentKeyup = function(e, keyboard) {
     switch(e.which) {
         case 65: // left
-        scroll.x = 0;
+        keyboard.a = false;
         break;
 
         case 87: // up
-        scroll.y = 0;
+        keyboard.w = false;
         break;
 
         case 68: // right
-        scroll.x = 0;
+        keyboard.d = false;
         break;
 
         case 83: // down
-        scroll.y = 0;
+        keyboard.s = false;
         break;
 
         case 16: // shift
-        scroll.speed = 5;
+        keyboard.shift = false;
         break;
 
         default: return; // exit this handler for other keys
-
-
     }
     e.preventDefault(); // prevent the default action (scroll / move caret)
 };
@@ -363,11 +295,36 @@ ui.showFullscreen = function(showFullscreen) {
     return ui.isFullscreen();
 };
 
-ui.scrollLoop = function(canvas, scroll) {
-    if (!scroll.x && !scroll.y) {
-        return;
+ui.scrollLoop = function(context, scroll, keyboard) {
+    scroll.x = 0;
+    scroll.y = 0;
+    
+    if (keyboard.w) {
+        scroll.y += scroll.speed;    // UP
     }
-
-    canvas.xOffset += (scroll.speed * scroll.x);
-    canvas.yOffset += (scroll.speed * scroll.y);
+    if (keyboard.s) {
+        scroll.y -= scroll.speed;    // DOWN
+    }
+    if (keyboard.a) {
+        scroll.x += scroll.speed;    //LEFT
+    }
+    if (keyboard.d) {
+        scroll.x -= scroll.speed;    //RIGHT
+    }
+    
+    // Is the player actuaylly scrolling through the level?
+    if (scroll.x !== 0 || scroll.y !== 0) {
+        // Speed up 
+        if (keyboard.shift) {
+            scroll.x *= scroll.shiftMultiplier;
+            scroll.y *= scroll.shiftMultiplier;
+        }
+        
+        scroll.offset.x += scroll.x;
+        scroll.offset.y += scroll.y;
+        
+        contextGL.translate(context, scroll.offset.x, scroll.offset.y);
+    }
+    
+    return scroll;
 };

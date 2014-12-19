@@ -32,14 +32,13 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
     var scale = common.scaleNumber(1);
     contextGL.scale(canvas.context, scale);
-    contextGL.translate(canvas.context, canvas.xOffset, canvas.yOffset);
 
     // Assign tileset data to variables for easy use.
     var chunkSize = data.chunk.size;
-    var offsetsLT = common.getGridFromScreen(canvas, 0, 0);
-    var offsetsRT = common.getGridFromScreen(canvas, canvasWidth, 0);
-    var offsetsLB = common.getGridFromScreen(canvas, 0, canvasHeight);
-    var offsetsRB = common.getGridFromScreen(canvas, canvasWidth, canvasHeight);
+    var offsetsLT = common.getGridFromScreen(data.scroll, 0, 0);
+    var offsetsRT = common.getGridFromScreen(data.scroll, canvasWidth, 0);
+    var offsetsLB = common.getGridFromScreen(data.scroll, 0, canvasHeight);
+    var offsetsRB = common.getGridFromScreen(data.scroll, canvasWidth, canvasHeight);
 
     var chunkXOffset = Math.min(offsetsLT.chunk.x, offsetsRT.chunk.x, offsetsLB.chunk.x, offsetsRB.chunk.x);
     var chunkYOffset = Math.min(offsetsLT.chunk.y, offsetsRT.chunk.y, offsetsLB.chunk.y, offsetsRB.chunk.y);
@@ -215,7 +214,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             });
 
             if (craftObject) {
-                var grid = common.getGridFromScreen(canvas, data.mouseX, data.mouseY);
+                var grid = common.getGridFromScreen(data.scroll, data.mouseX, data.mouseY);
                 var coordinates = common.getCoordinatesFromGrid(grid.x, grid.y);
 
                 tileset = craftObject.prototype.tileset;
@@ -239,13 +238,13 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
             tilesPerRow = tileset.tilesPerRow;
 
-            x = data.mouseX;
-            y = data.mouseY;
+            x = data.mouse.x;
+            y = data.mouse.y;
 
             tileIndex = 0;
 
-            for (x = selectGrid.lx; x <= selectGrid.rx; x++) {
-                for (y = selectGrid.ty; y <= selectGrid.by; y++) {
+            for (x = data.mouse.selection.lx; x <= data.mouse.selection.rx; x++) {
+                for (y = data.mouse.selection.ty; y <= data.mouse.selection.by; y++) {
                     contextGL.drawObject(canvas.context,
                                         tileset,
                                         Math.round(0.5*(x-y)*tilewidth),

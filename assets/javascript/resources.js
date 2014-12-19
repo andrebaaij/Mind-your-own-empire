@@ -1,4 +1,4 @@
-/* global common,level,game,userInterface,resources:true */
+/* global common,level,game,ui,resources:true, data */
 
 resources = {
     list : {}
@@ -64,8 +64,8 @@ resources.gatherResource = function(resource, amount) {
         resources.destroyResource(resource);
     }
 
-    game.resources.iron += amount;
-    userInterface.updateIron(game.resources.iron);
+    data.resources.iron += amount;
+    ui.updateIron(data.resources.iron);
 
     return amount;
 };

@@ -335,8 +335,8 @@ common.scaleNumber = function(number, invert) {
     return number;
 };
 
-common.getGridFromScreen = function(canvas, x, y) {
-    var coordinates = common.getCoordinatesFromScreen(canvas, x, y);
+common.getGridFromScreen = function(scroll, x, y) {
+    var coordinates = common.getCoordinatesFromScreen(scroll, x, y);
     return common.getGridFromCoordinates(coordinates.x, coordinates.y);
 };
 
@@ -367,9 +367,9 @@ common.getGridFromCoordinates = function(x, y) {
     };
 };
 
-common.getCoordinatesFromScreen = function(canvas, x, y) {
-    x = common.scaleNumber(x, true) - canvas.xOffset;
-    y = common.scaleNumber(y, true ) - canvas.yOffset;
+common.getCoordinatesFromScreen = function(scroll, x, y) {
+    x = common.scaleNumber(x, true) - scroll.offset.x;
+    y = common.scaleNumber(y, true ) - scroll.offset.y;
 
     return {x : x, y : y};
 };

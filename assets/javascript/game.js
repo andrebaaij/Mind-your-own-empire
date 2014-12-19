@@ -6,17 +6,15 @@ var data = {
     scroll : {
         speed : 5,
         x : 0,
-        y : 0
+        y : 0,
+        offset : {
+            x : 0,
+            y : 0
+        }
     },
     selectedObjects : [],
     resourcesFromSelectedObjects : {},
     craftObject : null,
-    selectGrid : {
-            ty : null,
-            by : null,
-            lx : null,
-            rx : null
-        },
     mouseDown : false,
     scale : {
         level: 1,
@@ -31,7 +29,14 @@ var data = {
     resources : {
         iron: 1000,
         energy: 0
-    }
+    },
+    mouse : {
+        selection : {
+            objects : []
+        }
+    },
+    keyboard : {},
+    selection : {}
 };
 
 common.parseQueryString();
@@ -65,7 +70,7 @@ game.gameLoop = function() {
     contextGL.clearScene(data.DOM.canvas.context);
 
     if (!data.pause) {
-        ui.scrollLoop(data.DOM.canvas, data.scroll);
+        data.scroll = ui.scrollLoop(data.DOM.canvas.context, data.scroll, data.keyboard);
         game.draw();
 
         objects.list().forEach(function(object) {
