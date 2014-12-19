@@ -12,8 +12,6 @@ var data = {
             y : 0
         }
     },
-    selectedObjects : [],
-    resourcesFromSelectedObjects : {},
     craftObject : null,
     mouseDown : false,
     scale : {

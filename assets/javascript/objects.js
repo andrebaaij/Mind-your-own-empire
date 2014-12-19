@@ -112,11 +112,7 @@ objects.prototype.functions.removeResources = function(resources) {
 };
 
 objects.prototype.functions.animationLoop = function() {
-    //setTimeout(this.animationLoop.bind(this),100);
-
     this.tile = this.animation.array[this.animation.index];
-
-
 
     if (this.animation.index < this.animation.array.length-1) {
         this.animation.index += 1;

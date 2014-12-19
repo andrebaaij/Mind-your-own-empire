@@ -1,7 +1,10 @@
-/* global data,$,level,document,window,console,common,game,contextGL */
+/* global data,$,level,document,window,console,common,contextGL, objects */
 
 var ui = {};
 
+/**
+ * Initialise the ui object
+ */
 ui.initialise = function () {
 
     /* DOM elements */
@@ -20,7 +23,7 @@ ui.initialise = function () {
     /* EventListeners assignment*/
     data.DOM.$canvas.mousemove( function(e) { ui.eventCanvasMousemove(e, data.mouse);});
     data.DOM.$canvas.mousedown( function(e) { ui.eventCanvasMousedown(e, data.mouse, data.scroll); });
-    data.DOM.$canvas.mouseup(   function(e) { ui.eventCanvasMouseup(e, data.mouse);});
+    data.DOM.$canvas.mouseup(   function(e) { ui.eventCanvasMouseup(e, data.mouse, data.keyboard, data.scroll, data.resources, data.craftObject);});
     data.DOM.pauseContinue.addEventListener('click',    function () {ui.showPause(false); });
     data.DOM.pauseFullscreen.addEventListener('click',  function () {ui.showFullscreen(); });
     data.DOM.menu_pause.addEventListener('click',       function () {ui.showPause(true); });
@@ -44,6 +47,9 @@ ui.initialise = function () {
 
 /* Window */
 
+/**
+ * When the window resizes, resize the wrapper object with it.
+ */
 ui.eventWindowResize = function() {
     data.DOM.canvas.width = window.innerWidth;
     data.DOM.canvas.height = window.innerHeight;
@@ -56,11 +62,22 @@ ui.eventWindowResize = function() {
 
 /* Pause */
 
+/**
+ * Display, hide or toggle the pause overlay
+ * @param   {Boolean} show true: show, false: hide, undefined = toggle
+ * @returns {Boolean} [[Description]]
+ */
 ui.showPause = function(show) {
-    if (show) {
+    if (show === true) {
         data.DOM.pause.style.display = "block";
-    } else {
+    } else if (show === false) {
         data.DOM.pause.style.display = "none";
+    } else {
+        if (data.DOM.pause.style.display === "none") {
+            ui.showPause(true);
+        } else {
+            ui.showPause(false);
+        }
     }
 
     return data.DOM.pause.style.display === "block";
@@ -107,7 +124,7 @@ ui.eventCanvasMousedown = function(event, mouse, scroll) {
     } else if (event.which === 3) {
         mouse.right = true;
     }
-        
+
     if (mouse.left) {
         mouse.x = event.pageX;
         mouse.y = event.pageY;
@@ -116,7 +133,16 @@ ui.eventCanvasMousedown = function(event, mouse, scroll) {
     }
 };
 
-ui.eventCanvasMouseup = function(event, mouse) {
+ui.eventCanvasMouseup = function(event, mouse, keyboard, scroll, resources, craftObject) {
+    mouse.x = event.pageX;
+    mouse.y = event.pageY;
+
+    if (mouse.left) {
+        ui.eventCanvasMouseup_left(mouse, keyboard, scroll, resources, craftObject);
+    } else if (mouse.right) {
+        ui.eventCanvasMouseup_right(mouse, scroll);
+    }
+
     if (event.which === 1) {
         mouse.left = false;
     } else if (event.which === 2) {
@@ -124,41 +150,34 @@ ui.eventCanvasMouseup = function(event, mouse) {
     } else if (event.which === 3) {
         mouse.right = false;
     }
-
-    mouse.x = event.pageX;
-    mouse.y = event.pageY;
-    
-    if (mouse.left) {
-        ui.eventCanvasMouseup_left(mouse);
-    } else if (mouse.right) {
-        ui.eventCanvasMouseup_right(mouse);
-    }
 };
 
-ui.eventCanvasMouseup_left = function (mouse) {
+ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craftObject) {
+    var grid = common.getGridFromScreen(scroll, mouse.x, mouse.y);
+
     // If we have a craft object selected it means we are in build mode.
-    if (data.craftObject !== null) {
+    if (craftObject !== null) {
         // Build the object
 
         // Are there enough resources available?
-        if (data.resources.iron >= data.craftObject.prototype.defaults.cost.iron) {
+        if (resources.iron >= craftObject.prototype.defaults.cost.iron) {
             // Subract the resources
-            data.resources.iron -= data.craftObject.prototype.defaults.cost.iron;
+            resources.iron -= craftObject.prototype.defaults.cost.iron;
 
             // Update the resources ui
-            ui.updateIron(data.resources.iron);
+            ui.updateIron(resources.iron);
 
-            data.craftObject.prototype.initialise(grid.x, grid.y);
-            
+            craftObject.prototype.initialise(grid.x, grid.y);
+
             if(!keyboard.shift) {
-                data.craftObject = null;
+                craftObject = null;
             }
         } else {
-            console.log("Not enough resources", data.resources.iron, data.craftObject.prototype.defaults.cost.iron);
+            console.log("Not enough resources", resources.iron, craftObject.prototype.defaults.cost.iron);
         }
         return;
     }
-    
+
     // Deselect all currently selected objects
     mouse.selection.objects.forEach(function(object) {
         object.deselect();
@@ -166,17 +185,16 @@ ui.eventCanvasMouseup_left = function (mouse) {
 
     // Select objects based on the selection grid.
     mouse.selection.objects = objects.find(mouse.selection.lx, mouse.selection.ty, mouse.selection.rx, mouse.selection.by);
-    
+
     // Select the found objects.
     mouse.selection.objects.forEach(function(object) {
         object.select();
     });
-
 };
 
-ui.eventCanvasMouseup_right = function (mouse, craftObject, selectedObjects) {
-    var grid = common.getGridFromScreen(data.scroll, mouse.x, mouse.y);
-    
+ui.eventCanvasMouseup_right = function (mouse, scroll) {
+    var grid = common.getGridFromScreen(scroll, mouse.x, mouse.y);
+
     if (mouse.selection.objects.length > 0) {
         var resources = [];
 
@@ -189,13 +207,13 @@ ui.eventCanvasMouseup_right = function (mouse, craftObject, selectedObjects) {
                 }
 
                 resources.forEach(function(resource) {
-                    object.gather(resource); 
+                    object.gather(resource);
                 });
             });
         } else {
             mouse.selection.objects.forEach(function(selectedObject) {
                 if (selectedObject.walk) {
-                    var coordinates = common.getCoordinatesFromScreen(data.scroll,mouseX,mouseY);
+                    var coordinates = common.getCoordinatesFromScreen(scroll,mouse.x,mouse.y);
                     selectedObject.walk(coordinates.x,coordinates.y);
                 }
             });
@@ -298,7 +316,7 @@ ui.showFullscreen = function(showFullscreen) {
 ui.scrollLoop = function(context, scroll, keyboard) {
     scroll.x = 0;
     scroll.y = 0;
-    
+
     if (keyboard.w) {
         scroll.y += scroll.speed;    // UP
     }
@@ -311,20 +329,20 @@ ui.scrollLoop = function(context, scroll, keyboard) {
     if (keyboard.d) {
         scroll.x -= scroll.speed;    //RIGHT
     }
-    
+
     // Is the player actuaylly scrolling through the level?
     if (scroll.x !== 0 || scroll.y !== 0) {
-        // Speed up 
+        // Speed up
         if (keyboard.shift) {
             scroll.x *= scroll.shiftMultiplier;
             scroll.y *= scroll.shiftMultiplier;
         }
-        
+
         scroll.offset.x += scroll.x;
         scroll.offset.y += scroll.y;
-        
+
         contextGL.translate(context, scroll.offset.x, scroll.offset.y);
     }
-    
+
     return scroll;
 };
