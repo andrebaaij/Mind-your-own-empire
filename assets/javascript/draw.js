@@ -214,19 +214,24 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             });
 
             if (craftObject) {
-                var grid = common.getGridFromScreen(data.scroll, data.mouseX, data.mouseY);
-                var coordinates = common.getCoordinatesFromGrid(grid.x, grid.y);
-
                 tileset = craftObject.prototype.tileset;
-
                 tileIndex = 0;
-                contextGL.drawObject(canvas.context,
-                    craftObject.prototype.image,
-                       coordinates.x - craftObject.prototype.center.x,
-                       coordinates.y - craftObject.prototype.center.y,
-                       tileIndex,
-                       {}
-                    );
+
+                for (x = data.mouse.selection.lx; x <= data.mouse.selection.rx; x++) {
+                    for (y = data.mouse.selection.ty; y <= data.mouse.selection.by; y++) {
+                        var coordinates = common.getCoordinatesFromGrid(x, y);
+
+                        contextGL.drawObject(canvas.context,
+                            craftObject.prototype.image,
+                           coordinates.x - craftObject.prototype.center.x,
+                           coordinates.y - craftObject.prototype.center.y,
+                           tileIndex,
+                           {}
+                        );
+                    }
+                }
+
+
             }
         } else if (layer.type === 'selection') {
         // Draw selection box:

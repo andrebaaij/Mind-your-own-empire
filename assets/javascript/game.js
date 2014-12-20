@@ -10,7 +10,8 @@ var data = {
         offset : {
             x : 0,
             y : 0
-        }
+        },
+        shiftMultiplier : 3
     },
     craftObject : null,
     mouseDown : false,
@@ -68,7 +69,7 @@ game.gameLoop = function() {
     contextGL.clearScene(data.DOM.canvas.context);
 
     if (!data.pause) {
-        data.scroll = ui.scrollLoop(data.DOM.canvas.context, data.scroll, data.keyboard);
+        data.scroll = ui.scrollLoop(data.DOM.canvas.context, data.scroll, data.mouse, data.keyboard);
         game.draw();
 
         objects.list().forEach(function(object) {

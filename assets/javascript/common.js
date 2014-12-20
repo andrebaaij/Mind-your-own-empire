@@ -367,6 +367,22 @@ common.getGridFromCoordinates = function(x, y) {
     };
 };
 
+common.getGridFromGrid = function(x, y) {
+    var chunkX = Math.floor(x/data.chunk.size);
+    var chunkY = Math.floor(y/data.chunk.size);
+
+    var i = (x - chunkX * data.chunk.size) + ((y - chunkY * data.chunk.size) * data.chunk.size);
+    return {
+        chunk : {
+            x : chunkX,
+            y : chunkY
+        },
+        x : x,
+        y : y,
+        i : i
+    };
+};
+
 common.getCoordinatesFromScreen = function(scroll, x, y) {
     x = common.scaleNumber(x, true) - scroll.offset.x;
     y = common.scaleNumber(y, true ) - scroll.offset.y;

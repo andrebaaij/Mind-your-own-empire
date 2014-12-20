@@ -31,7 +31,7 @@ ui.initialise = function () {
         data.mouseDown = false;
         ui.showPause(true);
     });
-    data.DOM.$document.keydown(function(e) {ui.eventDocumentKeydown(e, data.keyboard);});
+    data.DOM.$document.keydown(function(e) {ui.eventDocumentKeydown(e, data.keyboard, data.mouse);});
     data.DOM.$document.keyup(function(e) {ui.eventDocumentKeyup(e, data.keyboard);});
 
     /* initialise */
@@ -65,7 +65,7 @@ ui.eventWindowResize = function() {
 /**
  * Display, hide or toggle the pause overlay
  * @param   {Boolean} show true: show, false: hide, undefined = toggle
- * @returns {Boolean} [[Description]]
+ * @returns {Boolean} display state of the pause overlay
  */
 ui.showPause = function(show) {
     if (show === true) {
@@ -85,13 +85,18 @@ ui.showPause = function(show) {
 
 /* Canvas */
 
+/**
+ * Event listener for mouse movement on the canvas object.
+ * @param {Object} event mouse movement event
+ * @param {Object} mouse data.mouse
+ */
 ui.eventCanvasMousemove = function(event, mouse) {
     mouse.x = event.pageX;
     mouse.y = event.pageY;
 
     var grid = common.getGridFromScreen(data.scroll, mouse.x, mouse.y);
 
-    if (mouse.left) {
+    if (mouse.left || mouse.right) {
         if (mouse.selection.grid.y < grid.y) {
             mouse.selection.ty = mouse.selection.grid.y;
             mouse.selection.by = grid.y;
@@ -116,6 +121,12 @@ ui.eventCanvasMousemove = function(event, mouse) {
     }
 };
 
+/**
+ * Event listener for mouse down on the canvas object.
+ * @param {Object} event  mouse down event
+ * @param {Object} mouse  data.mouse
+ * @param {Object} scroll data.scroll
+ */
 ui.eventCanvasMousedown = function(event, mouse, scroll) {
     if (event.which === 1) {
         mouse.left = true;
@@ -125,7 +136,7 @@ ui.eventCanvasMousedown = function(event, mouse, scroll) {
         mouse.right = true;
     }
 
-    if (mouse.left) {
+    if (mouse.left || mouse.right) {
         mouse.x = event.pageX;
         mouse.y = event.pageY;
 
@@ -133,6 +144,15 @@ ui.eventCanvasMousedown = function(event, mouse, scroll) {
     }
 };
 
+/**
+ * Event listener for mouse up on the canvas object
+ * @param {Object} event       mouse up event
+ * @param {Object} mouse       data.mouse
+ * @param {Object} keyboard    data.keyboard
+ * @param {Object} scroll      data.scroll
+ * @param {Object} resources   data.resources
+ * @param {Object} craftObject data.craftObject
+ */
 ui.eventCanvasMouseup = function(event, mouse, keyboard, scroll, resources, craftObject) {
     mouse.x = event.pageX;
     mouse.y = event.pageY;
@@ -152,29 +172,40 @@ ui.eventCanvasMouseup = function(event, mouse, keyboard, scroll, resources, craf
     }
 };
 
+/**
+ * Execute when the left mouse button goes up
+ * @param {Object} mouse       data.mouse
+ * @param {Object} keyboard    data.keyboard
+ * @param {Object} scroll      data.scroll
+ * @param {Object} resources   data.resources
+ * @param {Object} craftObject data.craftObject
+ */
 ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craftObject) {
-    var grid = common.getGridFromScreen(scroll, mouse.x, mouse.y);
-
     // If we have a craft object selected it means we are in build mode.
-    if (craftObject !== null) {
+    if (craftObject) {
         // Build the object
+        for (var x = data.mouse.selection.lx; x <= data.mouse.selection.rx; x++) {
+            for (var y = data.mouse.selection.ty; y <= data.mouse.selection.by; y++) {
+                // Are there enough resources available?
+                if (resources.iron >= craftObject.prototype.defaults.cost.iron) {
+                    // Subract the resources
+                    resources.iron -= craftObject.prototype.defaults.cost.iron;
 
-        // Are there enough resources available?
-        if (resources.iron >= craftObject.prototype.defaults.cost.iron) {
-            // Subract the resources
-            resources.iron -= craftObject.prototype.defaults.cost.iron;
+                    // Update the resources ui
+                    ui.updateIron(resources.iron);
 
-            // Update the resources ui
-            ui.updateIron(resources.iron);
+                    craftObject.prototype.initialise(x, y);
 
-            craftObject.prototype.initialise(grid.x, grid.y);
-
-            if(!keyboard.shift) {
-                craftObject = null;
+                } else {
+                    console.log("Not enough resources", resources.iron, craftObject.prototype.defaults.cost.iron);
+                }
             }
-        } else {
-            console.log("Not enough resources", resources.iron, craftObject.prototype.defaults.cost.iron);
         }
+
+        if(keyboard.shift !== true) {
+            data.craftObject = null;
+        }
+
         return;
     }
 
@@ -192,13 +223,24 @@ ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craft
     });
 };
 
+/**
+ * Execute when the right mouse button goes up
+ * @param {Object} mouse       data.mouse
+ * @param {Object} scroll      data.scroll
+ */
 ui.eventCanvasMouseup_right = function (mouse, scroll) {
-    var grid = common.getGridFromScreen(scroll, mouse.x, mouse.y);
-
     if (mouse.selection.objects.length > 0) {
         var resources = [];
 
-        resources = level.findResource(grid);
+        for (var x = mouse.selection.lx; x <= mouse.selection.rx; x++) {
+            for (var y = mouse.selection.ty; y <= mouse.selection.by; y++) {
+                var grid = common.getGridFromGrid(x, y);
+
+                level.findResource(grid).forEach(function(resource) {
+                    resources.push(resource);
+                });
+            }
+        }
 
         if (resources.length > 0) {
             mouse.selection.objects.forEach(function(object) {
@@ -223,19 +265,25 @@ ui.eventCanvasMouseup_right = function (mouse, scroll) {
 
 /* Energy */
 
+/**
+ * update amount of energy DOM element
+ * @param {Number} amount energy
+ */
 ui.updateEnergy = function(amount) {
     $('#energy').text(amount);
 };
 
 /* Iron */
 
+/**
+ * update amount of iron DOM element
+ * @param {Number} amount iron
+ */
 ui.updateIron = function(amount) {
     $('#iron').text(amount);
 };
 
-/* Keyboard */
-
-ui.eventDocumentKeydown = function(e, keyboard) {
+ui.eventDocumentKeydown = function(e, keyboard, mouse) {
     switch(e.which) {
         case 65: // left
         keyboard.a = true;
@@ -253,8 +301,31 @@ ui.eventDocumentKeydown = function(e, keyboard) {
         keyboard.s = true;
         break;
 
+        case 67: // c
+        keyboard.c = true;
+
+        // shift + c; Remove all actions from selected objects
+        if (keyboard.shift === true) {
+            mouse.selection.objects.forEach(function(object) {
+                object.actions = [];
+            });
+        } else { // c; Remove the first action from selected objects
+            mouse.selection.objects.forEach(function(object) {
+                // Remove action if it is walking to a non walking action, we should remove both.
+                if (object.actions.length > 1 && object.actions[0].action === "walk" && object.actions[1].action !== "walk") {
+                    object.actions.splice(0,2);
+                } else if (object.actions.length > 0) {
+                    object.actions.splice(0,1);
+                }
+            });
+        }
+        break;
+
         case 16: // shift
         keyboard.shift = true;
+
+
+        //if keyboard.
         break;
 
         default: return; // exit this handler for other keys
@@ -313,7 +384,7 @@ ui.showFullscreen = function(showFullscreen) {
     return ui.isFullscreen();
 };
 
-ui.scrollLoop = function(context, scroll, keyboard) {
+ui.scrollLoop = function(context, scroll, mouse, keyboard) {
     scroll.x = 0;
     scroll.y = 0;
 
@@ -333,13 +404,21 @@ ui.scrollLoop = function(context, scroll, keyboard) {
     // Is the player actuaylly scrolling through the level?
     if (scroll.x !== 0 || scroll.y !== 0) {
         // Speed up
-        if (keyboard.shift) {
+        if (keyboard.shift === true) {
             scroll.x *= scroll.shiftMultiplier;
             scroll.y *= scroll.shiftMultiplier;
         }
 
         scroll.offset.x += scroll.x;
         scroll.offset.y += scroll.y;
+
+        // Fake mouse move event;
+        var event = {
+            pageX : mouse.x,
+            pageY : mouse.y
+        };
+
+        ui.eventCanvasMousemove(event, mouse);
 
         contextGL.translate(context, scroll.offset.x, scroll.offset.y);
     }
