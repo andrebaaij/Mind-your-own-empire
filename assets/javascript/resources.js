@@ -50,7 +50,6 @@ resources.createResource = function(resourceName, amount, x, y) {
     var references = level.addResource(resource);
     resource = resources.addReferences(resource, references);
 
-
     return resource;
 };
 

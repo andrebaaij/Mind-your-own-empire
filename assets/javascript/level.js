@@ -357,6 +357,61 @@ level.findResource = function(grid) {
     return resources;
 };
 
+/**
+ * Add resource reference(s) to the level
+ * @param   {Object}   resource
+ * @returns {Array} Array containing reference objects containing the array and corresponding index to where the resource is added to the resource array
+ */
+level.addObject = function(object) {
+    var grid = common.getGridFromCoordinates(object.x, object.y);
+
+    var references = [];
+
+    var referenceChunk = {};
+
+    referenceChunk.array = level.getChunk(grid.chunk.x, grid.chunk.y).resources;
+    referenceChunk.index = referenceChunk.array.push(object);
+
+    references.push(referenceChunk);
+
+    return references;
+};
+
+/**
+ * Finds resources by grid coordinates
+ * @param   {Object} grid common grid coordinates as returned by getGridFrom* functions
+ * @returns {Array}  contains all resources which are on the exact same grid position as
+ */
+level.findObjectByGrid = function(grid) {
+    var resources = [];
+
+    level.getChunk(grid.chunk.x, grid.chunk.y).resources.forEach(function(resource) {
+        if (resource.grid.x === grid.x && resource.grid.y === grid.y) {
+            resources.push(resource);
+        }
+    });
+
+    return resources;
+};
+
+/**
+ * Finds resources by grid coordinates
+ * @param   {Object} grid common grid coordinates as returned by getGridFrom* functions
+ * @returns {Array}  contains all resources which are on the exact same grid position as
+ */
+level.findObjectByGridRange = function(fromGrid, toGrid) {
+    var objects = [];
+
+    for(var x = fromGrid.chunk.x; x < toGrid.chunk.x; x++) {
+        for(var y = fromGrid.chunk.y; y < toGrid.chunk.y; y++) {
+            level.getChunk(x, y).objects.forEach(function(object) {
+                objects.push(object);
+            });
+        }
+    }
+    return objects;
+};
+
 level.createTile = function(x, y, tileIndex) {
     var coordinates = common.getCoordinatesFromGrid(x, y);
 

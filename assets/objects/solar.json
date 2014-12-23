@@ -1,12 +1,9 @@
 {
-    "images" : ["tileset"],
     "targetActions" : [],
-    "defaults" : {
-        "communicationRadius" : 0,
-        "hasWindow" :  true,
-        "energy" : 2,
-        "cost" : {
-            "iron" : 10000
-        }
+    "communicationRadius" : 0,
+    "hasWindow" :  true,
+    "energy" : 2,
+    "cost" : {
+        "iron" : 10000
     }
 }

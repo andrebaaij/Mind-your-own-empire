@@ -35,7 +35,11 @@ var data = {
         }
     },
     keyboard : {},
-    selection : {}
+    objects : [],
+    repository : {
+        objects : {
+        }
+    }
 };
 
 common.parseQueryString();
@@ -45,20 +49,20 @@ data.seed = data.url.seed;
 game.initialise = function() {
     game.gameLoop();
 
-    objects.create("block",0,1);
-    objects.create("block",1,1);
-    objects.create("block",2,1);
+    objects.create(data.repository.objects, "block", 0, 1, data.objects);
+    objects.create(data.repository.objects, "block", 1, 1, data.objects);
+    objects.create(data.repository.objects, "block", 2, 1, data.objects);
 
-    objects.create("mind",5,5);
+    objects.create(data.repository.objects, "mind", 5, 5, data.objects);
 
-    objects.create("tower",10,10);
+    objects.create(data.repository.objects, "tower", 10, 10, data.objects);
 
-    objects.create("solar",11,4);
-    objects.create("solar",11,5);
-    objects.create("solar",11,6);
-    objects.create("solar",10,4);
-    objects.create("solar",10,5);
-    objects.create("solar",10,6);
+    objects.create(data.repository.objects, "solar", 11, 4, data.objects);
+    objects.create(data.repository.objects, "solar", 11, 5, data.objects);
+    objects.create(data.repository.objects, "solar", 11, 6, data.objects);
+    objects.create(data.repository.objects, "solar", 10, 4, data.objects);
+    objects.create(data.repository.objects, "solar", 10, 5, data.objects);
+    objects.create(data.repository.objects, "solar", 10, 6, data.objects);
 };
 
 common.require('contextGL', 'objects','resources', 'perlin', 'level', 'ui', 'draw', 'particle', game.initialise);
@@ -70,16 +74,13 @@ game.gameLoop = function() {
 
     if (!data.pause) {
         data.scroll = ui.scrollLoop(data.DOM.canvas.context, data.scroll, data.mouse, data.keyboard);
-        game.draw();
 
-        objects.list().forEach(function(object) {
-            object.loop();
+        data.objects.forEach(function(object) {
+            objects.loop(object);
         });
+
+        draw.draw(data.DOM.canvas, level, data.objects, data.craftObject, data.selectGrid);
     }
 
     contextGL.drawScene(data.DOM.canvas.context);
-};
-
-game.draw = function() {
-    draw.draw(data.DOM.canvas, level, objects.list(), data.craftObject, data.selectGrid);
 };

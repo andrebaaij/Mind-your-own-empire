@@ -1,9 +1,6 @@
 {
-    "images" : ["tileset"],
     "targetActions" : [],
-    "defaults" : {
-        "communicationRadius" : 10,
-        "hasWindow" :  true,
-        "energy" : -6
-    }
+    "communicationRadius" : 10,
+    "hasWindow" :  true,
+    "energy" : -6
 }

@@ -147,7 +147,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                 }
             }
             //objects = game.findObject(offsetsLT.chunk.x * chunkSize, offsetsRT.chunk.y * chunkSize, (offsetsRB.chunk.x + 1) * chunkSize, (offsetsLB.chunk.y + 1) * chunkSize);
-            objects = game.findObjectByChunks(chunks);
+            objects = data.objects;//game.findObjectByChunks(chunks);
 
             // Sort objects by y position
             objects.sort(function (a,b) {
@@ -214,7 +214,9 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             });
 
             if (craftObject) {
-                tileset = craftObject.prototype.tileset;
+                var object = data.repository.objects[craftObject];
+
+                tileset = object.tileset;
                 tileIndex = 0;
 
                 for (x = data.mouse.selection.lx; x <= data.mouse.selection.rx; x++) {
@@ -222,18 +224,18 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                         var coordinates = common.getCoordinatesFromGrid(x, y);
 
                         contextGL.drawObject(canvas.context,
-                            craftObject.prototype.image,
-                           coordinates.x - craftObject.prototype.center.x,
-                           coordinates.y - craftObject.prototype.center.y,
-                           tileIndex,
-                           {}
+                            object.image,
+                            coordinates.x - object.center.x,
+                            coordinates.y - object.center.y,
+                            tileIndex,
+                            {}
                         );
                     }
                 }
 
 
             }
-        } else if (layer.type === 'selection') {
+        } else if (layer.type === 'selection' && !craftObject) {
         // Draw selection box:
 
             tileset = this.gameTiles;

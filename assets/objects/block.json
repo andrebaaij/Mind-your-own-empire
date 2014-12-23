@@ -1,12 +1,12 @@
 {
-    "images" : ["tileset"],
-    "skills" : ["walk", "gather"],
-    "defaults" : {
-        "communicationRadius" : 2,
-        "hasWindow" :  true,
-        "energy" : -1,
-        "cost" : {
-            "iron" : 1000
-        }
+    "skills" : {
+        "walk" : true,
+        "gather" : true
+    },
+    "communicationRadius" : 2,
+    "hasWindow" :  true,
+    "energy" : -1,
+    "cost" : {
+        "iron" : 1000
     }
 }

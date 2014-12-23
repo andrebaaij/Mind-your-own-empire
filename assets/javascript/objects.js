@@ -1,38 +1,93 @@
-/*
+/* global objects:true, resources,console,common,game, ui, data, Emitter */
 
+objects = {};
 
-    Styleguide: https://github.com/airbnb/javascript
-*/
+objects.create = function(repository, name, x, y, objectsReference) {
+    var object = {
+        name : name,
+        x : x,
+        y : y,
+        exists : true,
+        references : [],
+        actions : [],
+        animation : {array: []},
+        chunk : {}
+    };
 
-/*
+    var definition = objects.getDefinition(repository, name);
 
-    Interface to objects:
+    var coordinates = common.getCoordinatesFromGrid(x, y);
+    object.grid = common.getGridFromCoordinates(coordinates.x, coordinates.y);
+    objects.move(object, coordinates.x, coordinates.y);
 
-    objects.create(objectName, x, y);
-    returns the newly created object;
+    //object.images
+    object.skills = definition.skills;
+    object.communicationRadius = definition.communicationRadius;
+    object.hasWindow = definition.hasWindow;
+    object.energy = definition.energy;
+    object.cost = definition.cost;
+    object.targetActions = definition.targetActions;
 
-    objects.list(orderArguments);
-    returns a list of all the objects sorted by arguments
+    data.resources.energy += object.energy;
+    ui.updateEnergy(data.resources.energy);
 
-    objects.find(x, y);
-    find an object based on a x and y position.
-*/
+    var tileset = common.resources.tilesets.get(name);
 
+    object.tileset = tileset;
+    object.width = tileset.grid.width;
+    object.height = tileset.grid.height;
+    object.image = tileset;
+    object.collisionBox = tileset.collisionBox;
+    object.center = {
+        x: (object.collisionBox.lx + object.collisionBox.rx ) /2,
+        y: (object.collisionBox.ty + object.collisionBox.by ) /2
+    };
 
-/* global resources,console,common,game, ui, data, Emitter */
+    object = objects.setAnimation(object, object.tileset.defaultAnimation);
+    object = objects.setDirection(object, 'NE');
+    object = objects.animationLoop(object);
+    object = objects.addReference(object, "objects", objectsReference);
 
-function objects() {
-    var _self = this;
-
-    _self.array = [];
-    _self.chunk = [];
-}
-
-objects.prototype.list = function() {
-    return objects.array;
+    return object;
 };
 
-objects.prototype.updateChunk = function(object, newChunk) {
+objects.setActions = function(object, actions) {
+    object.actions = actions;
+
+    return object;
+};
+
+objects.getObjectURI = function(name) {
+    return './assets/objects/' + name + '.json';
+};
+
+objects.getDefinition = function(repository, name) {
+
+    var definition = repository[name];
+
+    if (typeof definition === 'undefined') {
+        var URI = objects.getObjectURI(name);
+        definition = common.getJSONFromURI(URI);
+
+        repository[name] = definition;
+    }
+
+    var tileset = common.resources.tilesets.get(name);
+
+    definition.tileset = tileset;
+    definition.width = tileset.grid.width;
+    definition.height = tileset.grid.height;
+    definition.image = tileset;
+    definition.collisionBox = tileset.collisionBox;
+    definition.center = {
+        x: (definition.collisionBox.lx + definition.collisionBox.rx ) /2,
+        y: (definition.collisionBox.ty + definition.collisionBox.by ) /2
+    };
+
+    return definition;
+};
+
+objects.updateChunk = function(object, newChunk) {
     if (object.chunk.x !== newChunk.x || object.chunk.y !== newChunk.y) {
         if (object.chunk !== 'undefined') {
             //Remove from the old chunk
@@ -51,104 +106,104 @@ objects.prototype.updateChunk = function(object, newChunk) {
     return object;
 };
 
-objects.prototype.functions = {};
+objects.hasSkill = function(object, skill) {
+    var hasSkill = object.skills[skill];
 
-objects.prototype.functions.move = function(x,y) {
-    this.x += x;
-    this.y += y;
+    if (hasSkill !== true) {
+        return false;
+    }
 
-    var grid = common.getGridFromCoordinates(this.x, this.y);
+    return true;
+};
 
-    if (this.grid.x !== grid.x || this.grid.y !== grid.y) {
+objects.move = function(object,x,y) {
+    object.x += x;
+    object.y += y;
+
+    var grid = common.getGridFromCoordinates(object.x, object.y);
+
+    if (object.grid.x !== grid.x || object.grid.y !== grid.y) {
         game.calculatefog();
     }
 
-    this.grid = grid;
-    objects.chunk = objects.updateChunk(this, grid.chunk);
+    object.grid = grid;
+    objects.chunk = objects.updateChunk(object, grid.chunk);
 };
 
-objects.prototype.functions.select = function(){
-    var _self = this;
-
-    if (this.tileset.image_selected) {
-        this.image = this.tileset.image_selected;
+objects.select = function(object){
+    if (object.tileset.image_selected) {
+        object.image = object.tileset.image_selected;
     }
 
-    _self.isSelected = true;
-    //_self.$window.show();
+    object.isSelected = true;
 };
 
-objects.prototype.functions.deselect = function(){
-    var _self = this;
-
-    if (this.tileset.image_selected) {
-        this.image = this.tileset;
+objects.deselect = function(object){
+    if (object.tileset.image_selected) {
+        object.image = object.tileset;
     }
 
-    _self.isSelected = false;
+    object.isSelected = false;
 };
 
-objects.prototype.functions.addResources = function(resources) {
-    for(var resource in resources) {
-        this.resources[resource] += parseInt(resources[resource]);
-    }
-};
+objects.animationLoop = function(object) {
+    object.tile = object.animation.array[object.animation.index];
 
-objects.prototype.functions.removeResources = function(resources) {
-    for(var resource in resources) {
-        if (typeof this.resources[resource] !== 'undefined') {
-            this.resources[resource] -= resources[resource];
-
-            if (this.resources[resource] < 0) {
-                resources[resource] = this.resources[resource] * -1;
-                this.resources[resource] = 0;
-            } else {
-                resources[resource] = 0;
-            }
-        }
-    }
-
-    return resources;
-};
-
-objects.prototype.functions.animationLoop = function() {
-    this.tile = this.animation.array[this.animation.index];
-
-    if (this.animation.index < this.animation.array.length-1) {
-        this.animation.index += 1;
+    if (object.animation.index < object.animation.array.length-1) {
+        object.animation.index += 1;
     } else {
-        this.animation.index = 0;
+        object.animation.index = 0;
     }
+
+    return object;
 };
 
-objects.prototype.functions.setDirection = function(direction) {
+objects.setDirection = function(object, direction) {
     if(!direction) {
         direction = 'NE';
     }
 
-    this.animation.array = this.tileset.animations[this.animation.name][direction];
-    this.direction = direction;
+    object.animation.array = object.tileset.animations[object.animation.name][direction];
+    object.direction = direction;
+
+    return object;
 };
 
-objects.prototype.functions.setAnimation = function(animation) {
-    if (this.animation.name !== animation) {
-        this.animation.name = animation;
-        this.animation.array = this.tileset.animations[animation][this.direction];
-        this.animation.index = 0;
+objects.setAnimation = function(object, animation) {
+    if (object.animation.name !== animation) {
+        object.animation.name = animation;
+        object.animation.array = object.tileset.animations[animation][object.direction];
+        object.animation.index = 0;
 
-        if (this.tileset.animations[animation].emitter) {
-            this.emitter = new Emitter(0,0, this.tileset.animations[animation].emitter);
+        if (object.tileset.animations[animation].emitter) {
+            object.emitter = new Emitter(0,0, object.tileset.animations[animation].emitter);
         } else {
-            this.emitter = null;
+            object.emitter = null;
         }
     }
+
+    return object;
 };
 
-objects.prototype.functions.walk = function(x,y) {
-    var self = this,
+objects.calculateWalkSteps = function(origin, target) {
+    var x = target.x - origin.x;
+    var y = target.y - origin.y;
+
+    var nbSteps = Math.sqrt(x*x + y*y)/2;
+
+    target.step = {
+        x : x / nbSteps,
+        y : y / nbSteps
+    };
+
+    return target;
+};
+
+objects.walk = function(object, x,y) {
+    var self = object,
         origin;
 
-    if (this.actions.length > 0) {
+    if (object.actions.length > 0) {
         origin = {x : self.actions[self.actions.length-1].x, y : self.actions[self.actions.length-1].y};
     } else {
         origin = {x : self.x, y : self.y};
@@ -158,56 +213,27 @@ objects.prototype.functions.walk = function(x,y) {
 
     if (typeof path === 'undefined') return;
 
-    path.forEach(function(leg, index, array) {
+    path.forEach(function(leg) {
         leg.action = "walk";
-
-        x = leg.x - origin.x;
-        y = leg.y - origin.y;
-
-        var nbSteps = Math.sqrt(x*x + y*y)/2;
-
-        leg.step = {
-            x : x / nbSteps,
-            y : y / nbSteps
-        };
-
-        var NS,
-            WE;
-
-        if (x < 0) {
-            WE = 'W';
-        } else if (x > 0) {
-            WE = 'E';
-        } else {
-            WE = '';
-        }
-
-        if (y > 0) {
-            NS = 'S';
-        } else if (y < 0) {
-            NS = 'N';
-        } else {
-            NS = '';
-        }
-
-        origin.x = leg.x;
-        origin.y = leg.y;
-
         leg.direction = 'N';
 
+        leg = objects.calculateWalkSteps(origin, leg);
+
         self.actions.push(leg);
+
+        origin = leg;
     });
 };
 
-objects.prototype.functions.walkLoop = function(action) {
-    this.setDirection(action.direction);
+objects.walkLoop = function(object, action) {
+    objects.setDirection(object, action.direction);
 
     var destination = action;
     var x,
         y;
 
-    x = destination.x - this.x;
-    y = destination.y - this.y;
+    x = destination.x - object.x;
+    y = destination.y - object.y;
 
     if(Math.abs(x) > Math.abs(action.step.x)) {
         x = action.step.x;
@@ -217,325 +243,144 @@ objects.prototype.functions.walkLoop = function(action) {
         y = action.step.y;
     }
 
-    this.move(x,y);
+    objects.move(object, x,y);
 
-    if (this.x === destination.x && this.y === destination.y) {
-        this.actions.shift();
+    if (object.x === destination.x && object.y === destination.y) {
+        object.actions.shift();
     }
 
 };
 
 /**
  * Tell the object to add the gather actions to its action list
- * @param {Object} resource This is the target resource which it will have to gather
+ * @param {Object} resource object is the target resource which it will have to gather
  */
-objects.prototype.functions.gather = function(resource) {
-    this.walk(resource.x, resource.y);
+objects.gather = function(object, resource) {
+    objects.walk(object, resource.x, resource.y);
 
     var action = {action:"gather", x : resource.x, y : resource.y, object: resource};
 
-    this.actions.push(action);
+    object.actions.push(action);
 };
 
 /**
- * While the action 'gather' exists for an object this loop is run
+ * While the action 'gather' exists for an object object loop is run
  * @param {Object} action The action to execute
  */
-objects.prototype.functions.gatherLoop = function(action) {
+objects.gatherLoop = function(object, action) {
     if (typeof action.object === 'undefined' || !resources.resourceExists(action.object)) {
-        this.actions.shift();
+        object.actions.shift();
     } else {
-        this.addResources(resources.gatherResource(action.object, 1));
+        resources.gatherResource(action.object, 1);
     }
 };
 
-objects.prototype.functions.craft = function(object) {
-    this.walk(object.x, object.y);
-
-    var action = {action:"craft", x : object.x, y : object.y, object: object};
-
-    this.actions.push(action);
+objects.restLoop = function(object) {
+    object = objects.setAnimation(object, "rest");
 };
 
-objects.prototype.functions.craftLoop = function(action) {
-    if (action.object.crafted >= 1) {
-        action.object.crafted = 1;
-        this.actions.shift();
-        return;
-    }
+objects.loop = function(object) {
+    object = objects.animationLoop(object);
 
-    action.object.crafted += 0.001;
-};
+    var action = object.actions[0];
 
-// Target Actions
-objects.prototype.functions.targetgather = function(object, amount) {
-    this.health = this.health-amount;
-
-    if (this.health <= 0) {
-        object.addResources(this.resources);
-        this.resources = {};
-        this.destroy();
-    }
-
-
-};
-
-// Miscellaneous functions
-objects.prototype.functions.restLoop = function() {
-    this.setAnimation("rest");
-};
-
-objects.prototype.functions.loop = function() {
-//    //setTimeout(this.loop.bind(this),this.loopSpeed);
-//
-    if (data.pause || this.type === 'resource') {
-        return;
-    }
-//
-    this.animationLoop.bind(this);
-
-    if (this.actions.length > 0) {
-        if (this[this.actions[0].action + "Loop"]) {
-            this.setAnimation(this.actions[0].action);
-            this[this.actions[0].action + "Loop"](this.actions[0]);
-        } else {
-            console.log("Unknow active skill: " + this.activeSkill);
-            this.actions.shift();
+    if (typeof action !== 'undefined') {
+        if (action.action === "walk") {
+            object = objects.setAnimation(object, "walk");
+            object = objects.walkLoop(object, object.actions[0]);
+        } else if (action.action === "gather") {
+            object = objects.setAnimation(object, "walk");
+            object = objects.gatherLoop(object, object.actions[0]);
         }
     } else {
-        this.restLoop();
+        objects.restLoop(object);
     }
-};
-
-objects.prototype.functions.initialise = function(x,y) {
-    //Remove the initialise function.
-    var object = new objects.repository[this.name]();
-    object.initialise = undefined;
-
-    var coordinates = common.getCoordinatesFromGrid(x, y);
-    object.grid = common.getGridFromCoordinates(coordinates.x, coordinates.y);
-    object.chunk = {};
-
-    //Initialize the variables:
-    object.x = 0;
-    object.y = 0;
-    object.move(coordinates.x, coordinates.y);
-
-    object.path = [];
-    object.animation = {array: []};
-    object.actions = [];
-    object.resources = {};
-
-    object.setAnimation(object.tileset.defaultAnimation);
-    object.setDirection('NE');
-    object.animationLoop();
-    object.loopSpeed = 10; //milliseconds
-
-    for (var variable in object.defaults) {
-        object[variable] = object.defaults[variable];
-    }
-
-    data.resources.energy += object.energy;
-    ui.updateEnergy(data.resources.energy);
-
-//    if (object.hasWindow) {
-//        object.$window = common.window(this.name, data.mouseX, data.mouseY).hide();
-//    }
-
-    // breathe
-    object.loop();
-
-    objects.add(object);
-
-
 
     return object;
 };
 
-objects.prototype.functions.destroy = function() {
-    this.isDestroyed = true;
-    objects.array.splice([objects.array.indexOf(this)],1);
+objects.destroy = function(object) {
+    object.exists = false;
+    object = object.removeReferences(object);
 };
 
-function repository() {}
+objects.find = function(lx, ty, rx, by) {
+    var results = [];
 
-repository.prototype.get = function(name) {
-    if (typeof objects.repository[name] !== 'undefined') {
-        return objects.repository[name];
-    }
-
-    var URI = './assets/objects/' + name + '.json';
-
-    var object = common.getJSONFromURI(URI);
-
-    if (object === null) {
-        console.error("objects.loadObject could not load " + URI);
-        return null;
-    }
-
-    objects.repository[name] = function(){};// = object;
-
-    if (object.images) {
-        if (object.images.indexOf("tileset") !== -1) {
-            objects.repository[name].prototype.tileset = common.resources.tilesets.get(name);
-            objects.repository[name].prototype.width = common.resources.tilesets.get(name).grid.width;
-            objects.repository[name].prototype.height = common.resources.tilesets.get(name).grid.height;
-            objects.repository[name].prototype.image = common.resources.tilesets.get(name);
-            objects.repository[name].prototype.collisionBox = common.resources.tilesets.get(name).collisionBox;
-            objects.repository[name].prototype.center = {x: (objects.repository[name].prototype.collisionBox.lx + objects.repository[name].prototype.collisionBox.rx ) /2,
-                                                         y: (objects.repository[name].prototype.collisionBox.ty + objects.repository[name].prototype.collisionBox.by ) /2};
-        }
-
-        if (object.images.indexOf("icon") !== -1) {
-            objects.repository[name].prototype.icon = common.resources.icons.get(name);
-        }
-    }
-
-    if (object.defaults) {
-        objects.repository[name].prototype.defaults = object.defaults;
-    } else {
-        objects.repository[name].prototype.defaults = {};
-    }
-
-    objects.repository[name].prototype.name = name;
-
-    if (object.skills) {
-        objects.repository[name].prototype.skills = object.skills;
-    }
-
-    if (object.targetActions) {
-        objects.repository[name].prototype.targetActions = object.targetActions;
-    }
-
-    if (typeof object.craft !== 'undefined') {
-        objects.repository[name].prototype.craftInformation = object.craft;
-        objects.repository[name].prototype.icon = common.resources.icons.get(name);
-        objects.repository[name].prototype.defaults.crafted = 0.00;
-
-        // Loop through resources and make sure that they are available and have icons.
-        var resource;
-        for(resource in object.craft) {
-            objects.repository.get(resource).icon = common.resources.icons.get(resource);
-
-        }
-    }
-
-    if (typeof object.health !== 'undefined') {
-        objects.repository[name].prototype.defaults.health = object.health;
-    }
-
-    if (typeof object.resources !== 'undefined') {
-        objects.repository[name].prototype.defaults.resources = object.resources;
-    }
-
-    objects.repository[name].prototype.move = objects.functions.move;
-
-    objects.repository[name].prototype.select = objects.functions.select;
-
-    objects.repository[name].prototype.deselect = objects.functions.deselect;
-
-    objects.repository[name].prototype.addResources = objects.functions.addResources;
-
-    objects.repository[name].prototype.removeResources = objects.functions.removeResources;
-
-    objects.repository[name].prototype.animationLoop = objects.functions.animationLoop;
-
-    objects.repository[name].prototype.setDirection = objects.functions.setDirection;
-
-    objects.repository[name].prototype.setAnimation = objects.functions.setAnimation;
-
-    if(object.skills) {
-        if(object.skills.indexOf("walk") !== -1) {
-            objects.repository[name].prototype.walk = objects.functions.walk;
-            objects.repository[name].prototype.walkLoop = objects.functions.walkLoop;
-        }
-
-        if(object.skills.indexOf("gather") !== -1) {
-            objects.repository[name].prototype.gather = objects.functions.gather;
-            objects.repository[name].prototype.gatherLoop = objects.functions.gatherLoop;
-        }
-
-        if(object.skills.indexOf("craft") !== -1) {
-            objects.repository[name].prototype.craft = objects.functions.craft;
-            objects.repository[name].prototype.craftLoop = objects.functions.craftLoop;
-        }
-    }
-
-
-    // TargetActions
-
-    if(object.targetActions) {
-        if(object.targetActions.indexOf("gather") !== -1) {
-            objects.repository[name].prototype.targetgather = objects.functions.targetgather;
-        }
-    }
-
-    // Miscellaneous
-
-    objects.repository[name].prototype.restLoop = objects.functions.restLoop;
-
-    objects.repository[name].prototype.loop = objects.functions.loop;
-
-    // Initialise
-
-    objects.repository[name].prototype.initialise = objects.functions.initialise;
-
-    objects.repository[name].prototype.destroy = objects.functions.destroy;
-
-    return objects.repository[name];
-};
-
-objects.prototype.create = function(name, x, y) {
-    var prototype = objects.repository.get(name);
-    var object = new prototype();
-    object.initialise(x,y);
-
-    game.calculatefog();
-
-    return object;
-};
-
-objects.prototype.add = function(object) {
-    this.array.push(object);
-};
-
-objects.prototype.find = function(lx, ty, rx, by) {
-    var array = [];
-
-    objects.array.forEach(function(object, index) {
+    data.objects.forEach(function(object) {
         if (lx <= object.grid.x && object.grid.x <= rx && ty <= object.grid.y && object.grid.y <= by) {
-            array.push(object);
+            results.push(object);
         }
     });
 
-    return array;
+    return results;
 };
 
-objects.prototype.findByChunks = function(chunks) {
+objects.findByChunks = function(object, chunks) {
     var array = [];
 
-    chunks.forEach(function(chunk) {
-        var _self = this;
+//    chunks.forEach(function(object, chunk) {
+//        game.getChunk(chunk.x, chunk.y).objects.forEach(function(object) {
+//            array.push(object);
+//        });
+//    });
 
-        game.getChunk(chunk.x, chunk.y).objects.forEach(function(object) {
-            array.push(object);
+    return data.objects;
+};
+
+objects.addReference = function(object, name, array) {
+    var index = array.push(object);
+
+    array.name = name;
+
+    var reference = {
+        name : name,
+        array : array,
+        index : index
+    };
+
+    object.references.push(reference);
+
+    return object;
+};
+
+objects.recalculateReferenceIndexes = function(array) {
+    array.forEach(function(object, index) {
+        object.references.forEach(function(reference) {
+            if (reference.name === array.name) {
+                reference.index = index;
+            }
         });
     });
 
     return array;
 };
 
-// Initialise the Object objects.prototype.repository
-objects.prototype.repository = new repository();
+objects.removeReferences = function(object) {
+    object.references.forEach(function(reference) {
+        objects.removeReference(reference);
+    });
 
-// Initialise the Object objects
-objects = new objects();
+    object.references = [];
 
-objects.initialise = function() {
-    //Interfaces
-    game.objectsRepository = objects.repository;
-    game.getObjects = objects.list;
-    game.findObject = objects.find;
-    game.findObjectByChunks = objects.findByChunks;
-    game.createObject = objects.create;
+    return object;
 };
+
+objects.removeReference = function(object, name) {
+    var reference;
+
+    object.references.forEach(function(reference) {
+        if (reference.name === name) {
+            reference = reference;
+        }
+    });
+
+    //Remove this reference
+    reference.array.splice(reference.index-1,1);
+
+    //Recalculate all indexes for object in the reference.
+    objects.recalculateReferenceIndexes(reference.array);
+
+    return object;
+};
+

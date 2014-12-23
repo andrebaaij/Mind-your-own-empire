@@ -23,7 +23,7 @@ ui.initialise = function () {
     /* EventListeners assignment*/
     data.DOM.$canvas.mousemove( function(e) { ui.eventCanvasMousemove(e, data.mouse);});
     data.DOM.$canvas.mousedown( function(e) { ui.eventCanvasMousedown(e, data.mouse, data.scroll); });
-    data.DOM.$canvas.mouseup(   function(e) { ui.eventCanvasMouseup(e, data.mouse, data.keyboard, data.scroll, data.resources, data.craftObject);});
+    data.DOM.$canvas.mouseup(   function(e) { ui.eventCanvasMouseup(e, data.mouse, data.keyboard, data.scroll, data.resources, data.craftObject, data.repository.objects, data.objects);});
     data.DOM.pauseContinue.addEventListener('click',    function () {ui.showPause(false); });
     data.DOM.pauseFullscreen.addEventListener('click',  function () {ui.showFullscreen(); });
     data.DOM.menu_pause.addEventListener('click',       function () {ui.showPause(true); });
@@ -45,8 +45,6 @@ ui.initialise = function () {
     ui.showFullscreen(true);
 };
 
-/* Window */
-
 /**
  * When the window resizes, resize the wrapper object with it.
  */
@@ -60,8 +58,6 @@ ui.eventWindowResize = function() {
     contextGL.scale(data.DOM.canvas.context, scale);
 };
 
-/* Pause */
-
 /**
  * Display, hide or toggle the pause overlay
  * @param   {Boolean} show true: show, false: hide, undefined = toggle
@@ -70,8 +66,10 @@ ui.eventWindowResize = function() {
 ui.showPause = function(show) {
     if (show === true) {
         data.DOM.pause.style.display = "block";
+        data.pause = true;
     } else if (show === false) {
         data.DOM.pause.style.display = "none";
+        data.pause = false;
     } else {
         if (data.DOM.pause.style.display === "none") {
             ui.showPause(true);
@@ -153,12 +151,12 @@ ui.eventCanvasMousedown = function(event, mouse, scroll) {
  * @param {Object} resources   data.resources
  * @param {Object} craftObject data.craftObject
  */
-ui.eventCanvasMouseup = function(event, mouse, keyboard, scroll, resources, craftObject) {
+ui.eventCanvasMouseup = function(event, mouse, keyboard, scroll, resources, craftObject, objectRepository, objectsReference) {
     mouse.x = event.pageX;
     mouse.y = event.pageY;
 
     if (mouse.left) {
-        ui.eventCanvasMouseup_left(mouse, keyboard, scroll, resources, craftObject);
+        ui.eventCanvasMouseup_left(mouse, keyboard, scroll, resources, craftObject, objectRepository, objectsReference);
     } else if (mouse.right) {
         ui.eventCanvasMouseup_right(mouse, scroll);
     }
@@ -180,24 +178,25 @@ ui.eventCanvasMouseup = function(event, mouse, keyboard, scroll, resources, craf
  * @param {Object} resources   data.resources
  * @param {Object} craftObject data.craftObject
  */
-ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craftObject) {
+ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craftObject, objectRepository, objectsReference) {
     // If we have a craft object selected it means we are in build mode.
     if (craftObject) {
+        var definition = objects.getDefinition(data.repository.objects, craftObject);
         // Build the object
         for (var x = data.mouse.selection.lx; x <= data.mouse.selection.rx; x++) {
             for (var y = data.mouse.selection.ty; y <= data.mouse.selection.by; y++) {
                 // Are there enough resources available?
-                if (resources.iron >= craftObject.prototype.defaults.cost.iron) {
+                if (resources.iron >= definition.cost.iron) {
                     // Subract the resources
-                    resources.iron -= craftObject.prototype.defaults.cost.iron;
+                    resources.iron -= definition.cost.iron;
 
                     // Update the resources ui
                     ui.updateIron(resources.iron);
 
-                    craftObject.prototype.initialise(x, y);
+                    objects.create(objectRepository, craftObject, x, y, objectsReference);
 
                 } else {
-                    console.log("Not enough resources", resources.iron, craftObject.prototype.defaults.cost.iron);
+                    console.log("Not enough resources", resources.iron, definition.cost.iron);
                 }
             }
         }
@@ -211,7 +210,7 @@ ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craft
 
     // Deselect all currently selected objects
     mouse.selection.objects.forEach(function(object) {
-        object.deselect();
+        objects.deselect(object);
     });
 
     // Select objects based on the selection grid.
@@ -219,7 +218,7 @@ ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craft
 
     // Select the found objects.
     mouse.selection.objects.forEach(function(object) {
-        object.select();
+        objects.select(object);
     });
 };
 
@@ -244,19 +243,17 @@ ui.eventCanvasMouseup_right = function (mouse, scroll) {
 
         if (resources.length > 0) {
             mouse.selection.objects.forEach(function(object) {
-                if(typeof object.gather === 'undefined') {
-                    return;
+                if (objects.hasSkill(object, "gather")) {
+                    resources.forEach(function(resource) {
+                        objects.gather(object, resource);
+                    });
                 }
-
-                resources.forEach(function(resource) {
-                    object.gather(resource);
-                });
             });
         } else {
-            mouse.selection.objects.forEach(function(selectedObject) {
-                if (selectedObject.walk) {
-                    var coordinates = common.getCoordinatesFromScreen(scroll,mouse.x,mouse.y);
-                    selectedObject.walk(coordinates.x,coordinates.y);
+            mouse.selection.objects.forEach(function(object) {
+                if (objects.hasSkill(object, "walk")) {
+                    var coordinates = common.getCoordinatesFromScreen(scroll, mouse.x, mouse.y);
+                    objects.walk(object, coordinates.x, coordinates.y);
                 }
             });
         }
@@ -307,7 +304,7 @@ ui.eventDocumentKeydown = function(e, keyboard, mouse) {
         // shift + c; Remove all actions from selected objects
         if (keyboard.shift === true) {
             mouse.selection.objects.forEach(function(object) {
-                object.actions = [];
+                objects.setActions(object, []);
             });
         } else { // c; Remove the first action from selected objects
             mouse.selection.objects.forEach(function(object) {
@@ -316,6 +313,11 @@ ui.eventDocumentKeydown = function(e, keyboard, mouse) {
                     object.actions.splice(0,2);
                 } else if (object.actions.length > 0) {
                     object.actions.splice(0,1);
+                }
+
+                // Recalcualte the walking steps for the next action
+                if (object.actions.length > 0) {
+                    object.actions[0] = objects.calculateWalkSteps({x : object.x, y : object.y}, object.actions[0]);
                 }
             });
         }
