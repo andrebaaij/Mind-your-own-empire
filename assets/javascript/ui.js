@@ -17,7 +17,9 @@ ui.initialise = function () {
         pauseContinue : document.getElementById("pauseContinue"),
         pauseFullscreen : document.getElementById("pauseFullscreen"),
         menu_pause : document.getElementById("menu_pause"),
-        menu_craft : document.getElementById("menu_craft")
+        menu_craft : document.getElementById("menu_craft"),
+        $message : $("#message"),
+        $message_text : $("#message_text")
     };
 
     /* EventListeners assignment*/
@@ -43,6 +45,7 @@ ui.initialise = function () {
     ui.updateEnergy(data.resources.energy);
     ui.updateIron(data.resources.iron);
     ui.showFullscreen(true);
+    ui.showMessage("Welcome [player], good luck!!!", 20000);
 };
 
 /**
@@ -172,16 +175,18 @@ ui.eventCanvasMouseup = function(event, mouse, keyboard, scroll, resources, craf
 
 /**
  * Execute when the left mouse button goes up
- * @param {Object} mouse       data.mouse
- * @param {Object} keyboard    data.keyboard
- * @param {Object} scroll      data.scroll
- * @param {Object} resources   data.resources
- * @param {Object} craftObject data.craftObject
+ * @param {Object} mouse            data.mouse
+ * @param {Object} keyboard         data.keyboard
+ * @param {Object} scroll           data.scroll
+ * @param {Object} resources        data.resources
+ * @param {Object} craftObject      data.craftObject
+ * @param {Object} objectRepository [[Description]]
+ * @param {Object} objectsReference [[Description]]
  */
 ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craftObject, objectRepository, objectsReference) {
     // If we have a craft object selected it means we are in build mode.
     if (craftObject) {
-        var definition = objects.getDefinition(data.repository.objects, craftObject);
+        var definition = objects.getDefinition(objectRepository, craftObject);
         // Build the object
         for (var x = data.mouse.selection.lx; x <= data.mouse.selection.rx; x++) {
             for (var y = data.mouse.selection.ty; y <= data.mouse.selection.by; y++) {
@@ -196,8 +201,7 @@ ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craft
                     objects.create(objectRepository, craftObject, x, y, objectsReference);
 
                 } else {
-                    console.log("Not enough resources", resources.iron, definition.cost.iron);
-                    ui.showMessage("Not enough resources");
+                    ui.showMessage("Not enough resources to create a " + craftObject, 10000);
                     return;
                 }
             }
@@ -272,8 +276,6 @@ ui.updateEnergy = function(amount) {
     $('#energy').text(amount);
 };
 
-/* Iron */
-
 /**
  * update amount of iron DOM element
  * @param {Number} amount iron
@@ -283,7 +285,17 @@ ui.updateIron = function(amount) {
 };
 
 ui.eventDocumentKeydown = function(e, keyboard, mouse) {
+    //console.log(e.which);
+
     switch(e.which) {
+        case 27: // esc
+            data.craftObject = undefined;
+            mouse.selection.objects.forEach(function(object) {
+                objects.deselect(object);
+            });
+            mouse.selection.objects = [];
+        break;
+
         case 65: // left
         keyboard.a = true;
         break;
@@ -368,10 +380,19 @@ ui.eventDocumentKeyup = function(e, keyboard) {
 
 /* Miscellaneous */
 
+/**
+ * [[Description]]
+ * @returns {[[Type]]} [[Description]]
+ */
 ui.isFullscreen = function() {
     return common.RunPrefixMethod(document, "FullScreen") || common.RunPrefixMethod(document, "IsFullScreen");
 };
 
+/**
+ * [[Description]]
+ * @param   {[[Type]]} showFullscreen [[Description]]
+ * @returns {[[Type]]} [[Description]]
+ */
 ui.showFullscreen = function(showFullscreen) {
     if (showFullscreen === true) {
         common.RunPrefixMethod(document.getElementById("wrapper"), "RequestFullScreen");
@@ -388,6 +409,14 @@ ui.showFullscreen = function(showFullscreen) {
     return ui.isFullscreen();
 };
 
+/**
+ * [[Description]]
+ * @param   {[[Type]]} context  [[Description]]
+ * @param   {Object}   scroll   [[Description]]
+ * @param   {Object}   mouse    [[Description]]
+ * @param   {Object}   keyboard [[Description]]
+ * @returns {[[Type]]} [[Description]]
+ */
 ui.scrollLoop = function(context, scroll, mouse, keyboard) {
     scroll.x = 0;
     scroll.y = 0;
@@ -428,4 +457,23 @@ ui.scrollLoop = function(context, scroll, mouse, keyboard) {
     }
 
     return scroll;
+};
+
+
+
+
+/**
+ * [[Description]]
+ * @param {[[Type]]} text     [[Description]]
+ * @param {[[Type]]} showTime [[Description]]
+ */
+ui.showMessage = function(text, showTime) {
+
+    console.log(text);
+
+    data.DOM.$message.stop(true);
+    data.DOM.$message.show();
+    data.DOM.$message_text.text(text);
+    data.DOM.$message.delay(showTime);
+    data.DOM.$message.fadeOut(0);
 };
