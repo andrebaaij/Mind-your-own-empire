@@ -197,6 +197,8 @@ ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craft
 
                 } else {
                     console.log("Not enough resources", resources.iron, definition.cost.iron);
+                    ui.showMessage("Not enough resources");
+                    return;
                 }
             }
         }

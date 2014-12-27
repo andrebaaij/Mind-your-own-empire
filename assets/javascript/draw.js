@@ -193,30 +193,28 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
             //Draw objects
             objects.forEach(function(object) {
-                    object.crafted = typeof object.crafted !== 'undefined' && object.crafted < 1 ? object.crafted : 1;
-
                     tileset = object.tileset;
                     var tileheight = tileset.grid.height;
 
                     tileIndex = object.tile;
 
-//                    if (object.emitter && object.crafted === 1) {
-//                        object.emitter.update(canvas, Math.round(object.x), Math.round(object.y));
-//                    }
-
                     contextGL.drawObject(canvas.context,
-                                            object.image,
-                                            Math.round(object.x - object.center.x),
-                                            Math.round(object.y - object.center.y) + tileheight * (1-object.crafted),
-                                            tileIndex,
-                                            object
-                                        );
+                            object.image,
+                            Math.round(object.x - object.center.x),
+                            Math.round(object.y - object.center.y),
+                            tileIndex,
+                            object
+                        );
             });
 
             if (craftObject) {
                 var object = data.repository.objects[craftObject];
 
                 tileset = object.tileset;
+
+                var w = data.tile.width;
+                var h = data.tile.height;
+
                 tileIndex = 0;
 
                 for (x = data.mouse.selection.lx; x <= data.mouse.selection.rx; x++) {
@@ -224,12 +222,12 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                         var coordinates = common.getCoordinatesFromGrid(x, y);
 
                         contextGL.drawObject(canvas.context,
-                            object.image,
-                            coordinates.x - object.center.x,
-                            coordinates.y - object.center.y,
-                            tileIndex,
-                            {}
-                        );
+                                object.image,
+                                coordinates.x - object.center.x,
+                                coordinates.y - object.center.y,
+                                tileIndex,
+                                {}
+                            );
                     }
                 }
 

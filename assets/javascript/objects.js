@@ -20,6 +20,9 @@ objects.create = function(repository, name, x, y, objectsReference) {
     object.grid = common.getGridFromCoordinates(coordinates.x, coordinates.y);
     objects.move(object, coordinates.x, coordinates.y);
 
+    object.x = coordinates.x;
+    object.y = coordinates.y;
+
     //object.images
     object.skills = definition.skills;
     object.communicationRadius = definition.communicationRadius;

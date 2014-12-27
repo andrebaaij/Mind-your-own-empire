@@ -26,7 +26,7 @@ var data = {
         size : 10
     },
     resources : {
-        iron: 1000,
+        iron: 100000,
         energy: 0
     },
     mouse : {
