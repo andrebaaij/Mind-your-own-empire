@@ -230,7 +230,7 @@ objects.walk = function(object, x,y) {
     });
 };
 
-objects.walkLoop = function(object, action) {
+objects.walkLoop = function(object, action, data) {
     objects.setDirection(object, action.direction);
 
     var destination = action;
@@ -248,8 +248,67 @@ objects.walkLoop = function(object, action) {
         y = action.step.y;
     }
 
-    objects.move(object, x,y);
+    var flag  = false;
+    
+    data.objects.forEach(function(obj) {
+        for (var i = 1 ; i <= 50; i++) {
+        if (obj === object || flag === true) {
+                return;   
+            }
+            if (obj.x - (obj.collisionBox.rx - obj.collisionBox.lx)/2 <= x*i + object.x && 
+                obj.x + (obj.collisionBox.rx - obj.collisionBox.lx)/2 >= x*i + object.x && 
+                obj.y - (obj.collisionBox.by - obj.collisionBox.ty)/2 <= y*i + object.y && 
+                obj.y + (obj.collisionBox.by - obj.collisionBox.ty)/2 >= y*i + object.y) {
+                flag = true;
+            }
+        }
+    });
+    
+    if (!flag) {
+        objects.move(object, x,y);
+    } else {
+        var lengte = Math.sqrt(x*x + y*y);
+        var graden = Math.asin(y/lengte)*(180/Math.PI);
+        if (x < 0) {
+            graden = 180 - graden;
+        }
+        var flag2 = false;
+        var y2 = y;
+        var x2 = x;
+        
+        for (var j = 1; j < 180; j++) {
+            flag2 = false;
+            graden = graden + j*(2*(j%2)-1);
+            y2 = Math.sin(graden*Math.PI/180)*lengte;
+            x2 = Math.cos(graden*Math.PI/180)*lengte;
+            data.objects.forEach(function(obj) {
+                for (var k = 1 ; k <= 50; k++) {
+                    if (obj === object || flag2 === true) {
+                        return;   
+                    }
+                    if (obj.x - (obj.collisionBox.rx - obj.collisionBox.lx)/2 <= x2*k + object.x && 
+                        obj.x + (obj.collisionBox.rx - obj.collisionBox.lx)/2 >= x2*k + object.x && 
+                        obj.y - (obj.collisionBox.by - obj.collisionBox.ty)/2 <= y2*k + object.y && 
+                        obj.y + (obj.collisionBox.by - obj.collisionBox.ty)/2 >= y2*k + object.y) {
+                        flag2 = true;
+                        return;
+                    }
+                }
+            });
+            if (flag2 === false) {
+                break;   
+            }
+        }
+        
+        if (flag2 === false) {
+            objects.move(object, x2,y2);
+            object.actions[0] = objects.calculateWalkSteps({x : object.x, y : object.y}, object.actions[0]);  
+        } else {
+            // wachten :-)
+        }    
+    }
 
+        
     if (object.x === destination.x && object.y === destination.y) {
         object.actions.shift();
     }
@@ -284,7 +343,7 @@ objects.restLoop = function(object) {
     object = objects.setAnimation(object, "rest");
 };
 
-objects.loop = function(object) {
+objects.loop = function(object, data) {
     object = objects.animationLoop(object);
 
     var action = object.actions[0];
@@ -292,7 +351,7 @@ objects.loop = function(object) {
     if (typeof action !== 'undefined') {
         if (action.action === "walk") {
             object = objects.setAnimation(object, "walk");
-            object = objects.walkLoop(object, object.actions[0]);
+            object = objects.walkLoop(object, object.actions[0], data);
         } else if (action.action === "gather") {
             object = objects.setAnimation(object, "walk");
             object = objects.gatherLoop(object, object.actions[0]);

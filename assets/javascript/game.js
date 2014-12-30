@@ -85,7 +85,7 @@ game.gameLoop = function() {
         data.scroll = ui.scrollLoop(data.DOM.canvas.context, data.scroll, data.mouse, data.keyboard);
 
         data.objects.forEach(function(object) {
-            objects.loop(object);
+            objects.loop(object, data);
         });
 
         draw.draw(data.DOM.canvas, level, data.objects, data.craftObject, data.selectGrid);
