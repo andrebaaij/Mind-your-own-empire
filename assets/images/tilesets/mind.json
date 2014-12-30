@@ -5,10 +5,10 @@
         "height" : 144
     },
     "collisionBox" : {
-        "lx": 1,
-        "ty": 80,
+        "lx": 2,
+        "ty": 60,
         "rx": 143,
-        "by": 143
+        "by": 130
     },
     "defaultAnimation" : "rest",
     "animations" : {
