@@ -39,30 +39,39 @@ var data = {
     repository : {
         objects : {
         }
+    },
+    player : {
+        color : {
+            r : 200,
+            g : 200,
+            b : 200,
+            a : 1
+        }
     }
 };
 
 common.parseQueryString();
 
 data.seed = data.url.seed;
+data.player.color = common.colors.player[data.url.color];
 
 game.initialise = function() {
     game.gameLoop();
 
-    objects.create(data.repository.objects, "block", 0, 1, data.objects);
-    objects.create(data.repository.objects, "block", 1, 1, data.objects);
-    objects.create(data.repository.objects, "block", 2, 1, data.objects);
+    objects.create(data.repository.objects, "block", 0, 1, data.player, data.objects);
+    objects.create(data.repository.objects, "block", 1, 1, data.player, data.objects);
+    objects.create(data.repository.objects, "block", 2, 1, data.player, data.objects);
 
-    objects.create(data.repository.objects, "mind", 5, 5, data.objects);
+    objects.create(data.repository.objects, "mind", 5, 5, data.player, data.objects);
 
-    objects.create(data.repository.objects, "tower", 10, 10, data.objects);
+    objects.create(data.repository.objects, "tower", 10, 10, data.player, data.objects);
 
-    objects.create(data.repository.objects, "solar", 11, 4, data.objects);
-    objects.create(data.repository.objects, "solar", 11, 5, data.objects);
-    objects.create(data.repository.objects, "solar", 11, 6, data.objects);
-    objects.create(data.repository.objects, "solar", 10, 4, data.objects);
-    objects.create(data.repository.objects, "solar", 10, 5, data.objects);
-    objects.create(data.repository.objects, "solar", 10, 6, data.objects);
+    objects.create(data.repository.objects, "solar", 11, 4, data.player, data.objects);
+    objects.create(data.repository.objects, "solar", 11, 5, data.player, data.objects);
+    objects.create(data.repository.objects, "solar", 11, 6, data.player, data.objects);
+    objects.create(data.repository.objects, "solar", 10, 4, data.player, data.objects);
+    objects.create(data.repository.objects, "solar", 10, 5, data.player, data.objects);
+    objects.create(data.repository.objects, "solar", 10, 6, data.player, data.objects);
 };
 
 common.require('contextGL', 'objects','resources', 'perlin', 'level', 'ui', 'draw', 'particle', game.initialise);

@@ -2,7 +2,7 @@
 
 objects = {};
 
-objects.create = function(repository, name, x, y, objectsReference) {
+objects.create = function(repository, name, x, y, player, objectsReference) {
     var object = {
         name : name,
         x : x,
@@ -50,6 +50,8 @@ objects.create = function(repository, name, x, y, objectsReference) {
     object = objects.setDirection(object, 'NE');
     object = objects.animationLoop(object);
     object = objects.addReference(object, "objects", objectsReference);
+
+    object.color = player.color;
 
     return object;
 };

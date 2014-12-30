@@ -25,7 +25,7 @@ ui.initialise = function () {
     /* EventListeners assignment*/
     data.DOM.$canvas.mousemove( function(e) { ui.eventCanvasMousemove(e, data.mouse);});
     data.DOM.$canvas.mousedown( function(e) { ui.eventCanvasMousedown(e, data.mouse, data.scroll); });
-    data.DOM.$canvas.mouseup(   function(e) { ui.eventCanvasMouseup(e, data.mouse, data.keyboard, data.scroll, data.resources, data.craftObject, data.repository.objects, data.objects);});
+    data.DOM.$canvas.mouseup(   function(e) { ui.eventCanvasMouseup(e, data.mouse, data.keyboard, data.scroll, data.resources, data.craftObject, data.player, data.repository.objects, data.objects);});
     data.DOM.pauseContinue.addEventListener('click',    function () {ui.showPause(false); });
     data.DOM.pauseFullscreen.addEventListener('click',  function () {ui.showFullscreen(); });
     data.DOM.menu_pause.addEventListener('click',       function () {ui.showPause(true); });
@@ -147,19 +147,22 @@ ui.eventCanvasMousedown = function(event, mouse, scroll) {
 
 /**
  * Event listener for mouse up on the canvas object
- * @param {Object} event       mouse up event
- * @param {Object} mouse       data.mouse
- * @param {Object} keyboard    data.keyboard
- * @param {Object} scroll      data.scroll
- * @param {Object} resources   data.resources
- * @param {Object} craftObject data.craftObject
+ * @param {Object} event            mouse up event
+ * @param {Object} mouse            data.mouse
+ * @param {Object} keyboard         data.keyboard
+ * @param {Object} scroll           data.scroll
+ * @param {Object} resources        data.resources
+ * @param {Object} craftObject      data.craftObject
+ * @param {Object} player           for which player is the object to be created? Default to the playing player (non ai).
+ * @param {Array}  objectRepository repository where the objects are kept.
+ * @param {Array}  objectsReference [[Description]]
  */
-ui.eventCanvasMouseup = function(event, mouse, keyboard, scroll, resources, craftObject, objectRepository, objectsReference) {
+ui.eventCanvasMouseup = function(event, mouse, keyboard, scroll, resources, craftObject, player, objectRepository, objectsReference) {
     mouse.x = event.pageX;
     mouse.y = event.pageY;
 
     if (mouse.left) {
-        ui.eventCanvasMouseup_left(mouse, keyboard, scroll, resources, craftObject, objectRepository, objectsReference);
+        ui.eventCanvasMouseup_left(mouse, keyboard, scroll, resources, craftObject, player, objectRepository, objectsReference);
     } else if (mouse.right) {
         ui.eventCanvasMouseup_right(mouse, scroll);
     }
@@ -183,7 +186,7 @@ ui.eventCanvasMouseup = function(event, mouse, keyboard, scroll, resources, craf
  * @param {Object} objectRepository [[Description]]
  * @param {Object} objectsReference [[Description]]
  */
-ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craftObject, objectRepository, objectsReference) {
+ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craftObject, player, objectRepository, objectsReference) {
     // If we have a craft object selected it means we are in build mode.
     if (craftObject) {
         var definition = objects.getDefinition(objectRepository, craftObject);
@@ -198,7 +201,7 @@ ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craft
                     // Update the resources ui
                     ui.updateIron(resources.iron);
 
-                    objects.create(objectRepository, craftObject, x, y, objectsReference);
+                    objects.create(objectRepository, craftObject, x, y, player, objectsReference);
 
                 } else {
                     ui.showMessage("Not enough resources to create a " + craftObject, 10000);

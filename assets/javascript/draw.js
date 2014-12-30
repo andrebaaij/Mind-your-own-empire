@@ -203,7 +203,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                             Math.round(object.x - object.center.x),
                             Math.round(object.y - object.center.y),
                             tileIndex,
-                            object
+                            object,
+                            object.color
                         );
             });
 
@@ -226,7 +227,8 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                                 coordinates.x - object.center.x,
                                 coordinates.y - object.center.y,
                                 tileIndex,
-                                {}
+                                {},
+                                object.color
                             );
                     }
                 }

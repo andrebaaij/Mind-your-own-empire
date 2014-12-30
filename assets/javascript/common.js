@@ -57,6 +57,14 @@ common.require = function (){
     common.resources.scripts.add(scriptsToLoad[0], this.loadNext.bind(this));
 };
 
+// convert RGBA color data to hex
+common.rgba2hex = function(r, g, b, a) {
+    if (r > 255 || g > 255 || b > 255 || a > 1) {
+        throw "Invalid color component";
+    }
+    return (256 + r).toString(16).substr(1) +((1 << 24) + (g << 16) | (b << 8) | a).toString(16).substr(1);
+};
+
 // attach the .equals method to Array's prototype to call it on any array
 Array.prototype.equals = function (array) {
     // if the other array is a falsy value, return
@@ -502,4 +510,60 @@ common.RunPrefixMethod = function(obj, method) {
         }
         p++;
     }
+};
+
+var dark = 255,
+    light = 200;
+
+common.colors = {
+    original : {
+        r : 255,
+        g : 255,
+        b : 255,
+        a : 1
+    },
+    grayscale : {
+        r : 255*0.2126,
+        g : 255*0.7152,
+        b : 255*0.0722,
+        a : 1
+    },
+    player : {
+        red : {
+            r : dark,
+            g : light,
+            b : light,
+            a : 1
+        },
+        green : {
+            r : light,
+            g : dark,
+            b : light,
+            a : 1
+        },
+        blue : {
+            r : light,
+            g : light,
+            b : dark,
+            a : 1
+        },
+        magenta : {
+            r : dark,
+            g : light,
+            b : dark,
+            a : 1
+        },
+        yellow : {
+            r : dark,
+            g : dark,
+            b : light,
+            a : 1
+        },
+        cyan : {
+            r : light,
+            g : dark,
+            b : dark,
+            a : 1
+        }
+    },
 };
