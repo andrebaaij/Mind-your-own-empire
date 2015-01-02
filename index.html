@@ -1,6 +1,6 @@
 <html>
     <head>
-        <title>Mind your own Empire</title>
+        <title>Mind your own Empire!</title>
         <link href='http://fonts.googleapis.com/css?family=Ubuntu+Mono' rel='stylesheet' type='text/css'>
         <style>
             @font-face {
@@ -57,7 +57,8 @@
                 top: 0; left: 0; bottom: 0; right: 0;
             }
 
-            form input {
+            form input,
+            form select{
                 background-color: #4d5255;
                 border: 0;
                 padding: 2px 5px;
@@ -88,11 +89,24 @@
             <div class="modal">
                 <div class="TL"></div>
                 <div class="TR"></div>
-                <H1>RTS</H1>
+                <H1>Mind your own empire!</H1>
                 <form id="frm" action="./game.html" method="get">
                     <div class="group">
-                        <label>Seed : </label><input type="number" name="seed" value="1500">
+                        <h2>Game</h2>
+                        <label>Seed : </label><input type="number" name="seed" value="1500"><br>
                         <br><br>
+                        <h2>Player</h2>
+                        <label>Name : </label><input type="string" name="name" value="Pleasent suprise"><br>
+                        <label>Color : </label><select type="string" name="color">
+                                                  <option value="red">Red</option>
+                                                  <option value="green">Green</option>
+                                                  <option value="blue">Blue</option>
+                                                  <option value="magenta">Magenta</option>
+                                                  <option value="cyan">Cyan</option>
+                                                  <option value="yellow">Yellow</option>
+                                               </select>
+                        <br><br>
+                        <h2>Instructions</h2>
                         <label>W           : Move up</label><br>
                         <label>A           : Move left</label><br>
                         <label>S           : Move down</label><br>

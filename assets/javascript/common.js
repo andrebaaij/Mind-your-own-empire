@@ -513,7 +513,7 @@ common.RunPrefixMethod = function(obj, method) {
 };
 
 var dark = 255,
-    light = 200;
+    light = 180;
 
 common.colors = {
     original : {
