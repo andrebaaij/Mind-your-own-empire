@@ -1,5 +1,5 @@
 {
-    "image" : "simplex.png",
+    "image" : "simplex",
     "grid" : {
         "width" : 64,
         "height" : 32

@@ -50,6 +50,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
     for (var l in level.layers) {
         var layer = level.layers[l];
+
         if (layer.visible === false) {
             continue;
         }
@@ -60,26 +61,14 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
             for (y = chunkYOffset; y <= maxChunkYOffset; y++) {
                 for (x = chunkXOffset; x <= maxChunkXOffset; x++) {
-                    //level.getChunk(x,y).drawLayer(layer);
 
                     var chunkLayer = level.getChunk(x, y).getLayer(layer);
 
-                    if(chunkLayer.data.equals([])) {
-                        // GENERATE
-                        if (layer.generate) {
-                            for (var dataY = 0; dataY < chunkSize; dataY++) {
-                                for (var dataX = 0; dataX < chunkSize; dataX++) {
-                                    var i = (dataY * chunkSize + dataX);
-                                    tileIndex = layer.generate(x * chunkSize + dataX, y * chunkSize + dataY);
-                                    var tile = level.createTile(x * chunkSize + dataX, y * chunkSize + dataY, tileIndex)
-                                    level.addTileToChunkLayer(chunkLayer, tile);
-                                }
-                            }
-                        }
-                        chunkLayer.data = [1];
-                    }
-
                     chunkLayer.tiles.forEach( function(tile) {
+                        if (tile.tile === -1) {
+                            return;
+                        }
+
                         contextGL.drawTile(canvas.context,
                             layer.tileset,
                             tile.x - tilewidth/2,
@@ -88,19 +77,6 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                             tile
                         );
                     });
-
-//                    for (var i = 0; i < layer.size * layer.size; i++) {
-//                        if (0 <= chunkLayer.data[i] && chunkLayer.data[i] < layer.tileset.nbTiles) {
-//                            var cx = i % layer.size;
-//                            var cy = (i - cx) / layer.size;
-//
-//                            canvas.context.drawImage(layer.tileset,
-//                                Math.round(((cx+(x*chunkSize))-(cy+(y*chunkSize)))*0.5*tilewidth),
-//                                Math.round(((cx+(x*chunkSize))+(cy+(y*chunkSize)))*0.5*tileheight),
-//                                chunkLayer.data[i]
-//                            );
-//                        }
-//                    }
                 }
             }
         } else if (layer.type === "resources") {
@@ -112,22 +88,6 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                     //level.getChunk(x,y).drawLayer(layer);
 
                     var chunkLayer = level.getChunk(x, y).getLayer(layer);
-
-                    if(chunkLayer.data.equals([])) {
-                        // GENERATE
-                        if (layer.generate) {
-                            for (var dataY = 0; dataY < chunkSize; dataY++) {
-                                for (var dataX = 0; dataX < chunkSize; dataX++) {
-                                    var i = (dataY * chunkSize + dataX);
-
-                                    var amount = layer.generate(x * chunkSize + dataX, y * chunkSize + dataY);
-                                    resources.createResource(layer.name, amount, x * chunkSize + dataX, y * chunkSize + dataY);
-                                }
-                            }
-                        }
-                        //quick hack to stop regeneration every time.
-                        chunkLayer.data = [1];
-                    }
                     chunkLayer.resources.forEach( function(resource) {
                         contextGL.drawTile(canvas.context,
                             layer.tileset,

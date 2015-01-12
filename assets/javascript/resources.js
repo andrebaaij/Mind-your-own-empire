@@ -34,22 +34,22 @@ resources.createResource = function(resourceName, amount, x, y) {
         return;
     }
 
+    var coordinates = common.getCoordinatesFromGrid(x, y);
+
     var resource = {
+        id : Symbol(),
         name : resourceName,
         amount : amount,
         references : [],
-        exists : true
+        exists : true,
+        x : coordinates.x,
+        y : coordinates.y,
+        grid : common.getGridFromGrid(x, y)
     };
+
     resource = resources.initialiseResource(resource);
     resource = resources.calculateResourceLevel(resource);
-
-    var coordinates = common.getCoordinatesFromGrid(x, y);
-    resource.grid = common.getGridFromCoordinates(coordinates.x, coordinates.y);
-    resource.x = coordinates.x;
-    resource.y = coordinates.y;
-    var references = level.addResource(resource);
-    resource = resources.addReferences(resource, references);
-
+    level.addResource(resource);
     return resource;
 };
 
@@ -64,7 +64,7 @@ resources.gatherResource = function(resource, amount) {
     }
 
     data.resources.iron += amount;
-    ui.updateIron(data.resources.iron);
+    ui.updateResources(data.resources);
 
     return amount;
 };
@@ -85,27 +85,9 @@ resources.calculateResourceLevel = function(resource) {
 
 resources.destroyResource = function(resource) {
     // Remove references
-    resources.removeReferences(resource);
+    delete level.getChunk(resource.grid.chunk.x, resource.grid.chunk.y).resources[resource.grid.i][resource.id];
+    delete level.getChunk(resource.grid.chunk.x, resource.grid.chunk.y).layers[resource.name].resources[resource.grid.i];
     resource.exists = false;
-    return resource;
-};
-
-resources.addReferences = function(resource, references) {
-    references.forEach(function(reference) {
-        resources.addReference(resource, reference.array, reference.index);
-    });
-
-    return resource;
-};
-
-resources.addReference = function(resource, array, index) {
-    var reference = {
-        array: array,
-        index : index
-    };
-
-    resource.references.push(reference);
-
     return resource;
 };
 
@@ -120,38 +102,4 @@ resources.resourceExists = function(resource) {
 
 resources.findByGrid = function(grid) {
     return level.findResource(grid);
-};
-
-//TODO: should go in the common and also be applied to objects too?
-resources.recalculateReferenceIndexes = function(array) {
-    array.forEach(function(object,index) {
-        if (typeof object.references !== 'undefined') {
-            resources.updateReference(object, array, index+1);
-        }
-    });
-};
-
-resources.updateReference = function(resource, array, index) {
-    resource.references.forEach(function(reference) {
-        if (reference.array === array) {
-            reference.index = index;
-        }
-    });
-};
-
-resources.removeReferences = function(resource) {
-    resource.references.forEach(function(reference) {
-        resources.removeReference(reference);
-    });
-
-    resource.references = [];
-    return resource;
-};
-
-resources.removeReference = function(reference) {
-    //Remove this reference
-    reference.array.splice(reference.index-1,1);
-
-    //Recalculate all indexes for object in the reference.
-    resources.recalculateReferenceIndexes(reference.array);
 };

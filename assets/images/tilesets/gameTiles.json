@@ -1,10 +1,10 @@
 {
-    "image" : "actions.png",
+    "image" : "gameTiles",
     "grid" : {
         "width" : 64,
         "height" : 32
     },
     "animations" : {
-        
+
     }
 }

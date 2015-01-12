@@ -42,10 +42,8 @@ ui.initialise = function () {
     data.DOM.canvas.xOffset = 0;
     data.DOM.canvas.yOffset = 0;
     window.onresize = ui.eventWindowResize;
-    ui.updateEnergy(data.resources.energy);
-    ui.updateIron(data.resources.iron);
+    ui.updateResources(data.resources);
     ui.showFullscreen(true);
-    ui.showMessage("Welcome [player], good luck!!!", 20000);
 };
 
 /**
@@ -250,41 +248,44 @@ ui.eventCanvasMouseup_right = function (mouse, scroll) {
             }
         }
 
+        var skillAssigned = false;
+
         if (resources.length > 0) {
             mouse.selection.objects.forEach(function(object) {
                 if (objects.hasSkill(object, "gather")) {
                     resources.forEach(function(resource) {
                         objects.gather(object, resource);
                     });
+                    skillAssigned = true;
+                    console.log("gather")
                 }
             });
-        } else {
+        }
+
+        if (!skillAssigned) {
             mouse.selection.objects.forEach(function(object) {
                 if (objects.hasSkill(object, "walk")) {
                     var coordinates = common.getCoordinatesFromScreen(scroll, mouse.x, mouse.y);
                     objects.walk(object, coordinates.x, coordinates.y);
                 }
+                skillAssigned = true;
             });
         }
     }
 };
 
-/* Energy */
+/* Resources */
 
 /**
  * update amount of energy DOM element
- * @param {Number} amount energy
+ * @param {Number} resources data.resources
  */
-ui.updateEnergy = function(amount) {
-    $('#energy').text(amount);
-};
+ui.updateResources = function(resources) {
+    $('#energy').text(resources.energy);
+    $('#iron').text(resources.energy);
 
-/**
- * update amount of iron DOM element
- * @param {Number} amount iron
- */
-ui.updateIron = function(amount) {
-    $('#iron').text(amount);
+    $('#storage_energy').text(resources.storage.energy);
+    $('#storage_iron').text(resources.storage.energy);
 };
 
 ui.eventDocumentKeydown = function(e, keyboard, mouse) {
@@ -471,9 +472,6 @@ ui.scrollLoop = function(context, scroll, mouse, keyboard) {
  * @param {[[Type]]} showTime [[Description]]
  */
 ui.showMessage = function(text, showTime) {
-
-    console.log(text);
-
     data.DOM.$message.stop(true);
     data.DOM.$message.show();
     data.DOM.$message_text.text(text);

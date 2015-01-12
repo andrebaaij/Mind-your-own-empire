@@ -1,5 +1,5 @@
 {
-    "image" : "solar.png",
+    "image" : "solar",
     "grid" : {
         "width" : 64,
         "height" : 64

@@ -8,11 +8,16 @@
                 src: url(./assets/fonts/visitor2.ttf);
             }
 
+            @font-face {
+                font-family: minecraftia;
+                src: url('./assets/fonts/RopaSans-Regular.ttf') format('truetype');
+            }
+
             * {
                 font-family: 'visitor', 'Ubuntu Mono', Arial;
                 font-weight: 400;
                 font-size: 18px;
-                color: #fff;
+                color: #bbbbbb;
                 //text-shadow: 1px 1px #222;
                 padding: 0;
                 margin: 0;
@@ -22,46 +27,31 @@
                 background-color: #0a0a0a;
             }
 
+            h1 {
+                color: white;
+            }
+
             #frm {
 
             }
-
-            .overlay {
-                color: #fff;
-                left: 0;
-                top: 0;
-                position: absolute;
-                height: 100%;
-                width: 100%;
-                background-color: #0a0a0a;
-                z-index: 200;
-            }
             .modal {
+                padding: 30px;
                 text-align: center;
                 width: 300px;
-                margin: auto;
-
-                //background-color: #49586E;
-                //border: 1px solid rgba(0, 0, 0, 0.7);
                 padding-bottom: 100px;
-                font-family: Arial;
-                color: rgba(0, 0, 0, 0.7);
                 max-width: 400px;
                 border-width: 2px;
-                -webkit-border-image: url(./assets/images/border-1.png) 2 repeat; /* Safari 3.1-5 */
-                -o-border-image: url(./assets/images/border-1.png) 2 repeat; /* Opera 11-12.1 */
-                border-image: url(./assets/images/border-1.png) 2 fill;
-                padding: 5px 0;
-                position:absolute;
-                bottom: 0;
-                top: 0; left: 0; bottom: 0; right: 0;
+                position: absolute;
+                top: 0px;
             }
+
             form label {
                 float:left;
                 width: 100px;
                 text-align: left;
                 height: 20px;
                 line-height: 20px;
+                color: white;
             }
 
             form input,
@@ -73,6 +63,7 @@
                 font-size: 18px;
                 width: 198px;
                 height: 20px;
+                color: white;
             }
 
             .modal .button {
@@ -95,38 +86,53 @@
             h1 {
                 font-size: 53
             }
+
+            p,
+            p * {
+                text-align: left;
+                font-family: 'minecraftia';
+                //font-size: 12px;
+                //line-height: 16px;
+            }
         </style>
     </head>
     <body id="wrapper">
-        <div class="overlay">
-            <div class="modal">
-                <div class="TL"></div>
-                <div class="TR"></div>
-                <br><br>
-                <H1>Play</H1>
-                <form id="frm" action="./game.html" method="get">
-                    <div class="group">
-                        <label>Name</label><input type="string" name="name" value="Pleasent suprise"><br>
-                        <label>Color</label><select id="color" type="string" name="color">
-                                                  <option value="white">White</option>
-                                                  <option value="red">Red</option>
-                                                  <option value="green">Green</option>
-                                                  <option value="blue">Blue</option>
-                                                  <option value="magenta">Magenta</option>
-                                                  <option value="cyan">Cyan</option>
-                                                  <option value="yellow">Yellow</option>
-                                               </select><br>
-                        <label>Seed</label><input type="number" name="seed" value="1500"><br>
-                        <button id="submit" type="submit" href="./game.html" class="button">PLAY</button>
-                    </div>
-                </form>
-                <div class="BL"></div>
-                <div class="BR"></div>
-                <br><br>
-                <img src="./assets/images/controls.png">
-            </div>
+        <div class="modal">
+            <H1>Play</H1>
+            <form id="frm" action="./game.html" method="get">
+                <div class="group">
+                    <label>Name</label><input type="string" name="name" value="Pleasent suprise"><br>
+                    <label>Color</label><select id="color" type="string" name="color">
+                                              <option value="white">White</option>
+                                              <option value="red">Red</option>
+                                              <option value="green">Green</option>
+                                              <option value="blue">Blue</option>
+                                              <option value="magenta">Magenta</option>
+                                              <option value="cyan">Cyan</option>
+                                              <option value="yellow">Yellow</option>
+                                           </select><br>
+                    <label>Seed</label><input type="number" name="seed" value="1500"><br>
+                    <button id="submit" type="submit" href="./game.html" class="button">PLAY</button>
+                </div>
+            </form>
+            <br><br>
+            <img src="./assets/images/controls.png">
         </div>
-        <div>
+        <div class="modal" style="left: 360px; width: 500px;">
+            <H1>About</H1>
+            <p style="text-align: left;">
+                You are a Mind, landed on a new planet. You command/upgrade your minions/buildings. They will be mining resources, fighting off the original inhabitants/other interested races and building for you... The story will be a bit better in the future :)
+            </p><br>
+            <h1>Alpha version</h1>
+            <p>
+                Currently the game is under heavy development as a sideproject. The game is a procedurally sandboxed rts, you could say it is kind of a minecraft rts in that aspect. Just give it a try and let us know what you think at <a href="https://twitter.com/andrebaaij">@andrebaaij</a>
+            </p><br>
+            <p>
+                Please note, performance on older hardware is not yet great, we hope to improve this a lot. We are pushing the limits for a browser based game, so please be patient.
+            </p><br>
+            <p style="text-align: left;">
+                If you are interested in looking at the code, open a bug or help us squash those bugs, look at our <a href="https://github.com/andrebaaij/Mind-your-own-empire">github repository</a>.
+            </p>
         </div>
     </body>
     <script src="./assets/javascript/jquery-2.1.1.js"></script>
@@ -137,7 +143,7 @@
 
         var event_colorOnChange = function(event) {
             var colorval = $color.val();
-            if (colorval === 'White') {
+            if (colorval === 'white') {
                 $submit.css("background-color","rgba(255, 255, 255, 1)");
             } else {
                 var color = common.colors.player[colorval];

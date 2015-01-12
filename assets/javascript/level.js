@@ -9,8 +9,6 @@ var level = {},
 level.initialise = function() {
     var _self = this;
 
-    //Interfaces
-    game.calculatefog = level.calculatefog;
     game.getChunk = level.getChunk;
     game.getLevel = level.get;
     game.getPath = level.getPath;
@@ -124,28 +122,6 @@ level.initialise = function() {
             return MM;
         }
     };
-    level.layers.history = {
-        name : "history",
-        type : "data",
-        visible : false,
-        tileset : common.resources.tilesets.get("gameTiles"),
-        size : data.chunk.size,
-        data : [],
-        generate : function(x, y) {
-            return 1;
-        }
-    };
-    level.layers.calculateFog = {
-        name : "calculateFog",
-        type : "data",
-        visible : false,
-        tileset : common.resources.tilesets.get("gameTiles"),
-        size : data.chunk.size,
-        data : [],
-        generate : function(x, y) {
-            return 1;
-        }
-    };
     level.layers.iron = {
         name : "iron",
         type : "resources",
@@ -172,12 +148,12 @@ level.initialise = function() {
     level.layers.fog = {
         name : "fog",
         type : "tile",
-        visible : false,
-        tileset : common.resources.tilesets.get("gameTiles"),
+        visible : true,
+        tileset : common.resources.tilesets.get("tiles"),
         size : data.chunk.size,
         data : [],
         generate : function(x, y) {
-            return 1;
+            return 49;
         }
     };
 };
@@ -193,6 +169,25 @@ level.chunk = function(x, y){
     _self.layers = {};
     _self.objects = [];
     _self.resources = [];
+
+    for(var i = 0; i < data.chunk.size * data.chunk.size; i++) {
+        _self.objects[i] = {
+            counter : 0
+        };
+
+        _self.resources[i] = {
+
+        };
+    }
+};
+
+level.chunk.prototype.initialise = function() {
+    var _self = this;
+
+    for (var l in level.layers) {
+        var layer = level.layers[l];
+        _self.createLayer(layer);
+    }
 };
 
 level.chunk.prototype.getLayer = function(layer) {
@@ -216,6 +211,27 @@ level.chunk.prototype.createLayer = function(layer) {
         tiles : []
     };
 
+    for (var y = 0; y < data.chunk.size; y++) {
+        for (var x = 0; x < data.chunk.size; x++) {
+            if (layer.type === "tile") {
+                var tile_index = level.layers[layer.name].generate(
+                    _self.x * data.chunk.size + x,
+                    _self.y * data.chunk.size + y);
+
+                var tile = level.createTile(
+                    _self.x * data.chunk.size + x,
+                    _self.y * data.chunk.size + y,
+                    tile_index);
+
+                level.addTileToChunkLayer(_self.layers[layer.name], tile);
+            } else if (layer.type === "resources") {
+                var amount = layer.generate(_self.x * data.chunk.size + x, _self.y * data.chunk.size + y);
+                resources.createResource(layer.name, amount, _self.x * data.chunk.size + x, _self.y * data.chunk.size + y);
+
+            }
+        }
+    }
+
     return _self.layers[layer.name];
 };
 
@@ -223,10 +239,12 @@ level.getChunk = function(x, y) {
     if(level.chunks[x] && level.chunks[x][y]) {
         return level.chunks[x][y];
     } else {
+        console.log(x, y);
         if (!level.chunks[x]) {
             level.chunks[x] = [];
         }
         level.chunks[x][y] = new level.chunk(x, y);
+        level.chunks[x][y].initialise();
         return level.chunks[x][y];
     }
 };
@@ -239,105 +257,14 @@ level.getPath = function(object, destination) {
     return [destination];
 };
 
-level.calculatefog = function() {
-    return;
-
-//    var arrObjects = game.getObjects();
-//    var handledObjects = [];
-//    var objectsBeingHandled = [];
-//
-//    arrObjects.forEach(function(object) {
-//        if (object.name === 'mind') {
-//            objectsBeingHandled.push(object);
-//        }
-//    });
-//
-//    var thereAreNewObjectsToBeHandled = true;
-//
-//    while(thereAreNewObjectsToBeHandled) {
-//        thereAreNewObjectsToBeHandled = false;
-//
-//        objectsBeingHandled.forEach(function(object, index) {
-//
-//            for(var x = object.grid.x - object.communicationRadius; x <= object.grid.x + object.communicationRadius; x++) {
-//                for(var y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {
-//                    var chunkX = Math.floor(x / data.chunk.size);
-//                    var chunkY = Math.floor(y / data.chunk.size);
-//
-//                    var dx = x % data.chunk.size;
-//                    var dy = y % data.chunk.size;
-//
-//                    if (dx < 0) {
-//                        dx = data.chunk.size + dx;
-//                    }
-//                    if (dy < 0) {
-//                        dy = data.chunk.size + dy;
-//                    }
-//
-//                    level.getChunk(chunkX, chunkY).getLayer(level.layers.calculateFog).data[dy * data.chunk.size + dx] = -1;
-//                    level.getChunk(chunkX, chunkY).getLayer(level.layers.history).data[dy * data.chunk.size + dx] = 3;
-//                }
-//            }
-//
-//            var objectsWithinCommunicationRadius = game.findObject(object.grid.x - object.communicationRadius,
-//                                          object.grid.y - object.communicationRadius,
-//                                          object.grid.x + object.communicationRadius,
-//                                          object.grid.y + object.communicationRadius);
-//
-//            objectsWithinCommunicationRadius.forEach(function(objectWithinCommunicationRadius) {
-//                if (handledObjects.indexOf(objectWithinCommunicationRadius) === -1 && objectsBeingHandled.indexOf(objectWithinCommunicationRadius) === -1 ) {
-//                    objectsBeingHandled.push(objectWithinCommunicationRadius);
-//                    thereAreNewObjectsToBeHandled = true;
-//
-//                }
-//            });
-//
-//            handledObjects.push(object);
-//            delete objectsBeingHandled[index];
-//        });
-//    }
-//
-//
-//    for(var x in level.chunks) {
-//        if ((!isNaN(parseFloat(x)) && isFinite(x))) {
-//            for (var y in level.chunks[x]) {
-//                if ((!isNaN(parseFloat(y)) && isFinite(y))) {
-//                    var chunk = level.chunks[x][y];
-//                    if (!chunk.getLayer(level.layers.calculateFog).data.equals(chunk.getLayer(level.layers.fog).data)) {
-//                        chunk.getLayer(level.layers.fog).data.forEach(function(n, i, array) {
-//                            array[i] = chunk.getLayer(level.layers.calculateFog).data[i];
-//                        });
-//                        chunk.drawLayer(chunk.getLayer(level.layers.fog));
-//                    }
-//                }
-//            }
-//        }
-//    }
-};
-
 /**
  * Add resource reference(s) to the level
  * @param   {Object}   resource
  * @returns {Array} Array containing reference objects containing the array and corresponding index to where the resource is added to the resource array
  */
 level.addResource = function(resource) {
-    var grid = common.getGridFromCoordinates(resource.x, resource.y);
-
-    var references = [];
-
-    var referenceChunk = {},
-        referenceChunkLayer = {};
-
-    referenceChunk.array = level.getChunk(grid.chunk.x, grid.chunk.y).resources;
-    referenceChunk.index = referenceChunk.array.push(resource);
-
-    referenceChunkLayer.array = level.getChunk(grid.chunk.x, grid.chunk.y).getLayer(level.layers[resource.name]).resources;
-    referenceChunkLayer.index = referenceChunkLayer.array.push(resource);
-
-    references.push(referenceChunk);
-    references.push(referenceChunkLayer);
-
-    return references;
+    level.getChunk(resource.grid.chunk.x, resource.grid.chunk.y).resources[resource.grid.i][resource.id] = resource;
+    level.getChunk(resource.grid.chunk.x, resource.grid.chunk.y).layers[resource.name].resources[resource.grid.i] = resource;
 };
 
 /**
@@ -347,11 +274,10 @@ level.addResource = function(resource) {
  */
 level.findResource = function(grid) {
     var resources = [];
+    var resource_ids = Object.getOwnPropertySymbols(level.getChunk(grid.chunk.x, grid.chunk.y).resources[grid.i]);
 
-    level.getChunk(grid.chunk.x, grid.chunk.y).resources.forEach(function(resource) {
-        if (resource.grid.x === grid.x && resource.grid.y === grid.y) {
-            resources.push(resource);
-        }
+    resource_ids.forEach(function(id) {
+        resources.push(level.getChunk(grid.chunk.x, grid.chunk.y).resources[grid.i][id]);
     });
 
     return resources;
@@ -363,18 +289,18 @@ level.findResource = function(grid) {
  * @returns {Array} Array containing reference objects containing the array and corresponding index to where the resource is added to the resource array
  */
 level.addObject = function(object) {
-    var grid = common.getGridFromCoordinates(object.x, object.y);
-
-    var references = [];
-
-    var referenceChunk = {};
-
-    referenceChunk.array = level.getChunk(grid.chunk.x, grid.chunk.y).resources;
-    referenceChunk.index = referenceChunk.array.push(object);
-
-    references.push(referenceChunk);
-
-    return references;
+//    var grid = common.getGridFromCoordinates(object.x, object.y);
+//
+//    var references = [];
+//
+//    var referenceChunk = {};
+//
+//    referenceChunk.array = level.getChunk(grid.chunk.x, grid.chunk.y).resources;
+//    referenceChunk.index = referenceChunk.array.push(object);
+//
+//    references.push(referenceChunk);
+//
+//    return references;
 };
 
 /**
@@ -417,6 +343,7 @@ level.createTile = function(x, y, tileIndex) {
 
     var tile = {
         tile : tileIndex,
+        grid : common.getGridFromCoordinates(coordinates.x, coordinates.y),
         x : coordinates.x,
         y : coordinates.y
     };
@@ -425,7 +352,7 @@ level.createTile = function(x, y, tileIndex) {
 };
 
 level.addTileToChunkLayer = function(chunkLayer, tile) {
-    chunkLayer.tiles.push(tile);
+    chunkLayer.tiles[tile.grid.i] = tile;
 };
 
 level.getLayer = function(layername) {

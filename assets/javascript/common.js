@@ -4,7 +4,7 @@
 
 
 /* global common:true, Image,document,window,console,XMLHttpRequest,game,$,data */
-
+/* esnext:true */
 
 /* Technical functions */
 
@@ -183,7 +183,7 @@ tilesets.prototype.add = function(name) {
         return null;
     }
 
-    var imageURI = './assets/images/tilesets/' + name + '.png';
+    var imageURI = './assets/images/tilesets/' + tilesetObject.image + '.png';
 
     common.resources.tilesets[name] = new tileset();
     common.resources.tilesets[name].grid = tilesetObject.grid;
@@ -207,7 +207,7 @@ tilesets.prototype.add = function(name) {
     common.resources.tilesets[name].src = imageURI;
 
     if (tilesetObject.imageSelected) {
-        var image_selectedURI = './assets/images/tilesets/' +name + 'Selected.png';
+        var image_selectedURI = './assets/images/tilesets/' + tilesetObject.image + 'Selected.png';
         common.resources.tilesets[name].image_selected = new Image();
         common.resources.tilesets[name].image_selected.grid = tilesetObject.grid;
 

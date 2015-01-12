@@ -1,17 +1,16 @@
 {
     "skills" : {
         "walk" : true,
-        "gather" : true
+        "scout" : true
     },
-    "communicationRadius" : 1,
+    "communicationRadius" : 3,
     "hasWindow" :  true,
     "energy" : -1,
     "cost" : {
-        "iron" : 1000
+        "iron" : 5000
     },
     "capacity" : {
-        "energy" : 100,
-        "iron" : 50
+        "energy" : 100
     },
     "storage" : {
         "iron" : 0,

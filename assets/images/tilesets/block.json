@@ -1,5 +1,5 @@
 {
-    "image" : "block.png",
+    "image" : "block",
     "imageSelected" : "true",
     "grid" : {
         "width" : 16,

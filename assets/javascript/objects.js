@@ -1,9 +1,11 @@
-/* global objects:true, resources,console,common,game, ui, data, Emitter */
+/* global objects:true, level, resources, common, game, ui, data, Emitter */
+/* esnext */
 
 objects = {};
 
 objects.create = function(repository, name, x, y, player, objectsReference) {
     var object = {
+        id : Symbol(),
         name : name,
         x : x,
         y : y,
@@ -16,13 +18,6 @@ objects.create = function(repository, name, x, y, player, objectsReference) {
 
     var definition = objects.getDefinition(repository, name);
 
-    var coordinates = common.getCoordinatesFromGrid(x, y);
-    object.grid = common.getGridFromCoordinates(coordinates.x, coordinates.y);
-    objects.move(object, coordinates.x, coordinates.y);
-
-    object.x = coordinates.x;
-    object.y = coordinates.y;
-
     //object.images
     object.skills = definition.skills;
     object.communicationRadius = definition.communicationRadius;
@@ -30,9 +25,21 @@ objects.create = function(repository, name, x, y, player, objectsReference) {
     object.energy = definition.energy;
     object.cost = definition.cost;
     object.targetActions = definition.targetActions;
+    object.capacity = definition.capacity;
+
+    var coordinates = common.getCoordinatesFromGrid(x, y);
+    objects.updateGrid(object,common.getGridFromCoordinates(coordinates.x, coordinates.y));
+    objects.move(object, coordinates.x, coordinates.y);
+
+    object.x = coordinates.x;
+    object.y = coordinates.y;
+
 
     data.resources.energy += object.energy;
-    ui.updateEnergy(data.resources.energy);
+    data.resources.storage.energy += definition.storage.energy;
+    data.resources.storage.iron += definition.storage.iron;
+
+    ui.updateResources(data.resources);
 
     var tileset = common.resources.tilesets.get(name);
 
@@ -93,22 +100,22 @@ objects.getDefinition = function(repository, name) {
 };
 
 objects.updateChunk = function(object, newChunk) {
-    if (object.chunk.x !== newChunk.x || object.chunk.y !== newChunk.y) {
-        if (object.chunk !== 'undefined') {
-            //Remove from the old chunk
-            game.getChunk(object.chunk.x,object.chunk.y).objects.splice(object.chunk.position-1,1);
+//    if (object.chunk.x !== newChunk.x || object.chunk.y !== newChunk.y) {
+//        if (object.chunk !== 'undefined') {
+//            //Remove from the old chunk
+//            game.getChunk(object.chunk.x,object.chunk.y).objects.splice(object.chunk.position-1,1);
+//
+//            //Renumber all positions for object later on in the chunk.
+//            game.getChunk(object.chunk.x,object.chunk.y).objects.forEach(function(object, index) {
+//                object.chunk.position = index + 1;
+//            });
+//        }
+//
+//        object.chunk = newChunk;
+//        object.chunk.position = game.getChunk(object.chunk.x,object.chunk.y).objects.push(object);
+//    }
 
-            //Renumber all positions for object later on in the chunk.
-            game.getChunk(object.chunk.x,object.chunk.y).objects.forEach(function(object, index) {
-                object.chunk.position = index + 1;
-            });
-        }
-
-        object.chunk = newChunk;
-        object.chunk.position = game.getChunk(object.chunk.x,object.chunk.y).objects.push(object);
-    }
-
-    return object;
+//    return object;
 };
 
 objects.hasSkill = function(object, skill) {
@@ -128,11 +135,48 @@ objects.move = function(object,x,y) {
     var grid = common.getGridFromCoordinates(object.x, object.y);
 
     if (object.grid.x !== grid.x || object.grid.y !== grid.y) {
-        game.calculatefog();
+        //Update all tiles;
+        objects.updateGrid(object, grid);
     }
 
     object.grid = grid;
     objects.chunk = objects.updateChunk(object, grid.chunk);
+};
+
+objects.updateGrid = function(object, grid) {
+    if (typeof object.grid !== 'undefined') {
+        var chunk = level.getChunk(object.grid.chunk.x, object.grid.chunk.y);
+
+        delete chunk.objects[object.grid.i][object.id];
+
+        for (var x = object.grid.x - object.communicationRadius; x <= object.grid.x + object.communicationRadius; x++) {
+            for (var y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {
+                var c_grid = common.getGridFromGrid(x, y);
+                var chunk = level.getChunk(c_grid.chunk.x, c_grid.chunk.y);
+
+                delete chunk.objects[c_grid.i][object.id];
+                chunk.objects[c_grid.i].counter -= 1;
+                if(chunk.objects[c_grid.i].counter === 0) {
+                    chunk.layers.fog.tiles[c_grid.i].tile = 48;
+                }
+            }
+        }
+    }
+
+    object.grid = grid;
+
+    var chunk = level.getChunk(object.grid.chunk.x, object.grid.chunk.y);
+    chunk.objects[object.grid.i][object.id] = object;
+
+    for (var x = object.grid.x - object.communicationRadius; x <= object.grid.x + object.communicationRadius; x++) {
+        for (var y = object.grid.y - object.communicationRadius; y <= object.grid.y + object.communicationRadius; y++) {
+            var c_grid = common.getGridFromGrid(x, y);
+            var chunk = level.getChunk(c_grid.chunk.x, c_grid.chunk.y);
+            chunk.objects[c_grid.i][object.id] = object;
+            chunk.objects[c_grid.i].counter += 1;
+            chunk.layers.fog.tiles[c_grid.i].tile = -1;
+        }
+    }
 };
 
 objects.select = function(object){
@@ -249,21 +293,21 @@ objects.walkLoop = function(object, action, data) {
     }
 
     var flag  = false;
-    
+
     data.objects.forEach(function(obj) {
         for (var i = 1 ; i <= 50; i++) {
         if (obj === object || flag === true) {
-                return;   
+                return;
             }
-            if (obj.x - (obj.collisionBox.rx - obj.collisionBox.lx)/2 <= x*i + object.x && 
-                obj.x + (obj.collisionBox.rx - obj.collisionBox.lx)/2 >= x*i + object.x && 
-                obj.y - (obj.collisionBox.by - obj.collisionBox.ty)/2 <= y*i + object.y && 
+            if (obj.x - (obj.collisionBox.rx - obj.collisionBox.lx)/2 <= x*i + object.x &&
+                obj.x + (obj.collisionBox.rx - obj.collisionBox.lx)/2 >= x*i + object.x &&
+                obj.y - (obj.collisionBox.by - obj.collisionBox.ty)/2 <= y*i + object.y &&
                 obj.y + (obj.collisionBox.by - obj.collisionBox.ty)/2 >= y*i + object.y) {
                 flag = true;
             }
         }
     });
-    
+
     if (!flag) {
         objects.move(object, x,y);
     } else {
@@ -275,7 +319,7 @@ objects.walkLoop = function(object, action, data) {
         var flag2 = false;
         var y2 = y;
         var x2 = x;
-        
+
         for (var j = 1; j < 180; j++) {
             flag2 = false;
             graden = graden + j*(2*(j%2)-1);
@@ -284,11 +328,11 @@ objects.walkLoop = function(object, action, data) {
             data.objects.forEach(function(obj) {
                 for (var k = 1 ; k <= 50; k++) {
                     if (obj === object || flag2 === true) {
-                        return;   
+                        return;
                     }
-                    if (obj.x - (obj.collisionBox.rx - obj.collisionBox.lx)/2 <= x2*k + object.x && 
-                        obj.x + (obj.collisionBox.rx - obj.collisionBox.lx)/2 >= x2*k + object.x && 
-                        obj.y - (obj.collisionBox.by - obj.collisionBox.ty)/2 <= y2*k + object.y && 
+                    if (obj.x - (obj.collisionBox.rx - obj.collisionBox.lx)/2 <= x2*k + object.x &&
+                        obj.x + (obj.collisionBox.rx - obj.collisionBox.lx)/2 >= x2*k + object.x &&
+                        obj.y - (obj.collisionBox.by - obj.collisionBox.ty)/2 <= y2*k + object.y &&
                         obj.y + (obj.collisionBox.by - obj.collisionBox.ty)/2 >= y2*k + object.y) {
                         flag2 = true;
                         return;
@@ -296,19 +340,19 @@ objects.walkLoop = function(object, action, data) {
                 }
             });
             if (flag2 === false) {
-                break;   
+                break;
             }
         }
-        
+
         if (flag2 === false) {
             objects.move(object, x2,y2);
-            object.actions[0] = objects.calculateWalkSteps({x : object.x, y : object.y}, object.actions[0]);  
+            object.actions[0] = objects.calculateWalkSteps({x : object.x, y : object.y}, object.actions[0]);
         } else {
             // wachten :-)
-        }    
+        }
     }
 
-        
+
     if (object.x === destination.x && object.y === destination.y) {
         object.actions.shift();
     }

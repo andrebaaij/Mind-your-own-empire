@@ -23,11 +23,15 @@ var data = {
     },
     pause : false,
     chunk : {
-        size : 10
+        size : 10 // Half the biggest communicationRadius
     },
     resources : {
         iron: 100000,
-        energy: 0
+        energy: 0,
+        storage : {
+            iron : 0,
+            energy : 0
+        }
     },
     mouse : {
         selection : {
@@ -54,6 +58,7 @@ common.parseQueryString();
 
 data.seed = data.url.seed;
 data.player.color = common.colors.player[data.url.color];
+data.player.name = data.url.name;
 
 game.initialise = function() {
     game.gameLoop();
@@ -72,6 +77,10 @@ game.initialise = function() {
     objects.create(data.repository.objects, "solar", 10, 4, data.player, data.objects);
     objects.create(data.repository.objects, "solar", 10, 5, data.player, data.objects);
     objects.create(data.repository.objects, "solar", 10, 6, data.player, data.objects);
+
+    objects.create(data.repository.objects, "scout", 0, 0, data.player, data.objects);
+
+    ui.showMessage("Welcome " + data.player.name + ", good luck!!!", 20000);
 };
 
 common.require('contextGL', 'objects','resources', 'perlin', 'level', 'ui', 'draw', 'particle', game.initialise);

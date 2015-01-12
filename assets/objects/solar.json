@@ -1,9 +1,14 @@
 {
+    "skills" : {},
     "targetActions" : [],
     "communicationRadius" : 0,
     "hasWindow" :  true,
     "energy" : 2,
     "cost" : {
         "iron" : 10000
+    },
+    "storage" : {
+        "iron" : 0,
+        "energy" : 0
     }
 }
