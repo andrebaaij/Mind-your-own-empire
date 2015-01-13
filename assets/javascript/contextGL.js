@@ -19,7 +19,7 @@ contextGL.get = function(canvas) {
         context = canvas.getContext("experimental-webgl");
         context.viewportWidth = canvas.width;
         context.viewportHeight = canvas.height;
-        context.clearColor(0.0, 0.0, 0.0, 1.0);
+        context.clearColor(1.0, 1.0, 1.0, 1.0);
         context.clear(context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
     } catch (e) {
 
@@ -492,6 +492,7 @@ contextGL.drawTexture = function(context, texture, color, gl) {
  * @param {Object} context Webgl context
  */
 contextGL.clearScene = function(context) {
+    context.clearColor(1.0, 1.0, 1.0, 1.0);
     context.textures = contextGL.clearTextures(context.textures);
 };
 

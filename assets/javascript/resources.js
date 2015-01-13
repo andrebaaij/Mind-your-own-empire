@@ -63,9 +63,6 @@ resources.gatherResource = function(resource, amount) {
         resources.destroyResource(resource);
     }
 
-    data.resources.iron += amount;
-    ui.updateResources(data.resources);
-
     return amount;
 };
 

@@ -204,7 +204,7 @@ level.chunk.prototype.createLayer = function(layer) {
     var _self = this;
 
     _self.layers[layer.name] = {
-        data : [],
+        data : Array.apply(null, new Array(data.chunk.size*data.chunk.size)).map(Boolean.prototype.valueOf,false),
         tileset : layer.tileset,
         definition : layer,
         resources : [],
@@ -213,6 +213,12 @@ level.chunk.prototype.createLayer = function(layer) {
 
     for (var y = 0; y < data.chunk.size; y++) {
         for (var x = 0; x < data.chunk.size; x++) {
+            var i = y * data.chunk.size + x;
+
+            if (layer.name === "fog") {
+                data[i] = false;
+            }
+
             if (layer.type === "tile") {
                 var tile_index = level.layers[layer.name].generate(
                     _self.x * data.chunk.size + x,

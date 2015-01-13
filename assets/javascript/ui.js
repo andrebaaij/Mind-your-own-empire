@@ -197,7 +197,7 @@ ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craft
                     resources.iron -= definition.cost.iron;
 
                     // Update the resources ui
-                    ui.updateIron(resources.iron);
+                    ui.updateResources(resources);
 
                     objects.create(objectRepository, craftObject, x, y, player, objectsReference);
 
@@ -241,10 +241,11 @@ ui.eventCanvasMouseup_right = function (mouse, scroll) {
         for (var x = mouse.selection.lx; x <= mouse.selection.rx; x++) {
             for (var y = mouse.selection.ty; y <= mouse.selection.by; y++) {
                 var grid = common.getGridFromGrid(x, y);
-
-                level.findResource(grid).forEach(function(resource) {
-                    resources.push(resource);
-                });
+                if (level.getChunk(x, y).layers.fog.data[grid.i]) {
+                    level.findResource(grid).forEach(function(resource) {
+                        resources.push(resource);
+                    });
+                }
             }
         }
 
@@ -257,7 +258,6 @@ ui.eventCanvasMouseup_right = function (mouse, scroll) {
                         objects.gather(object, resource);
                     });
                     skillAssigned = true;
-                    console.log("gather")
                 }
             });
         }
@@ -282,10 +282,10 @@ ui.eventCanvasMouseup_right = function (mouse, scroll) {
  */
 ui.updateResources = function(resources) {
     $('#energy').text(resources.energy);
-    $('#iron').text(resources.energy);
+    $('#iron').text(resources.iron);
 
     $('#storage_energy').text(resources.storage.energy);
-    $('#storage_iron').text(resources.storage.energy);
+    $('#storage_iron').text(resources.storage.iron);
 };
 
 ui.eventDocumentKeydown = function(e, keyboard, mouse) {

@@ -26,6 +26,10 @@ objects.create = function(repository, name, x, y, player, objectsReference) {
     object.cost = definition.cost;
     object.targetActions = definition.targetActions;
     object.capacity = definition.capacity;
+    object.resources = {
+        iron : 0,
+        energy : 0
+    };
 
     var coordinates = common.getCoordinatesFromGrid(x, y);
     objects.updateGrid(object,common.getGridFromCoordinates(coordinates.x, coordinates.y));
@@ -99,25 +103,6 @@ objects.getDefinition = function(repository, name) {
     return definition;
 };
 
-objects.updateChunk = function(object, newChunk) {
-//    if (object.chunk.x !== newChunk.x || object.chunk.y !== newChunk.y) {
-//        if (object.chunk !== 'undefined') {
-//            //Remove from the old chunk
-//            game.getChunk(object.chunk.x,object.chunk.y).objects.splice(object.chunk.position-1,1);
-//
-//            //Renumber all positions for object later on in the chunk.
-//            game.getChunk(object.chunk.x,object.chunk.y).objects.forEach(function(object, index) {
-//                object.chunk.position = index + 1;
-//            });
-//        }
-//
-//        object.chunk = newChunk;
-//        object.chunk.position = game.getChunk(object.chunk.x,object.chunk.y).objects.push(object);
-//    }
-
-//    return object;
-};
-
 objects.hasSkill = function(object, skill) {
     var hasSkill = object.skills[skill];
 
@@ -140,7 +125,6 @@ objects.move = function(object,x,y) {
     }
 
     object.grid = grid;
-    objects.chunk = objects.updateChunk(object, grid.chunk);
 };
 
 objects.updateGrid = function(object, grid) {
@@ -175,6 +159,7 @@ objects.updateGrid = function(object, grid) {
             chunk.objects[c_grid.i][object.id] = object;
             chunk.objects[c_grid.i].counter += 1;
             chunk.layers.fog.tiles[c_grid.i].tile = -1;
+            chunk.layers.fog.data[c_grid.i] = true;
         }
     }
 };
@@ -379,7 +364,13 @@ objects.gatherLoop = function(object, action) {
     if (typeof action.object === 'undefined' || !resources.resourceExists(action.object)) {
         object.actions.shift();
     } else {
-        resources.gatherResource(action.object, 1);
+        var amount = resources.gatherResource(action.object, 1);
+        object.resources.iron += amount;
+
+        if (object.resources.iron >= object.capacity.iron) {
+            //TODO: bring back resources to closest iron storage
+            ui.updateResources(data.resources);
+        }
     }
 };
 

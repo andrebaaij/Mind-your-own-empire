@@ -47,7 +47,6 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
     tilewidth = data.tile.width;
     tileheight = data.tile.height;
 
-
     for (var l in level.layers) {
         var layer = level.layers[l];
 
@@ -61,11 +60,11 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
             for (y = chunkYOffset; y <= maxChunkYOffset; y++) {
                 for (x = chunkXOffset; x <= maxChunkXOffset; x++) {
-
+                    var fogLayer = level.getChunk(x, y).layers.fog;
                     var chunkLayer = level.getChunk(x, y).getLayer(layer);
 
-                    chunkLayer.tiles.forEach( function(tile) {
-                        if (tile.tile === -1) {
+                    chunkLayer.tiles.forEach( function(tile, index) {
+                        if (tile.tile === -1 || !fogLayer.data[index]) {
                             return;
                         }
 
@@ -85,10 +84,15 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
             for (y = chunkYOffset; y <= maxChunkYOffset; y++) {
                 for (x = chunkXOffset; x <= maxChunkXOffset; x++) {
-                    //level.getChunk(x,y).drawLayer(layer);
 
+                    var fogLayer = level.getChunk(x, y).layers.fog;
                     var chunkLayer = level.getChunk(x, y).getLayer(layer);
-                    chunkLayer.resources.forEach( function(resource) {
+
+                    chunkLayer.resources.forEach( function(resource, index) {
+                        if (!fogLayer.data[index]) {
+                            return;
+                        }
+
                         contextGL.drawTile(canvas.context,
                             layer.tileset,
                             resource.x - tilewidth/2,
