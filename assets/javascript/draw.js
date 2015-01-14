@@ -16,6 +16,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
     var x,
         y,
+        z = 0,
         tileset,
         tilewidth,
         tileheight,
@@ -72,6 +73,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                             layer.tileset,
                             tile.x - tilewidth/2,
                             tile.y - tileheight/2,
+                            z += 1,
                             tile.tile,
                             tile
                         );
@@ -97,6 +99,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                             layer.tileset,
                             resource.x - tilewidth/2,
                             resource.y - tileheight/2,
+                            z += 1,
                             resource.level,
                             resource
                         );
@@ -144,6 +147,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                                            _self.actionTiles,
                                            Math.round(action.x-tilewidth/2),
                                            Math.round(action.y-tileheight/2),
+                                           z += 1,
                                            tileIndex,
                                            action
                                         );
@@ -166,6 +170,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                             object.image,
                             Math.round(object.x - object.center.x),
                             Math.round(object.y - object.center.y),
+                            z += 1,
                             tileIndex,
                             object,
                             object.color
@@ -190,6 +195,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                                 object.image,
                                 coordinates.x - object.center.x,
                                 coordinates.y - object.center.y,
+                                z += 1,
                                 tileIndex,
                                 {},
                                 object.color
@@ -220,6 +226,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                                         tileset,
                                         Math.round(0.5*(x-y)*tilewidth),
                                         Math.round(0.5*(x+y)*tileheight),
+                                        z += 1,
                                         tileIndex,
                                         {}
                                     );

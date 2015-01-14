@@ -245,7 +245,6 @@ level.getChunk = function(x, y) {
     if(level.chunks[x] && level.chunks[x][y]) {
         return level.chunks[x][y];
     } else {
-        console.log(x, y);
         if (!level.chunks[x]) {
             level.chunks[x] = [];
         }

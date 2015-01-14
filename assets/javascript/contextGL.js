@@ -237,10 +237,11 @@ contextGL.getShader = function(context, shaderId) {
  * @param {Object} texture   Tileset from [common]
  * @param {Number} x         x position in pixels where to draw the texture in the scene
  * @param {Number} y         y position in pixels where to draw the texture in the scene
+ * @param {Number} z         z index
  * @param {Number} tileIndex Which tile to draw?
  * @param {Object} object    What is the object being drawn, it is used to keep track of draw calls for efficiency
  */
-contextGL.drawTile = function (context, texture, x, y, tileIndex, object, color) {
+contextGL.drawTile = function (context, texture, x, y, z, tileIndex, object, color) {
 
     //default color to regulare if it is undefined
     if(typeof color === 'undefined') {
@@ -286,7 +287,7 @@ contextGL.drawTile = function (context, texture, x, y, tileIndex, object, color)
         };
 
         var tile = texture.tile[tileIndex];
-        this.bufferDraw(buffers, i, x, y, texture, tile);
+        this.bufferDraw(buffers, i, x, y, z, texture, tile);
 
         texture.colors[hex].gl.totalNumberOfDrawCalls += 1;
     }
@@ -314,10 +315,11 @@ contextGL.drawTile = function (context, texture, x, y, tileIndex, object, color)
  * @param {Object} texture   Tileset from [common]
  * @param {Number} x         x position in pixels where to draw the texture in the scene
  * @param {Number} y         y position in pixels where to draw the texture in the scene
+ * @param {Number} z         z index
  * @param {Number} tileIndex Which tile to draw?
  * @param {Object} object    What is the object being drawn, it is used to keep track of draw calls for efficiency
  */
-contextGL.drawObject = function (context, texture, x, y, tileIndex, object, color) {
+contextGL.drawObject = function (context, texture, x, y, z, tileIndex, object, color) {
     //default color to regulare if it is undefined
     if(typeof color === 'undefined') {
         color = common.colors.original;
@@ -363,7 +365,7 @@ contextGL.drawObject = function (context, texture, x, y, tileIndex, object, colo
     };
 
     var tile = texture.tile[tileIndex];
-    this.bufferDraw(buffers, i, x, y, texture, tile);
+    this.bufferDraw(buffers, i, x, y, z, texture, tile);
 
     texture.colors[hex].gl.totalNumberOfDrawCalls += 1;
 
@@ -390,11 +392,12 @@ contextGL.drawObject = function (context, texture, x, y, tileIndex, object, colo
  * @param   {Number} i       index for the buffer, current draw call number.
  * @param   {Number} x       x position in pixels where to draw the texture in the scene
  * @param   {Number} y       y position in pixels where to draw the texture in the scene
+ * @param   {Number} z       z index
  * @param   {Object} texture Tileset from [common]
  * @param   {Object} tile    tile containing x, y positions where it is located on the texture
  * @returns {Object} Containing the altered buffers.
  */
-contextGL.bufferDraw = function (buffers, i, x, y, texture, tile) {
+contextGL.bufferDraw = function (buffers, i, x, y, z, texture, tile) {
     var xwidth = x + texture.grid.width,
         yheight = y + texture.grid.height;
 
@@ -402,19 +405,19 @@ contextGL.bufferDraw = function (buffers, i, x, y, texture, tile) {
         i8 = i * 8;
     buffers.vertex[i12] = x;
     buffers.vertex[i12+1] = y;
-    buffers.vertex[i12+2] = i;
+    buffers.vertex[i12+2] = z;
 
     buffers.vertex[i12+3] = xwidth;
     buffers.vertex[i12+4] = y;
-    buffers.vertex[i12+5] = i;
+    buffers.vertex[i12+5] = z;
 
     buffers.vertex[i12+6] = xwidth;
     buffers.vertex[i12+7] = yheight;
-    buffers.vertex[i12+8] = i;
+    buffers.vertex[i12+8] = z;
 
     buffers.vertex[i12+9] = x;
     buffers.vertex[i12+10] = yheight;
-    buffers.vertex[i12+11] = i;
+    buffers.vertex[i12+11] = z;
 
 
 
