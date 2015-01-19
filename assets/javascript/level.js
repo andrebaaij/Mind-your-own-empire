@@ -133,12 +133,6 @@ level.initialise = function() {
             return Math.round((Math.sin(_self.simplex.noise2D(x/50,y/250))-0.40)*15000);
         }
     };
-    level.layers.selection = {
-        name : "selection",
-        type : "selection",
-        visible : true,
-        size : data.chunk.size
-    };
     level.layers.objects = {
         name : "objects",
         type : "objects",
@@ -155,6 +149,12 @@ level.initialise = function() {
         generate : function(x, y) {
             return 49;
         }
+    };
+    level.layers.selection = {
+        name : "selection",
+        type : "selection",
+        visible : true,
+        size : data.chunk.size
     };
 };
 

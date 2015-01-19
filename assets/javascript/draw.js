@@ -8,6 +8,7 @@ draw.initialise = function () {
     var _self = this;
 
     _self.gameTiles = common.resources.tilesets.get('gameTiles');
+    _self.pixelTiles = common.resources.tilesets.get('pixel');
     _self.actionTiles = common.resources.tilesets.get('actions');
 };
 
@@ -206,32 +207,24 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
 
             }
         } else if (layer.type === 'selection' && !craftObject) {
-        // Draw selection box:
-
-            tileset = this.gameTiles;
-
-            tilewidth = tileset.grid.width;
-            tileheight = tileset.grid.height;
-
-            tilesPerRow = tileset.tilesPerRow;
-
-            x = data.mouse.x;
-            y = data.mouse.y;
-
             tileIndex = 0;
 
-            for (x = data.mouse.selection.lx; x <= data.mouse.selection.rx; x++) {
-                for (y = data.mouse.selection.ty; y <= data.mouse.selection.by; y++) {
-                    contextGL.drawObject(canvas.context,
-                                        tileset,
-                                        Math.round(0.5*(x-y)*tilewidth),
-                                        Math.round(0.5*(x+y)*tileheight),
-                                        z += 1,
-                                        tileIndex,
-                                        {}
-                                    );
-                }
-            }
+            contextGL.drawSquare(canvas.context,
+                                this.pixelTiles,
+                                data.mouse.selection.lx,
+                                data.mouse.selection.ty,
+                                z += 1,
+                                data.mouse.selection.rx - data.mouse.selection.lx,
+                                data.mouse.selection.by - data.mouse.selection.ty,
+                                0,
+                                {},
+                                {
+                                    r:255 ,
+                                    g:255 ,
+                                    b:255 ,
+                                    a:0.6
+                                }
+                            );
         }
     }
 };

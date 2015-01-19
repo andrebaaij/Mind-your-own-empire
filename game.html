@@ -17,6 +17,15 @@
             gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t)) * u_color;
         }
     </script>
+    <script id="color-fs" type="x-shader/x-fragment">
+        precision mediump float;
+
+        uniform vec4 u_color;
+
+        void main(void) {
+            gl_FragColor = u_color;
+        }
+    </script>
     <script id="shader-vs" type="x-shader/x-vertex">
         attribute vec2 aTextureCoord;
 

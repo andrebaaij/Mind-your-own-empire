@@ -93,30 +93,30 @@ ui.eventCanvasMousemove = function(event, mouse) {
     mouse.x = event.pageX;
     mouse.y = event.pageY;
 
-    var grid = common.getGridFromScreen(data.scroll, mouse.x, mouse.y);
+    var coordinates = common.getCoordinatesFromScreen(data.scroll, mouse.x, mouse.y);
 
     if (mouse.left || mouse.right) {
-        if (mouse.selection.grid.y < grid.y) {
-            mouse.selection.ty = mouse.selection.grid.y;
-            mouse.selection.by = grid.y;
+        if (mouse.selection.y < coordinates.y) {
+            mouse.selection.ty = mouse.selection.y;
+            mouse.selection.by = coordinates.y;
         } else {
-            mouse.selection.by = mouse.selection.grid.y;
-            mouse.selection.ty = grid.y;
+            mouse.selection.by = mouse.selection.y;
+            mouse.selection.ty = coordinates.y;
         }
 
-        if (mouse.selection.grid.x < grid.x) {
-            mouse.selection.rx = grid.x;
-            mouse.selection.ly = mouse.selection.grid.x;
+        if (mouse.selection.x < coordinates.x) {
+            mouse.selection.rx = coordinates.x;
+            mouse.selection.lx = mouse.selection.x;
         } else {
-            mouse.selection.lx = grid.x;
-            mouse.selection.rx = mouse.selection.grid.x;
+            mouse.selection.lx = coordinates.x;
+            mouse.selection.rx = mouse.selection.x;
         }
 
     } else {
-        mouse.selection.ty = grid.y;
-        mouse.selection.by = grid.y;
-        mouse.selection.lx = grid.x;
-        mouse.selection.rx = grid.x;
+        mouse.selection.ty = coordinates.y;
+        mouse.selection.by = coordinates.y;
+        mouse.selection.lx = coordinates.x;
+        mouse.selection.rx = coordinates.x;
     }
 };
 
@@ -139,7 +139,11 @@ ui.eventCanvasMousedown = function(event, mouse, scroll) {
         mouse.x = event.pageX;
         mouse.y = event.pageY;
 
-        mouse.selection.grid = common.getGridFromScreen(scroll, mouse.x, mouse.y);
+        var selection = common.getCoordinatesFromScreen(scroll, mouse.x, mouse.y);
+        mouse.selection.x = selection.x;
+        mouse.selection.y = selection.y;
+        mouse.selection.grid = selection.grid;
+        mouse.selection.i = selection.i;
     }
 };
 
@@ -189,8 +193,8 @@ ui.eventCanvasMouseup_left = function (mouse, keyboard, scroll, resources, craft
     if (craftObject) {
         var definition = objects.getDefinition(objectRepository, craftObject);
         // Build the object
-        for (var x = data.mouse.selection.lx; x <= data.mouse.selection.rx; x++) {
-            for (var y = data.mouse.selection.ty; y <= data.mouse.selection.by; y++) {
+        for (var x = data.mouse.selection.lx.x; x <= data.mouse.selection.rx.x; x++) {
+            for (var y = data.mouse.selection.ty.y; y <= data.mouse.selection.by.y; y++) {
                 // Are there enough resources available?
                 if (resources.iron >= definition.cost.iron) {
                     // Subract the resources
@@ -240,8 +244,8 @@ ui.eventCanvasMouseup_right = function (mouse, scroll) {
 
         for (var x = mouse.selection.lx; x <= mouse.selection.rx; x++) {
             for (var y = mouse.selection.ty; y <= mouse.selection.by; y++) {
-                var grid = common.getGridFromGrid(x, y);
-                if (level.getChunk(x, y).layers.fog.data[grid.i]) {
+                var grid = common.getGridFromCoordinates(x, y);
+                if (level.getChunk(grid.chunk.x, grid.chunk.y).layers.fog.data[grid.i]) {
                     level.findResource(grid).forEach(function(resource) {
                         resources.push(resource);
                     });

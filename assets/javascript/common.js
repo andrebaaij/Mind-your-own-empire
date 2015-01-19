@@ -357,9 +357,6 @@ common.getGridFromCoordinates = function(x, y) {
     var gx = Math.floor(x / tileWidth + y / tileHeight);
     var gy = Math.floor(y / tileHeight - x / tileWidth);
 
-    gx = parseInt(gx,10);
-    gy = parseInt(gy,10);
-
     var chunkX = Math.floor(gx/data.chunk.size);
     var chunkY = Math.floor(gy/data.chunk.size);
 

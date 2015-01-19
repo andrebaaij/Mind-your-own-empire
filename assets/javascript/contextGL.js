@@ -89,11 +89,13 @@ contextGL.dimensions = function(context, width, height) {
  */
 contextGL.initialiseShaders = function(context) {
     var fragmentShader = contextGL.getShader(context, "shader-fs");
+    var colorShader = contextGL.getShader(context, "color-fs");
     var vertexShader = contextGL.getShader(context, "shader-vs");
 
     context.shaderProgram = context.createProgram();
     context.attachShader(context.shaderProgram, vertexShader);
     context.attachShader(context.shaderProgram, fragmentShader);
+    context.attachShader(context.shaderProgram, colorShader);
     context.linkProgram(context.shaderProgram);
 
     if (!context.getProgramParameter(context.shaderProgram, context.LINK_STATUS)) {
@@ -387,6 +389,84 @@ contextGL.drawObject = function (context, texture, x, y, z, tileIndex, object, c
 };
 
 /**
+ * Draw a tile on the supplied Webgl context
+ * @param {Object} context   Webgl context
+ * @param {Object} texture   Tileset from [common]
+ * @param {Number} x         x position in pixels where to draw the texture in the scene
+ * @param {Number} y         y position in pixels where to draw the texture in the scene
+ * @param {Number} z         z index
+ * @param {Number} tileIndex Which tile to draw?
+ * @param {Object} object    What is the object being drawn, it is used to keep track of draw calls for efficiency
+ */
+contextGL.drawSquare = function (context, texture, x, y, z, width, height, tileIndex, object, color) {
+
+    //default color to regulare if it is undefined
+    if(typeof color === 'undefined') {
+        color = common.colors.original;
+    }
+
+    // If the texture is not loaded yet, we don't have anything to draw, so let's quit the execution of this function.
+    if (!texture.isLoaded) {
+        return;
+    }
+
+    // If the texture is not initialised yet, buffer it now.
+    if (!texture.gl) {
+        texture = contextGL.initialiseTexture(context, texture);
+    }
+
+    var hex = common.rgba2hex(color.r, color.g, color.b, color.a);
+
+    if (!texture.colors[hex]) {
+        texture = contextGL.initialiseTextureColor(context, texture, color);
+    }
+
+    // For this scene, this is the nth drawcall:
+    var i = texture.colors[hex].gl.totalNumberOfDrawCalls;
+
+    // Add this texture to the scene if this is its first drawcall.
+    if (typeof texture.colors[hex].gl.currentNumberOfDrawCalls === 'undefined' || texture.colors[hex].gl.currentNumberOfDrawCalls === 0) {
+        context.textures.push(texture);
+    }
+
+    if(typeof object.gl === 'undefined' || object.gl.tile !== tileIndex) {
+        texture.colors[hex].gl.objects.push(object);
+
+        object.gl = {
+            index : i,
+            tile : tileIndex
+        };
+
+        var buffers = {
+            vertex : texture.colors[hex].gl.vertexPositionBuffer,
+            texture : texture.colors[hex].gl.textureCoordinationBuffer,
+            vertexIndex : texture.colors[hex].gl.vertexIndexBuffer
+        };
+
+        var tile = texture.tile[tileIndex];
+        this.bufferDrawSquare(buffers, i, x, y, z, width, height, texture, tile);
+
+        texture.colors[hex].gl.totalNumberOfDrawCalls += 1;
+    }
+
+    i = texture.colors[hex].gl.currentNumberOfDrawCalls;
+
+    //Vertices index
+    var i4 = object.gl.index*4, //object.gl.index
+        i6 = i*6;
+
+    texture.colors[hex].gl.vertexIndexBuffer[i6] = i4;
+    texture.colors[hex].gl.vertexIndexBuffer[i6+1] = i4+1;
+    texture.colors[hex].gl.vertexIndexBuffer[i6+2] = i4+2;
+
+    texture.colors[hex].gl.vertexIndexBuffer[i6+3] = i4;
+    texture.colors[hex].gl.vertexIndexBuffer[i6+4] = i4+2;
+    texture.colors[hex].gl.vertexIndexBuffer[i6+5] = i4+3;
+
+    texture.colors[hex].gl.currentNumberOfDrawCalls += 1;
+};
+
+/**
  * Buffer a draw call;
  * @param   {Object} buffers object containing 2 buffers; vertex and texture
  * @param   {Number} i       index for the buffer, current draw call number.
@@ -420,6 +500,43 @@ contextGL.bufferDraw = function (buffers, i, x, y, z, texture, tile) {
     buffers.vertex[i12+11] = z;
 
 
+
+    buffers.texture[i8] = tile.lx;
+    buffers.texture[i8+1] = tile.ty;
+
+    buffers.texture[i8+2] = tile.rx;
+    buffers.texture[i8+3] = tile.ty;
+
+    buffers.texture[i8+4] = tile.rx;
+    buffers.texture[i8+5] = tile.by;
+
+    buffers.texture[i8+6] = tile.lx;
+    buffers.texture[i8+7] = tile.by;
+
+    return buffers;
+};
+
+contextGL.bufferDrawSquare = function (buffers, i, x, y, z, width, height, texture, tile) {
+    var xwidth = x + width,
+        yheight = y + height;
+
+    var i12 = i * 12,
+        i8 = i * 8;
+    buffers.vertex[i12] = x;
+    buffers.vertex[i12+1] = y;
+    buffers.vertex[i12+2] = z;
+
+    buffers.vertex[i12+3] = xwidth;
+    buffers.vertex[i12+4] = y;
+    buffers.vertex[i12+5] = z;
+
+    buffers.vertex[i12+6] = xwidth;
+    buffers.vertex[i12+7] = yheight;
+    buffers.vertex[i12+8] = z;
+
+    buffers.vertex[i12+9] = x;
+    buffers.vertex[i12+10] = yheight;
+    buffers.vertex[i12+11] = z;
 
     buffers.texture[i8] = tile.lx;
     buffers.texture[i8+1] = tile.ty;

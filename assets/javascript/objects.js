@@ -403,15 +403,24 @@ objects.destroy = function(object) {
     object = object.removeReferences(object);
 };
 
-objects.find = function(lx, ty, rx, by) {
+objects.find = function(grid_lx, grid_ty, grid_rx, grid_by) {
     var results = [];
 
-    data.objects.forEach(function(object) {
-        if (lx <= object.grid.x && object.grid.x <= rx && ty <= object.grid.y && object.grid.y <= by) {
-            results.push(object);
-        }
-    });
-
+    // When one point is selected, select all objects within that box.
+    if (grid_lx === grid_rx && grid_ty === grid_by) {
+        data.objects.forEach(function(object) {
+            if (object.x - object.center.x - object.collisionBox.lx < grid_lx && grid_rx < object.x - object.center.x + object.collisionBox.rx && object.y - object.center.y < grid_ty && grid_by < object.y - object.center.y + object.collisionBox.by) {
+                results.push(object);
+            }
+        });
+    // else select every object with it's center in the selection box.
+    } else {
+        data.objects.forEach(function(object) {
+            if (grid_lx <= object.x && object.x <= grid_rx && grid_ty <= object.y && object.y <= grid_by) {
+                results.push(object);
+            }
+        });
+    }
     return results;
 };
 

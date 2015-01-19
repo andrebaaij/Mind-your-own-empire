@@ -23,7 +23,7 @@ var data = {
     },
     pause : false,
     chunk : {
-        size : 2 // Half the biggest communicationRadius
+        size : 10 // Half the biggest communicationRadius
     },
     resources : {
         iron: 100000,
