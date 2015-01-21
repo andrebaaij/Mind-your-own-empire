@@ -208,14 +208,13 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             }
         } else if (layer.type === 'selection' && !craftObject) {
             tileIndex = 0;
-
             contextGL.drawSquare(canvas.context,
                                 this.pixelTiles,
-                                data.mouse.selection.lx,
-                                data.mouse.selection.ty,
+                                data.mouse.selection.lx.c_x,
+                                data.mouse.selection.ty.c_y,
                                 z += 1,
-                                data.mouse.selection.rx - data.mouse.selection.lx,
-                                data.mouse.selection.by - data.mouse.selection.ty,
+                                data.mouse.selection.rx.c_x - data.mouse.selection.lx.c_x,
+                                data.mouse.selection.by.c_y - data.mouse.selection.ty.c_y,
                                 0,
                                 {},
                                 {

@@ -93,30 +93,41 @@ ui.eventCanvasMousemove = function(event, mouse) {
     mouse.x = event.pageX;
     mouse.y = event.pageY;
 
+    var grid = common.getGridFromScreen(data.scroll, mouse.x, mouse.y);
     var coordinates = common.getCoordinatesFromScreen(data.scroll, mouse.x, mouse.y);
 
     if (mouse.left || mouse.right) {
-        if (mouse.selection.y < coordinates.y) {
+        if (mouse.selection.y.c_y < coordinates.y) {
             mouse.selection.ty = mouse.selection.y;
-            mouse.selection.by = coordinates.y;
+            mouse.selection.by = grid;
+            mouse.selection.by.c_y = coordinates.y;
+            mouse.selection.by.c_x = coordinates.x;
         } else {
             mouse.selection.by = mouse.selection.y;
-            mouse.selection.ty = coordinates.y;
+            mouse.selection.ty = grid;
+            mouse.selection.ty.c_y = coordinates.y;
+            mouse.selection.ty.c_x = coordinates.x;
         }
 
-        if (mouse.selection.x < coordinates.x) {
-            mouse.selection.rx = coordinates.x;
+        if (mouse.selection.x.c_x < coordinates.x) {
+            mouse.selection.rx = grid;
+            mouse.selection.rx.c_x = coordinates.x;
             mouse.selection.lx = mouse.selection.x;
         } else {
-            mouse.selection.lx = coordinates.x;
+            mouse.selection.lx = grid;
+            mouse.selection.lx.c_x = coordinates.x;
             mouse.selection.rx = mouse.selection.x;
         }
 
     } else {
-        mouse.selection.ty = coordinates.y;
-        mouse.selection.by = coordinates.y;
-        mouse.selection.lx = coordinates.x;
-        mouse.selection.rx = coordinates.x;
+        mouse.selection.ty = grid;
+        mouse.selection.ty.c_y = coordinates.y;
+        mouse.selection.by = grid;
+        mouse.selection.by.c_y = coordinates.y;
+        mouse.selection.lx = grid;
+        mouse.selection.lx.c_x = coordinates.x;
+        mouse.selection.rx = grid;
+        mouse.selection.rx.c_x = coordinates.x;
     }
 };
 
@@ -139,11 +150,12 @@ ui.eventCanvasMousedown = function(event, mouse, scroll) {
         mouse.x = event.pageX;
         mouse.y = event.pageY;
 
-        var selection = common.getCoordinatesFromScreen(scroll, mouse.x, mouse.y);
-        mouse.selection.x = selection.x;
-        mouse.selection.y = selection.y;
-        mouse.selection.grid = selection.grid;
-        mouse.selection.i = selection.i;
+        var grid = common.getGridFromScreen(data.scroll, mouse.x, mouse.y);
+        var coordinates = common.getCoordinatesFromScreen(data.scroll, mouse.x, mouse.y);
+        mouse.selection.y = grid;
+        mouse.selection.y.c_y = coordinates.y;
+        mouse.selection.x = grid;
+        mouse.selection.x.c_x = coordinates.x;
     }
 };
 
@@ -242,8 +254,13 @@ ui.eventCanvasMouseup_right = function (mouse, scroll) {
     if (mouse.selection.objects.length > 0) {
         var resources = [];
 
-        for (var x = mouse.selection.lx; x <= mouse.selection.rx; x++) {
-            for (var y = mouse.selection.ty; y <= mouse.selection.by; y++) {
+        var row = 0;
+        for (var y = mouse.selection.ty.c_y; y <= mouse.selection.by.c_y; y += data.tile.height/2) {
+            var cx = 0;
+            if (row % 2) {
+                cx = data.tile.width/2
+            }
+            for (var x = mouse.selection.lx.c_x + cx; x <= mouse.selection.rx.c_x; x += data.tile.width) {
                 var grid = common.getGridFromCoordinates(x, y);
                 if (level.getChunk(grid.chunk.x, grid.chunk.y).layers.fog.data[grid.i]) {
                     level.findResource(grid).forEach(function(resource) {
@@ -251,6 +268,8 @@ ui.eventCanvasMouseup_right = function (mouse, scroll) {
                     });
                 }
             }
+
+            row += 1;
         }
 
         var skillAssigned = false;

@@ -35,7 +35,23 @@ var data = {
     },
     mouse : {
         selection : {
-            objects : []
+            objects : [],
+            lx : {
+                x : 0,
+                y : 0
+            },
+            rx : {
+                x : 0,
+                y : 0
+            },
+            ty : {
+                x : 0,
+                y : 0
+            },
+            by : {
+                x : 0,
+                y : 0
+            },
         }
     },
     keyboard : {},
