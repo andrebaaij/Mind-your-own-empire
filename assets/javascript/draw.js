@@ -88,13 +88,15 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
             for (y = chunkYOffset; y <= maxChunkYOffset; y++) {
                 for (x = chunkXOffset; x <= maxChunkXOffset; x++) {
 
-                    var fogLayer = level.getChunk(x, y).layers.fog;
+                    var fogLayer = level.getChunk(x, y).getLayer(level.layers.fog);
                     var chunkLayer = level.getChunk(x, y).getLayer(layer);
 
                     chunkLayer.resources.forEach( function(resource, index) {
                         if (!fogLayer.data[index]) {
                             return;
                         }
+
+                        //var group = resources.getGroupFromResource(resource);
 
                         contextGL.drawTile(canvas.context,
                             layer.tileset,
@@ -114,7 +116,7 @@ draw.draw = function (canvas, level, objects, craftObject, selectGrid) {
                     chunks.push({x: x, y: y});
                 }
             }
-            //objects = game.findObject(offsetsLT.chunk.x * chunkSize, offsetsRT.chunk.y * chunkSize, (offsetsRB.chunk.x + 1) * chunkSize, (offsetsLB.chunk.y + 1) * chunkSize);
+            //objects = objects..findObject(offsetsLT.chunk.x * chunkSize, offsetsRT.chunk.y * chunkSize, (offsetsRB.chunk.x + 1) * chunkSize, (offsetsLB.chunk.y + 1) * chunkSize);
             objects = data.objects;//game.findObjectByChunks(chunks);
 
             // Sort objects by y position

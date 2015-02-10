@@ -1,4 +1,4 @@
-/* global contextGL:true, Float32Array, Uint16Array, document, common */
+/*global contextGL:true, Float32Array, Uint16Array, document, common, alert*/
 
 // REMARK: Only one canvas per page is supported!
 // TODO: Implement scale
@@ -12,7 +12,9 @@ contextGL = {};
  * @param   {Object} canvas HTML canvas element for which the context should be defined.
  * @returns {Object} webgl context.
  */
-contextGL.get = function(canvas) {
+contextGL.get = function (canvas) {
+    "use strict";
+
     var context = {};
 
     try {
@@ -50,7 +52,9 @@ contextGL.get = function(canvas) {
  * @param   {Number} scale   Scale factor.
  * @returns {Object} Webgl context.
  */
-contextGL.scale = function(context, scale) {
+contextGL.scale = function (context, scale) {
+    "use strict";
+
     return context;
 };
 
@@ -61,7 +65,9 @@ contextGL.scale = function(context, scale) {
  * @param   {Number} y       Number of pixels to move the camera on the y axis.
  * @returns {Object} Webgl context.
  */
-contextGL.translate = function(context, x, y) {
+contextGL.translate = function (context, x, y) {
+    "use strict";
+
     context.uniform2f(context.shaderProgram.translate, x, y);
 
     return context;
@@ -74,7 +80,9 @@ contextGL.translate = function(context, x, y) {
  * @param   {Number} height  Height dimension in pixels.
  * @returns {Object} Webgl context.
  */
-contextGL.dimensions = function(context, width, height) {
+contextGL.dimensions = function (context, width, height) {
+    "use strict";
+
     context.viewport(0, 0, width, height);
     context.shaderProgram.resolutionLocation = context.getUniformLocation(context.shaderProgram, "u_resolution");
     context.uniform2f(context.shaderProgram.resolutionLocation, width, height);
@@ -87,15 +95,15 @@ contextGL.dimensions = function(context, width, height) {
  * @param   {Object} context Webgl context for which the shaders should be initialised
  * @returns {Object} Webgl context
  */
-contextGL.initialiseShaders = function(context) {
-    var fragmentShader = contextGL.getShader(context, "shader-fs");
-    var colorShader = contextGL.getShader(context, "color-fs");
-    var vertexShader = contextGL.getShader(context, "shader-vs");
+contextGL.initialiseShaders = function (context) {
+    "use strict";
+
+    var fragmentShader = contextGL.getShader(context, "shader-fs"),
+        vertexShader = contextGL.getShader(context, "shader-vs");
 
     context.shaderProgram = context.createProgram();
     context.attachShader(context.shaderProgram, vertexShader);
     context.attachShader(context.shaderProgram, fragmentShader);
-    context.attachShader(context.shaderProgram, colorShader);
     context.linkProgram(context.shaderProgram);
 
     if (!context.getProgramParameter(context.shaderProgram, context.LINK_STATUS)) {
@@ -129,10 +137,12 @@ contextGL.initialiseShaders = function(context) {
  * @param   {Object} texture Tileset from [common]
  * @returns {Object} texture prepared for drawing on the context.
  */
-contextGL.initialiseTexture = function(context, texture) {
-    var n2size = Math.pow(2, Math.ceil(Math.log(Math.max(texture.width, texture.height)) / Math.log(2)));
+contextGL.initialiseTexture = function (context, texture) {
+    "use strict";
 
-    var n2canvas = document.createElement('canvas');
+    var n2size = Math.pow(2, Math.ceil(Math.log(Math.max(texture.width, texture.height)) / Math.log(2))),
+        n2canvas = document.createElement('canvas');
+
     n2canvas.width = n2canvas.height = n2size;
     n2canvas.context = n2canvas.getContext('2d');
     n2canvas.context.drawImage(texture, 0, 0);
@@ -157,7 +167,9 @@ contextGL.initialiseTexture = function(context, texture) {
     return texture;
 };
 
-contextGL.initialiseTextureColor = function(context, texture, color) {
+contextGL.initialiseTextureColor = function (context, texture, color) {
+    "use strict";
+
     var hex = common.rgba2hex(color.r, color.g, color.b, color.a);
 
     texture.colors[hex] = {
@@ -184,7 +196,9 @@ contextGL.initialiseTextureColor = function(context, texture, color) {
  * @param   {Object} context Webgl for which the buffers will be initialised.
  * @returns {Object} Webgl context
  */
-contextGL.initialiseBuffers = function(context) {
+contextGL.initialiseBuffers = function (context) {
+    "use strict";
+
     context.buffers = {
         cubeVertexIndexBuffer : context.createBuffer()
     };
@@ -198,25 +212,30 @@ contextGL.initialiseBuffers = function(context) {
  * @param   {String} shaderId Id of the shader script which wil will be loaded from the DOM
  * @returns {Object} Webgl context
  */
-contextGL.getShader = function(context, shaderId) {
-    var scriptElement = document.getElementById(shaderId);
+contextGL.getShader = function (context, shaderId) {
+    "use strict";
+
+    var scriptElement = document.getElementById(shaderId),
+        definition = "",
+        k,
+        shader;
+
     if (!scriptElement) {
         return null;
     }
 
-    var definition = "";
-    var k = scriptElement.firstChild;
+    k = scriptElement.firstChild;
     while (k) {
-        if (k.nodeType == 3) {
+        if (k.nodeType === 3) {
             definition += k.textContent;
         }
         k = k.nextSibling;
     }
 
-    var shader;
-    if (scriptElement.type == "x-shader/x-fragment") {
+
+    if (scriptElement.type === "x-shader/x-fragment") {
         shader = context.createShader(context.FRAGMENT_SHADER);
-    } else if (scriptElement.type == "x-shader/x-vertex") {
+    } else if (scriptElement.type === "x-shader/x-vertex") {
         shader = context.createShader(context.VERTEX_SHADER);
     } else {
         return null;
@@ -244,9 +263,17 @@ contextGL.getShader = function(context, shaderId) {
  * @param {Object} object    What is the object being drawn, it is used to keep track of draw calls for efficiency
  */
 contextGL.drawTile = function (context, texture, x, y, z, tileIndex, object, color) {
+    "use strict";
+
+    var hex,
+        i,
+        buffers,
+        tile,
+        i4,
+        i6;
 
     //default color to regulare if it is undefined
-    if(typeof color === 'undefined') {
+    if (typeof color === 'undefined') {
         color = common.colors.original;
     }
 
@@ -260,21 +287,21 @@ contextGL.drawTile = function (context, texture, x, y, z, tileIndex, object, col
         texture = contextGL.initialiseTexture(context, texture);
     }
 
-    var hex = common.rgba2hex(color.r, color.g, color.b, color.a);
+    hex = common.rgba2hex(color.r, color.g, color.b, color.a);
 
     if (!texture.colors[hex]) {
         texture = contextGL.initialiseTextureColor(context, texture, color);
     }
 
     // For this scene, this is the nth drawcall:
-    var i = texture.colors[hex].gl.totalNumberOfDrawCalls;
+    i = texture.colors[hex].gl.totalNumberOfDrawCalls;
 
     // Add this texture to the scene if this is its first drawcall.
     if (typeof texture.colors[hex].gl.currentNumberOfDrawCalls === 'undefined' || texture.colors[hex].gl.currentNumberOfDrawCalls === 0) {
         context.textures.push(texture);
     }
 
-    if(typeof object.gl === 'undefined' || object.gl.tile !== tileIndex) {
+    if (typeof object.gl === 'undefined' || object.gl.tile !== tileIndex) {
         texture.colors[hex].gl.objects.push(object);
 
         object.gl = {
@@ -282,13 +309,13 @@ contextGL.drawTile = function (context, texture, x, y, z, tileIndex, object, col
             tile : tileIndex
         };
 
-        var buffers = {
+        buffers = {
             vertex : texture.colors[hex].gl.vertexPositionBuffer,
             texture : texture.colors[hex].gl.textureCoordinationBuffer,
             vertexIndex : texture.colors[hex].gl.vertexIndexBuffer
         };
 
-        var tile = texture.tile[tileIndex];
+        tile = texture.tile[tileIndex];
         this.bufferDraw(buffers, i, x, y, z, texture, tile);
 
         texture.colors[hex].gl.totalNumberOfDrawCalls += 1;
@@ -297,16 +324,16 @@ contextGL.drawTile = function (context, texture, x, y, z, tileIndex, object, col
     i = texture.colors[hex].gl.currentNumberOfDrawCalls;
 
     //Vertices index
-    var i4 = object.gl.index*4, //object.gl.index
-        i6 = i*6;
+    i4 = object.gl.index * 4;
+    i6 = i * 6;
 
     texture.colors[hex].gl.vertexIndexBuffer[i6] = i4;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+1] = i4+1;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+2] = i4+2;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 1] = i4 + 1;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 2] = i4 + 2;
 
-    texture.colors[hex].gl.vertexIndexBuffer[i6+3] = i4;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+4] = i4+2;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+5] = i4+3;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 3] = i4;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 4] = i4 + 2;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 5] = i4 + 3;
 
     texture.colors[hex].gl.currentNumberOfDrawCalls += 1;
 };
@@ -322,8 +349,17 @@ contextGL.drawTile = function (context, texture, x, y, z, tileIndex, object, col
  * @param {Object} object    What is the object being drawn, it is used to keep track of draw calls for efficiency
  */
 contextGL.drawObject = function (context, texture, x, y, z, tileIndex, object, color) {
+    "use strict";
+
+    var hex,
+        i,
+        buffers,
+        tile,
+        i4,
+        i6;
+
     //default color to regulare if it is undefined
-    if(typeof color === 'undefined') {
+    if (typeof color === 'undefined') {
         color = common.colors.original;
     }
 
@@ -337,14 +373,14 @@ contextGL.drawObject = function (context, texture, x, y, z, tileIndex, object, c
         contextGL.initialiseTexture(context, texture);
     }
 
-    var hex = common.rgba2hex(color.r, color.g, color.b, color.a);
+    hex = common.rgba2hex(color.r, color.g, color.b, color.a);
 
     if (!texture.colors[hex]) {
         texture = contextGL.initialiseTextureColor(context, texture, color);
     }
 
     // For this scene, this is the nth drawcall:
-    var i = texture.colors[hex].gl.totalNumberOfDrawCalls;
+    i = texture.colors[hex].gl.totalNumberOfDrawCalls;
 
     // Add this texture to the scene if this is its first drawcall.
     if (typeof texture.colors[hex].gl.currentNumberOfDrawCalls === 'undefined' || texture.colors[hex].gl.currentNumberOfDrawCalls === 0) {
@@ -360,13 +396,13 @@ contextGL.drawObject = function (context, texture, x, y, z, tileIndex, object, c
         index : i
     };
 
-    var buffers = {
+    buffers = {
         vertex : texture.colors[hex].gl.vertexPositionBuffer,
         texture : texture.colors[hex].gl.textureCoordinationBuffer,
         vertexIndex : texture.colors[hex].gl.vertexIndexBuffer
     };
 
-    var tile = texture.tile[tileIndex];
+    tile = texture.tile[tileIndex];
     this.bufferDraw(buffers, i, x, y, z, texture, tile);
 
     texture.colors[hex].gl.totalNumberOfDrawCalls += 1;
@@ -374,16 +410,16 @@ contextGL.drawObject = function (context, texture, x, y, z, tileIndex, object, c
     i = texture.colors[hex].gl.currentNumberOfDrawCalls;
 
     //Vertices index
-    var i4 = object.gl.index*4, //object.gl.index
-        i6 = i*6;
+    i4 = object.gl.index * 4; //object.gl.index
+    i6 = i * 6;
 
     texture.colors[hex].gl.vertexIndexBuffer[i6] = i4;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+1] = i4+1;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+2] = i4+2;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 1] = i4 + 1;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 2] = i4 + 2;
 
-    texture.colors[hex].gl.vertexIndexBuffer[i6+3] = i4;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+4] = i4+2;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+5] = i4+3;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 3] = i4;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 4] = i4 + 2;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 5] = i4 + 3;
 
     texture.colors[hex].gl.currentNumberOfDrawCalls += 1;
 };
@@ -399,9 +435,17 @@ contextGL.drawObject = function (context, texture, x, y, z, tileIndex, object, c
  * @param {Object} object    What is the object being drawn, it is used to keep track of draw calls for efficiency
  */
 contextGL.drawSquare = function (context, texture, x, y, z, width, height, tileIndex, object, color) {
+    "use strict";
+
+    var i,
+        hex,
+        buffers,
+        tile,
+        i4,
+        i6;
 
     //default color to regulare if it is undefined
-    if(typeof color === 'undefined') {
+    if (typeof color === 'undefined') {
         color = common.colors.original;
     }
 
@@ -415,21 +459,21 @@ contextGL.drawSquare = function (context, texture, x, y, z, width, height, tileI
         texture = contextGL.initialiseTexture(context, texture);
     }
 
-    var hex = common.rgba2hex(color.r, color.g, color.b, color.a);
+    hex = common.rgba2hex(color.r, color.g, color.b, color.a);
 
     if (!texture.colors[hex]) {
         texture = contextGL.initialiseTextureColor(context, texture, color);
     }
 
     // For this scene, this is the nth drawcall:
-    var i = texture.colors[hex].gl.totalNumberOfDrawCalls;
+    i = texture.colors[hex].gl.totalNumberOfDrawCalls;
 
     // Add this texture to the scene if this is its first drawcall.
     if (typeof texture.colors[hex].gl.currentNumberOfDrawCalls === 'undefined' || texture.colors[hex].gl.currentNumberOfDrawCalls === 0) {
         context.textures.push(texture);
     }
 
-    if(typeof object.gl === 'undefined' || object.gl.tile !== tileIndex) {
+    if (typeof object.gl === 'undefined' || object.gl.tile !== tileIndex) {
         texture.colors[hex].gl.objects.push(object);
 
         object.gl = {
@@ -437,13 +481,13 @@ contextGL.drawSquare = function (context, texture, x, y, z, width, height, tileI
             tile : tileIndex
         };
 
-        var buffers = {
+        buffers = {
             vertex : texture.colors[hex].gl.vertexPositionBuffer,
             texture : texture.colors[hex].gl.textureCoordinationBuffer,
             vertexIndex : texture.colors[hex].gl.vertexIndexBuffer
         };
 
-        var tile = texture.tile[tileIndex];
+        tile = texture.tile[tileIndex];
         this.bufferDrawSquare(buffers, i, x, y, z, width, height, texture, tile);
 
         texture.colors[hex].gl.totalNumberOfDrawCalls += 1;
@@ -452,16 +496,16 @@ contextGL.drawSquare = function (context, texture, x, y, z, width, height, tileI
     i = texture.colors[hex].gl.currentNumberOfDrawCalls;
 
     //Vertices index
-    var i4 = object.gl.index*4, //object.gl.index
-        i6 = i*6;
+    i4 = object.gl.index * 4;
+    i6 = i * 6;
 
     texture.colors[hex].gl.vertexIndexBuffer[i6] = i4;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+1] = i4+1;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+2] = i4+2;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 1] = i4 + 1;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 2] = i4 + 2;
 
-    texture.colors[hex].gl.vertexIndexBuffer[i6+3] = i4;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+4] = i4+2;
-    texture.colors[hex].gl.vertexIndexBuffer[i6+5] = i4+3;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 3] = i4;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 4] = i4 + 2;
+    texture.colors[hex].gl.vertexIndexBuffer[i6 + 5] = i4 + 3;
 
     texture.colors[hex].gl.currentNumberOfDrawCalls += 1;
 };
@@ -478,77 +522,79 @@ contextGL.drawSquare = function (context, texture, x, y, z, width, height, tileI
  * @returns {Object} Containing the altered buffers.
  */
 contextGL.bufferDraw = function (buffers, i, x, y, z, texture, tile) {
+    "use strict";
     var xwidth = x + texture.grid.width,
-        yheight = y + texture.grid.height;
-
-    var i12 = i * 12,
+        yheight = y + texture.grid.height,
+        i12 = i * 12,
         i8 = i * 8;
+
     buffers.vertex[i12] = x;
-    buffers.vertex[i12+1] = y;
-    buffers.vertex[i12+2] = z;
+    buffers.vertex[i12 + 1] = y;
+    buffers.vertex[i12 + 2] = z;
 
-    buffers.vertex[i12+3] = xwidth;
-    buffers.vertex[i12+4] = y;
-    buffers.vertex[i12+5] = z;
+    buffers.vertex[i12 + 3] = xwidth;
+    buffers.vertex[i12 + 4] = y;
+    buffers.vertex[i12 + 5] = z;
 
-    buffers.vertex[i12+6] = xwidth;
-    buffers.vertex[i12+7] = yheight;
-    buffers.vertex[i12+8] = z;
+    buffers.vertex[i12 + 6] = xwidth;
+    buffers.vertex[i12 + 7] = yheight;
+    buffers.vertex[i12 + 8] = z;
 
-    buffers.vertex[i12+9] = x;
-    buffers.vertex[i12+10] = yheight;
-    buffers.vertex[i12+11] = z;
+    buffers.vertex[i12 + 9] = x;
+    buffers.vertex[i12 + 10] = yheight;
+    buffers.vertex[i12 + 11] = z;
 
 
 
     buffers.texture[i8] = tile.lx;
-    buffers.texture[i8+1] = tile.ty;
+    buffers.texture[i8 + 1] = tile.ty;
 
-    buffers.texture[i8+2] = tile.rx;
-    buffers.texture[i8+3] = tile.ty;
+    buffers.texture[i8 + 2] = tile.rx;
+    buffers.texture[i8 + 3] = tile.ty;
 
-    buffers.texture[i8+4] = tile.rx;
-    buffers.texture[i8+5] = tile.by;
+    buffers.texture[i8 + 4] = tile.rx;
+    buffers.texture[i8 + 5] = tile.by;
 
-    buffers.texture[i8+6] = tile.lx;
-    buffers.texture[i8+7] = tile.by;
+    buffers.texture[i8 + 6] = tile.lx;
+    buffers.texture[i8 + 7] = tile.by;
 
     return buffers;
 };
 
 contextGL.bufferDrawSquare = function (buffers, i, x, y, z, width, height, texture, tile) {
-    var xwidth = x + width,
-        yheight = y + height;
+    "use strict";
 
-    var i12 = i * 12,
+    var xwidth = x + width,
+        yheight = y + height,
+        i12 = i * 12,
         i8 = i * 8;
     buffers.vertex[i12] = x;
-    buffers.vertex[i12+1] = y;
-    buffers.vertex[i12+2] = z;
+    buffers.vertex[i12 + 1] = y;
+    buffers.vertex[i12 + 2] = z;
 
-    buffers.vertex[i12+3] = xwidth;
-    buffers.vertex[i12+4] = y;
-    buffers.vertex[i12+5] = z;
+    buffers.vertex[i12 + 3] = xwidth;
+    buffers.vertex[i12 + 4] = y;
+    buffers.vertex[i12 + 5] = z;
 
-    buffers.vertex[i12+6] = xwidth;
-    buffers.vertex[i12+7] = yheight;
-    buffers.vertex[i12+8] = z;
+    buffers.vertex[i12 + 6] = xwidth;
+    buffers.vertex[i12 + 7] = yheight;
+    buffers.vertex[i12 + 8] = z;
 
-    buffers.vertex[i12+9] = x;
-    buffers.vertex[i12+10] = yheight;
-    buffers.vertex[i12+11] = z;
+    buffers.vertex[i12 + 9] = x;
+    buffers.vertex[i12 + 10] = yheight;
+    buffers.vertex[i12 + 11] = z;
 
     buffers.texture[i8] = tile.lx;
-    buffers.texture[i8+1] = tile.ty;
+    buffers.texture[i8 + 1] = tile.ty;
 
-    buffers.texture[i8+2] = tile.rx;
-    buffers.texture[i8+3] = tile.ty;
+    buffers.texture[i8 + 2] = tile.rx;
+    buffers.texture[i8 + 3] = tile.ty;
 
-    buffers.texture[i8+4] = tile.rx;
-    buffers.texture[i8+5] = tile.by;
+    buffers.texture[i8 + 4] = tile.rx;
+    buffers.texture[i8 + 5] = tile.by;
 
-    buffers.texture[i8+6] = tile.lx;
-    buffers.texture[i8+7] = tile.by;
+    buffers.texture[i8 + 6] = tile.lx;
+    buffers.texture[i8 + 7] = tile.by;
 
     return buffers;
 };
@@ -557,7 +603,8 @@ contextGL.bufferDrawSquare = function (buffers, i, x, y, z, width, height, textu
  * Draw the scene stored in the buffers/textures
  * @param {Object} context Webgl context
  */
-contextGL.drawScene = function(context) {
+contextGL.drawScene = function (context) {
+    "use strict";
     contextGL.drawTextures(context, context.textures);
 };
 
@@ -566,11 +613,18 @@ contextGL.drawScene = function(context) {
  * @param {Object} context  Webgl context
  * @param {Array}  textures List of textures to be drawn on the context
  */
-contextGL.drawTextures = function(context, textures) {
-    textures.forEach(function(texture) {
-        for(var hex in texture.colors){
-            var color = texture.colors[hex];
-            contextGL.drawTexture(context, texture, color.color, color.gl);
+contextGL.drawTextures = function (context, textures) {
+    "use strict";
+
+    textures.forEach(function (texture) {
+        var hex,
+            color;
+
+        for (hex in texture.colors) {
+            if (texture.colors.hasOwnProperty(hex)) {
+                color = texture.colors[hex];
+                contextGL.drawTexture(context, texture, color.color, color.gl);
+            }
         }
     });
 };
@@ -580,11 +634,12 @@ contextGL.drawTextures = function(context, textures) {
  * @param {Object} context Webgl context
  * @param {Object} texture Texture to be drawn on the context
  */
-contextGL.drawTexture = function(context, texture, color, gl) {
+contextGL.drawTexture = function (context, texture, color, gl) {
+    "use strict";
     if (gl.currentNumberOfDrawCalls > 0) {
         context.bindTexture(context.TEXTURE_2D, gl.texture);
         context.uniform2f(context.shaderProgram.textureresolution, gl.texture.image.width, gl.texture.image.height);
-        context.uniform4f(context.shaderProgram.color, color.r/255, color.g/255, color.b/255, color.a);
+        context.uniform4f(context.shaderProgram.color, color.r / 255, color.g / 255, color.b / 255, color.a);
 
         if (gl.totalNumberOfDrawCalls > gl.previousTotalNumberOfDrawCalls) {
             context.bindBuffer(context.ARRAY_BUFFER, gl.cubeVertexPositionBuffer);
@@ -611,7 +666,9 @@ contextGL.drawTexture = function(context, texture, color, gl) {
  * Clear all drawcalls for the current scene
  * @param {Object} context Webgl context
  */
-contextGL.clearScene = function(context) {
+contextGL.clearScene = function (context) {
+    "use strict";
+
     context.clearColor(1.0, 1.0, 1.0, 1.0);
     context.textures = contextGL.clearTextures(context.textures);
 };
@@ -621,8 +678,10 @@ contextGL.clearScene = function(context) {
  * @param   {Array} textures Which textures to clear
  * @returns {Array} empty textures array
  */
-contextGL.clearTextures = function(textures) {
-    textures.forEach(function(texture) {
+contextGL.clearTextures = function (textures) {
+    "use strict";
+
+    textures.forEach(function (texture) {
         texture = contextGL.clearTexture(texture);
     });
 
@@ -634,26 +693,34 @@ contextGL.clearTextures = function(textures) {
  * @param   {Object} texture
  * @returns {Object} texture
  */
-contextGL.clearTexture = function(texture) {
-    for(var hex in texture.colors){
-        var color = texture.colors[hex];
-        color.gl.previousTotalNumberOfDrawCalls = color.gl.totalNumberOfDrawCalls;
-        color.gl.currentNumberOfDrawCalls = 0;
-        color.gl.vertexIndexBuffer = [];//new Array(texture.gl.vertexIndexBuffer.length);
+contextGL.clearTexture = function (texture) {
+    "use strict";
 
-        if (color.gl.totalNumberOfDrawCalls > 10000) {
-            color.gl.totalNumberOfDrawCalls = 0;
-            color.gl.previousTotalNumberOfDrawCalls = 0;
+    var hex,
+        color,
+        undefine_objectgl = function (object) {
+            object.gl = undefined;
+        };
+
+    for (hex in texture.colors) {
+        if (texture.colors.hasOwnProperty(hex)) {
+            color = texture.colors[hex];
+            color.gl.previousTotalNumberOfDrawCalls = color.gl.totalNumberOfDrawCalls;
             color.gl.currentNumberOfDrawCalls = 0;
-            color.gl.vertexPositionBuffer = [];
-            color.gl.textureCoordinationBuffer = [];
-            color.gl.vertexIndexBuffer = [];
+            color.gl.vertexIndexBuffer = [];//new Array(texture.gl.vertexIndexBuffer.length);
 
-            color.gl.objects.forEach(function(object) {
-                object.gl = undefined;
-            });
+            if (color.gl.totalNumberOfDrawCalls > 10000) {
+                color.gl.totalNumberOfDrawCalls = 0;
+                color.gl.previousTotalNumberOfDrawCalls = 0;
+                color.gl.currentNumberOfDrawCalls = 0;
+                color.gl.vertexPositionBuffer = [];
+                color.gl.textureCoordinationBuffer = [];
+                color.gl.vertexIndexBuffer = [];
 
-            color.gl.objects = [];
+                color.gl.objects.forEach(undefine_objectgl);
+
+                color.gl.objects = [];
+            }
         }
     }
 

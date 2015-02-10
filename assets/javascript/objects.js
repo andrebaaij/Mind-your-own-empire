@@ -407,9 +407,14 @@ objects.find = function(grid_lx, grid_ty, grid_rx, grid_by) {
     var results = [];
 
     // When one point is selected, select all objects within that box.
-    if (grid_lx.c_x === grid_rx.c_x && grid_ty.c_y === grid_by.c_y) {
+    if (Math.floor(grid_lx.c_x/3) === Math.floor(grid_rx.c_x/3)
+        && Math.floor(grid_ty.c_y/3) === Math.floor(grid_by.c_y/3)) {
         data.objects.forEach(function(object) {
-            if (object.x - object.center.x - object.collisionBox.lx < grid_lx.c_x && grid_rx.c_x < object.x - object.center.x + object.collisionBox.rx && object.y - object.center.y < grid_ty.c_y && grid_by.c_y < object.y - object.center.y + object.collisionBox.by) {
+            if (object.x - object.center.x - object.collisionBox.lx < grid_lx.c_x
+                && grid_rx.c_x < object.x - object.center.x + object.collisionBox.rx
+                && object.y - object.center.y < grid_ty.c_y
+                && grid_by.c_y < object.y - object.center.y + object.collisionBox.by) {
+
                 results.push(object);
             }
         });
