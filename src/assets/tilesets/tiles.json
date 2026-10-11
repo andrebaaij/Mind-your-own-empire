@@ -1,0 +1,8 @@
+{
+  "image": "tiles",
+  "grid": {
+    "width": 64,
+    "height": 32
+  },
+  "animations": {}
+}

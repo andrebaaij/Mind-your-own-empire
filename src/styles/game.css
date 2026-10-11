@@ -1,0 +1,90 @@
+@import "./base.css";
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+  user-select: none;
+}
+
+#game canvas {
+  display: block;
+}
+
+.hud {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-inline: 6px;
+  background: var(--bg);
+  color: var(--fg-strong);
+  line-height: 25px;
+  white-space: nowrap;
+}
+
+.hud img {
+  vertical-align: middle;
+  image-rendering: pixelated;
+}
+
+.hud-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hud-muted,
+.hud-hint {
+  color: var(--fg);
+}
+
+.hud-hint {
+  margin-inline-start: auto;
+}
+
+.hud-button {
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding-inline: 4px;
+}
+
+.hud-button:hover,
+.hud-button[aria-pressed="true"] {
+  background: var(--fg-strong);
+  color: var(--bg);
+}
+
+.message {
+  position: absolute;
+  top: 30px;
+  left: 5px;
+  padding: 2px 5px;
+  background: yellow;
+  color: red;
+}
+
+.pause {
+  margin: auto;
+  width: min(400px, 90vw);
+  padding: 30px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  text-align: center;
+}
+
+.pause::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}

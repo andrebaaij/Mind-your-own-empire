@@ -1,108 +1,39 @@
-<html>
-
-<head>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/src/assets/icons/electricity.png" />
     <title>Mind your own Empire</title>
-    <link rel="stylesheet" type="text/css" href="./assets/stylesheets/jquery-ui.css">
-    <link rel="stylesheet" type="text/css" href="./assets/stylesheets/style.css">
-    <script type="text/javascript" src="https://raw.githubusercontent.com/zloirock/core-js/master/shim.js"></script>
-    <script type="text/javascript" src="./assets/javascript/glMatrix.js"></script>
-    <script id="shader-fs" type="x-shader/x-fragment">
-        precision mediump float;
+    <script type="module" src="/src/game/main.ts"></script>
+  </head>
+  <body>
+    <main id="game">
+      <header class="hud">
+        <span class="hud-label">Resources</span>
+        <span class="hud-stat" title="Iron / storage">
+          <img src="/src/assets/icons/iron.png" alt="Iron" />
+          <span id="iron"></span>/<span id="iron-storage"></span>
+        </span>
+        <span class="hud-stat" title="Net energy per hour, storage">
+          <img src="/src/assets/icons/electricity.png" alt="Energy" />
+          <span id="energy"></span>/hr
+          <span class="hud-muted">(storage <span id="energy-storage"></span>)</span>
+        </span>
+        <span class="hud-divider" aria-hidden="true">|</span>
+        <span class="hud-label">Build:</span>
+        <button type="button" class="hud-button" data-build="solar" aria-pressed="false">Solar</button>
+        <button type="button" class="hud-button" data-build="block" aria-pressed="false">Block</button>
+        <span class="hud-hint">P pause · Esc cancel</span>
+      </header>
 
-        varying vec2 vTextureCoord;
+      <output id="message" class="message" hidden></output>
 
-        uniform sampler2D uSampler;
-        uniform vec4 u_color;
-
-        void main(void) {
-            gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t)) * u_color;
-        }
-    </script>
-    <script id="color-fs" type="x-shader/x-fragment">
-        precision mediump float;
-
-        uniform vec4 u_color;
-
-        void main(void) {
-            gl_FragColor = u_color;
-        }
-    </script>
-    <script id="shader-vs" type="x-shader/x-vertex">
-        attribute vec2 aTextureCoord;
-
-        varying vec2 vTextureCoord;
-
-        attribute vec2 a_position;
-        attribute vec2 a_textureposition;
-        uniform vec2 u_resolution;
-        uniform vec2 u_textureresolution;
-        uniform vec2 u_translate;
-
-        void main(void) {
-            // Convert from pixels to clipspace for image position
-            vec2 clipSpace = (((a_position + u_translate) / u_resolution) * 2.0) - 1.0;
-            gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
-
-            // Convert from pixels to clipspace for image position
-            vec2 texture_clipSpace = (aTextureCoord / u_textureresolution);
-            vTextureCoord = texture_clipSpace * vec2(1, -1);
-
-        }
-    </script>
-</head>
-
-<body id="wrapper" oncontextmenu="return false;">
-    <div id="game">
-        <canvas id="canvas"></canvas>
-            <div id="message" class="message" style="
-                position: absolute;
-                display: none;
-                top: 30px;
-                left: 5px;
-                background-color: yellow;
-                color: red;
-                padding: 2px 5px;
-            ">
-            <span id="message_text">Welcome [player], good luck!!!</span>
-        </div>
-        <div class="menu top">
-            <span>resources</span>
-            <img src="assets/images/icons/iron.png"/>
-            <span id="iron"></span>/<span id="storage_iron"></span>
-            <img src="assets/images/icons/electricity.png"/>
-            <span id="generate_energy"></span>/hr&nbsp;&nbsp;
-            <span id="energy"></span>/<span id="storage_energy"></span>
-            <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-            BUILD:
-            <span>&nbsp;&nbsp;</span>
-            <a onclick="data.craftObject = 'solar';">Solar</a>
-            <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-            <a onclick="data.craftObject = 'block';">Block</a>
-            <div class="center" style="display:none">
-                <div id="menu_view" class="item" style="background-image: url('./assets/images/background-view.png');"></div>
-                <div id="menu_pause" class="item" style="background-image: url('./assets/images/pause.png');"></div>
-                <div id="menu_craft" class="item off" style="background-image: url('./assets/images/menu/menu_toggleCraft.png');"></div>
-            </div>
-        </div>
-        <div id="craft" class="overlay craft" style="display:none;">
-            <div class="window">
-            </div>
-        </div>
-        <div id="pause" class="overlay" style="display:none;">
-            <div class="modal">
-                <div class="inside">
-                    <h1>pause</h1>
-                    <a href="#" id="pauseContinue" class="button">Continue</a>
-                    <a href="#" id="pauseFullscreen" class="button">Fullscreen on/off</a>
-                </div>
-            </div>
-        </div>
-    </div>
-    <script src="./assets/javascript/jquery-2.1.1.js"></script>
-    <script src="./assets/javascript/jquery-ui.js"></script>
-    <script src="./assets/javascript/simplex-noise.js"></script>
-    <script src="./assets/javascript/common.js"></script>
-    <script src="./assets/javascript/game.js"></script>
-</body>
-
+      <dialog id="pause" class="pause">
+        <h1>Paused</h1>
+        <button type="button" id="pause-continue" class="button" autofocus>Continue</button>
+        <button type="button" id="pause-fullscreen" class="button">Fullscreen on/off</button>
+      </dialog>
+    </main>
+  </body>
 </html>

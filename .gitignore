@@ -1,3 +1,14 @@
-# OS generated files #
-######################
+# Dependencies and build output
+node_modules/
+dist/
+
+# Test artefacts
+test-results/
+playwright-report/
+coverage/
+
+# Editor / OS files
+.DS_Store
 Thumbs.db
+.idea/
+.vscode/

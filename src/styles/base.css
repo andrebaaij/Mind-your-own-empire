@@ -1,0 +1,60 @@
+@font-face {
+  font-family: "Visitor";
+  src: url("../assets/fonts/visitor2.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Ropa Sans";
+  src: url("../assets/fonts/RopaSans-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --bg: #0a0a0a;
+  --fg: #bbbbbb;
+  --fg-strong: #ffffff;
+  --border: #4d5255;
+  --font-pixel: "Visitor", ui-monospace, monospace;
+  --font-body: "Ropa Sans", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-pixel);
+  font-size: 18px;
+}
+
+h1 {
+  color: var(--fg-strong);
+  font-weight: 400;
+  font-size: 3rem;
+}
+
+.button {
+  display: block;
+  width: 100%;
+  height: 40px;
+  margin: 10px 0;
+  border: none;
+  background: var(--fg-strong);
+  color: var(--bg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.button:hover,
+.button:focus-visible {
+  filter: brightness(0.85);
+}

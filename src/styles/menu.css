@@ -1,0 +1,58 @@
+@import "./base.css";
+
+.menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  padding: 30px;
+}
+
+.panel {
+  width: 300px;
+}
+
+.panel.about {
+  width: min(500px, 100%);
+}
+
+.play-form {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 2px 0;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.play-form label {
+  color: var(--fg-strong);
+}
+
+.play-form input,
+.play-form select {
+  height: 24px;
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg-strong);
+  font: inherit;
+}
+
+.play-form .button {
+  grid-column: 1 / -1;
+}
+
+.controls {
+  margin-top: 30px;
+  max-width: 100%;
+  image-rendering: pixelated;
+}
+
+.about p {
+  margin: 10px 0 20px;
+  font-family: var(--font-body);
+  line-height: 1.4;
+}
+
+.about a {
+  color: var(--fg-strong);
+}

@@ -1,0 +1,35 @@
+{
+  "name": "mind-your-own-empire",
+  "version": "0.2.0",
+  "private": true,
+  "description": "A procedurally generated, single-player isometric RTS for the browser.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "alea": "^1.0.1",
+    "pixi.js": "^8.22.0",
+    "simplex-noise": "^4.0.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
+  }
+}
