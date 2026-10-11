@@ -1,20 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { WHITE } from "../src/game/colors";
-import { WALK_SPEED } from "../src/game/config";
 import { gridRef, rectFromPoints, worldFromGrid } from "../src/game/coords";
+import { getTileset } from "../src/game/definitions";
 import {
   cancelNextAction,
   createUnit,
+  directionOf,
   findUnits,
+  footprintTiles,
   queueGather,
   queueWalk,
-  stepTowards,
   type Unit,
   updateUnit,
 } from "../src/game/units";
-import { World } from "../src/game/world";
+import type { World } from "../src/game/world";
+import { area, ironWorld, openWorld, wall } from "./fixtures";
 
-const emptyWorld = () => new World(() => -1);
+const emptyWorld = openWorld;
 
 function runUntilIdle(world: World, unit: Unit, others: Unit[] = [unit], maxTicks = 10_000) {
   let ticks = 0;
@@ -25,15 +27,37 @@ function runUntilIdle(world: World, unit: Unit, others: Unit[] = [unit], maxTick
   return ticks;
 }
 
-describe("stepTowards", () => {
-  it("moves WALK_SPEED pixels per tick towards the target", () => {
-    const step = stepTowards({ x: 0, y: 0 }, { x: 30, y: 40 });
-    expect(Math.hypot(step.x, step.y)).toBeCloseTo(WALK_SPEED);
-    expect(step.x / step.y).toBeCloseTo(30 / 40);
+/** Tick every unit until all are idle. */
+function runAll(world: World, units: Unit[], maxTicks = 10_000) {
+  let ticks = 0;
+  while (units.some((u) => u.actions.length > 0) && ticks < maxTicks) {
+    for (const unit of units) updateUnit(world, unit, units);
+    ticks++;
+  }
+  return ticks;
+}
+
+describe("directionOf", () => {
+  it("maps screen-space movement to compass directions", () => {
+    expect(directionOf(0, -1)).toBe("N");
+    expect(directionOf(1, 0)).toBe("E");
+    expect(directionOf(-1, 1)).toBe("SW");
+    expect(directionOf(1, -1)).toBe("NE");
+  });
+});
+
+describe("footprintTiles", () => {
+  it("covers a single tile for small buildings", () => {
+    expect(footprintTiles(getTileset("solar"), 3, 4).map((t) => [t.x, t.y])).toEqual([[3, 4]]);
+    expect(footprintTiles(getTileset("tower"), 3, 4)).toHaveLength(1);
   });
 
-  it("does not move when already there", () => {
-    expect(stepTowards({ x: 5, y: 5 }, { x: 5, y: 5 })).toEqual({ x: 0, y: 0 });
+  it("covers the tiles under the Mind's base", () => {
+    const tiles = footprintTiles(getTileset("mind"), 0, 0).map((t) => `${t.x},${t.y}`);
+    expect(tiles).toContain("0,0");
+    expect(tiles).toContain("1,1");
+    expect(tiles).toContain("-1,-1");
+    expect(tiles).not.toContain("3,0");
   });
 });
 
@@ -89,23 +113,73 @@ describe("walking", () => {
     expect(unit.position).toEqual(b);
   });
 
-  it("steers around another unit in the way", () => {
+  it("walks around a building instead of through it", () => {
     const world = emptyWorld();
     const walker = createUnit(world, "block", 0, 0, WHITE);
-    const obstacle = createUnit(world, "mind", 0, 0, WHITE);
-    obstacle.position = { x: walker.position.x + 150, y: walker.position.y };
-    const target = { x: walker.position.x + 300, y: walker.position.y };
+    const mind = createUnit(world, "mind", 5, 0, WHITE);
+    const target = worldFromGrid(10, 0);
 
     queueWalk(walker, target);
-    runUntilIdle(world, walker, [walker, obstacle]);
-
+    let ticks = 0;
+    while (walker.actions.length > 0 && ticks++ < 5000) {
+      updateUnit(world, walker, [walker, mind]);
+      expect(world.isPassable(walker.grid)).toBe(true);
+    }
     expect(walker.position).toEqual(target);
+  });
+
+  it("re-plans when a building goes up on its route", () => {
+    const world = emptyWorld();
+    const walker = createUnit(world, "block", 0, 0, WHITE);
+    const target = worldFromGrid(12, 0);
+    queueWalk(walker, target);
+    updateUnit(world, walker, [walker]); // plans a straight line
+
+    wall(world, area([6, -3], [6, 3]));
+    let ticks = 0;
+    while (walker.actions.length > 0 && ticks++ < 5000) {
+      updateUnit(world, walker, [walker]);
+      expect(world.isPassable(walker.grid)).toBe(true);
+    }
+    expect(walker.position).toEqual(target);
+  });
+
+  it("lets two units walking head-on get past each other", () => {
+    const world = emptyWorld();
+    const a = createUnit(world, "block", 0, 0, WHITE);
+    const b = createUnit(world, "block", 8, 0, WHITE);
+    queueWalk(a, worldFromGrid(8, 0));
+    queueWalk(b, worldFromGrid(0, 0));
+
+    const ticks = runAll(world, [a, b]);
+
+    expect(ticks).toBeLessThan(10_000);
+    expect(Math.hypot(a.position.x - b.position.x, a.position.y - b.position.y)).toBeGreaterThan(
+      100,
+    );
+  });
+
+  it("stops near a destination another unit is standing on", () => {
+    const world = emptyWorld();
+    const walker = createUnit(world, "block", 0, 0, WHITE);
+    const sitter = createUnit(world, "block", 6, 0, WHITE);
+    queueWalk(walker, sitter.position);
+
+    const ticks = runAll(world, [walker, sitter]);
+
+    expect(ticks).toBeLessThan(10_000);
+    expect(sitter.position).toEqual(worldFromGrid(6, 0));
+    const gap = Math.hypot(
+      walker.position.x - sitter.position.x,
+      walker.position.y - sitter.position.y,
+    );
+    expect(gap).toBeLessThan(80);
   });
 });
 
 describe("gathering", () => {
   it("walks to the resource and mines it until it is gone", () => {
-    const world = new World(() => 1); // iron everywhere
+    const world = ironWorld();
     const unit = createUnit(world, "block", 0, 0, WHITE);
     const resource = world.resourceAt(gridRef(1, 0));
     if (!resource) throw new Error("expected iron next to the unit");
@@ -122,7 +196,7 @@ describe("gathering", () => {
 
 describe("cancelNextAction", () => {
   it("drops a walk together with the gather it leads to", () => {
-    const world = new World(() => 1);
+    const world = ironWorld();
     const unit = createUnit(world, "block", 0, 0, WHITE);
     const resource = world.resourceAt(gridRef(1, 0));
     if (!resource) throw new Error("expected iron");

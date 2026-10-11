@@ -1,4 +1,10 @@
-import { CLICK_TOLERANCE, SCROLL_SHIFT_MULTIPLIER, SCROLL_SPEED, STARTING_IRON } from "./config";
+import {
+  CLICK_TOLERANCE,
+  PATHS_PER_TICK,
+  SCROLL_SHIFT_MULTIPLIER,
+  SCROLL_SPEED,
+  STARTING_IRON,
+} from "./config";
 import {
   type GridRef,
   gridFromWorld,
@@ -9,15 +15,19 @@ import {
   rectContains,
   rectFromPoints,
 } from "./coords";
-import { getObjectDefinition, type ObjectName } from "./definitions";
+import { getObjectDefinition, getTileset, type ObjectName } from "./definitions";
+import { assignSpots, findFreeSpots, tileKey } from "./pathfinding";
 import { createNoise } from "./terrain";
 import {
   type Color,
   cancelAllActions,
   cancelNextAction,
   createUnit,
+  finalPosition,
   findUnits,
+  footprintTiles,
   hasSkill,
+  isMobile,
   queueGather,
   queueWalk,
   type Unit,
@@ -126,7 +136,8 @@ export function tick(state: GameState): void {
     state.pointer.world.y -= dy;
   }
 
-  for (const unit of state.units) updateUnit(state.world, unit, state.units);
+  const budget = { remaining: PATHS_PER_TICK };
+  for (const unit of state.units) updateUnit(state.world, unit, state.units, budget);
 }
 
 /** The rectangle being dragged, or the pointer position as a zero-size rectangle. */
@@ -143,23 +154,68 @@ export function buildTiles(pointer: Pointer): GridRef[] {
   return gridRange(gridFromWorld(pointer.dragStart ?? pointer.world), gridFromWorld(pointer.world));
 }
 
+/** Tiles an object placed on `tile` would cover. */
+export function placementTiles(name: ObjectName, tile: GridRef): GridRef[] {
+  return getObjectDefinition(name).skills.walk
+    ? [tile]
+    : footprintTiles(getTileset(name), tile.x, tile.y);
+}
+
+/** Whether `name` can be placed on `tile`: every covered tile explored and free to build on. */
+export function canPlace(state: GameState, name: ObjectName, tile: GridRef): boolean {
+  return placementTiles(name, tile).every((t) => state.world.isBuildable(t));
+}
+
 export interface BuildResult {
   built: number;
+  /** Tiles skipped because something was in the way. */
+  blocked: number;
   /** True when iron ran out before every tile was built. */
   outOfIron: boolean;
 }
 
-/** Place the selected building on every tile of the drag rectangle, as far as iron allows. */
+/**
+ * Place `name` on every free tile of the drag area, as far as iron allows. Tiles that are
+ * unexplored or blocked by buildings or acid are skipped, as when dragging walls in AoE.
+ */
 export function build(state: GameState, name: ObjectName, tiles: readonly GridRef[]): BuildResult {
   const cost = getObjectDefinition(name).cost?.iron ?? 0;
-  let built = 0;
+  const result: BuildResult = { built: 0, blocked: 0, outOfIron: false };
   for (const tile of tiles) {
-    if (state.economy.iron < cost) return { built, outOfIron: true };
+    if (!canPlace(state, name, tile)) {
+      result.blocked++;
+      continue;
+    }
+    if (state.economy.iron < cost) {
+      result.outOfIron = true;
+      break;
+    }
     state.economy.iron -= cost;
-    spawn(state, name, tile.x, tile.y);
-    built++;
+    const placed = spawn(state, name, tile.x, tile.y);
+    clearFootprint(state, placed.footprint);
+    result.built++;
   }
-  return { built, outOfIron: false };
+  return result;
+}
+
+/** Send mobile units standing where a building just went up to the nearest open ground. */
+function clearFootprint(state: GameState, footprint: readonly GridRef[]): void {
+  if (footprint.length === 0) return;
+  const covered = new Set(footprint.map((t) => tileKey(t.x, t.y)));
+  const trapped = state.units.filter(
+    (u) => isMobile(u) && covered.has(tileKey(u.grid.x, u.grid.y)),
+  );
+  if (trapped.length === 0) return;
+
+  const spots = findFreeSpots(state.world, trapped[0]?.position ?? { x: 0, y: 0 }, trapped.length);
+  const assigned = assignSpots(
+    trapped.map((unit) => ({ item: unit, from: unit.position })),
+    spots,
+  );
+  for (const [unit, spot] of assigned) {
+    cancelAllActions(unit);
+    queueWalk(unit, spot);
+  }
 }
 
 export function setSelection(state: GameState, units: Unit[]): void {
@@ -197,24 +253,72 @@ export function resourcesInRect(world: World, rect: Rect): Resource[] {
 }
 
 /**
- * Right-click order for the selection: gatherers mine every resource in the rectangle;
- * if nobody can gather there, walkers move to the pointer.
+ * Right-click order for the selection: gatherers mine the iron in the rectangle; if nobody can
+ * gather there, walkers spread out around the pointer. A plain order replaces what the units
+ * were doing; with `queue` (Shift held) it is added after their current orders.
  */
-export function issueOrder(state: GameState, rect: Rect, target: Point): void {
+export function issueOrder(state: GameState, rect: Rect, target: Point, queue = false): void {
   if (state.selection.length === 0) return;
 
   const resources = resourcesInRect(state.world, rect);
   const gatherers = state.selection.filter((unit) => hasSkill(unit, "gather"));
 
   if (resources.length > 0 && gatherers.length > 0) {
-    for (const unit of gatherers) {
-      for (const resource of resources) queueGather(unit, resource);
-    }
+    if (!queue) for (const unit of gatherers) cancelAllActions(unit);
+    orderGather(gatherers, resources);
     return;
   }
 
-  for (const unit of state.selection) {
-    if (hasSkill(unit, "walk")) queueWalk(unit, target);
+  const walkers = state.selection.filter((unit) => hasSkill(unit, "walk"));
+  if (!queue) for (const unit of walkers) cancelAllActions(unit);
+  orderMove(state.world, walkers, target);
+}
+
+/**
+ * Give each walker its own spot around the target, so a group fans out instead of fighting
+ * over one point. Spots go to the nearest walkers first.
+ */
+function orderMove(world: World, walkers: readonly Unit[], target: Point): void {
+  const spots = findFreeSpots(world, target, walkers.length);
+  const assigned = assignSpots(
+    walkers.map((unit) => ({ item: unit, from: finalPosition(unit) })),
+    spots,
+  );
+  for (const unit of walkers) queueWalk(unit, assigned.get(unit) ?? target);
+}
+
+/**
+ * Spread gatherers over the iron in the area: each starts at a different tile where possible
+ * (the nearest one still free), then works through the rest nearest-first.
+ */
+function orderGather(gatherers: readonly Unit[], resources: readonly Resource[]): void {
+  const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
+  const firsts = assignSpots(
+    gatherers.map((unit) => ({ item: unit, from: finalPosition(unit) })),
+    resources.map((r) => r.position),
+  );
+
+  for (const unit of gatherers) {
+    const first = firsts.get(unit);
+    const start =
+      resources.find((r) => r.position === first) ??
+      [...resources].sort(
+        (a, b) =>
+          distance(a.position, finalPosition(unit)) - distance(b.position, finalPosition(unit)),
+      )[0];
+    if (!start) continue;
+
+    // Nearest-neighbour tour from the first tile.
+    const todo = resources.filter((r) => r !== start);
+    let current = start;
+    queueGather(unit, current);
+    while (todo.length > 0) {
+      todo.sort(
+        (a, b) => distance(a.position, current.position) - distance(b.position, current.position),
+      );
+      current = todo.shift() as Resource;
+      queueGather(unit, current);
+    }
   }
 }
 

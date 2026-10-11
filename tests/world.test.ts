@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { gridRef } from "../src/game/coords";
 import { getResourceDefinition } from "../src/game/definitions";
-import { resourceLevel, World } from "../src/game/world";
+import { resourceLevel } from "../src/game/world";
+import { acid, ironWorld, openWorld } from "./fixtures";
 
-/** A world where every tile holds iron: sin(1) - 0.4 > 0. */
-const ironEverywhere = () => new World(() => 1);
-/** A world without any iron: sin(-1) - 0.4 < 0. */
-const noIron = () => new World(() => -1);
+const ironEverywhere = ironWorld;
+const noIron = openWorld;
 
 describe("resourceLevel", () => {
   const levels = [0, 500, 1000];
@@ -91,5 +90,29 @@ describe("resources", () => {
     const { levels } = getResourceDefinition("iron");
     world.gather(resource, resource.amount - ((levels[1] ?? 0) - 1));
     expect(resource.level).toBe(0);
+  });
+});
+
+describe("passability", () => {
+  it("blocks acid and tiles under buildings", () => {
+    const world = openWorld();
+    acid(world, [[1, 0]]);
+    world.occupy([gridRef(2, 0)], 1);
+
+    expect(world.isPassable(gridRef(0, 0))).toBe(true);
+    expect(world.isPassable(gridRef(1, 0))).toBe(false);
+    expect(world.isPassable(gridRef(2, 0))).toBe(false);
+
+    world.occupy([gridRef(2, 0)], -1);
+    expect(world.isPassable(gridRef(2, 0))).toBe(true);
+  });
+
+  it("only allows building on explored, passable ground", () => {
+    const world = openWorld();
+    expect(world.isBuildable(gridRef(0, 0))).toBe(false);
+    world.watch(gridRef(0, 0), 1);
+    expect(world.isBuildable(gridRef(0, 0))).toBe(true);
+    world.occupy([gridRef(0, 0)], 1);
+    expect(world.isBuildable(gridRef(0, 0))).toBe(false);
   });
 });

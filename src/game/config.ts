@@ -17,8 +17,23 @@ export const SCROLL_SHIFT_MULTIPLIER = 3;
 
 /** Distance a unit walks per tick, in world pixels. */
 export const WALK_SPEED = 2;
-/** Number of steps ahead a walking unit checks for obstacles. */
-export const COLLISION_LOOKAHEAD = 50;
+
+/** Personal space of a mobile unit, in world pixels. Two units keep twice this apart. */
+export const UNIT_RADIUS = 6;
+/** Ticks a unit waits for a moving unit in its way before planning a route around it. */
+export const BLOCKED_WAIT_TICKS = 20;
+/** Re-plans a unit attempts after getting stuck before it gives up on the order. */
+export const MAX_REPATHS = 3;
+/** A blocked unit this close to its destination counts as arrived. */
+export const ARRIVAL_RADIUS = 24;
+/** A* search budget per path, in expanded tiles. */
+export const MAX_PATH_NODES = 20_000;
+/** New routes planned per tick; further units start their walk on the following ticks. */
+export const PATHS_PER_TICK = 4;
+/** Weight on the A* distance estimate; above 1 trades a little path length for speed. */
+export const HEURISTIC_WEIGHT = 1.2;
+/** Spacing of the samples used to check a straight walk for obstacles. */
+export const LOS_SAMPLE_STEP = 8;
 /** Iron gathered per tick while a unit is mining. */
 export const GATHER_RATE = 1;
 

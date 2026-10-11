@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from "./config";
 import { type GridRef, gridRef, type Point, worldFromGrid } from "./coords";
 import { getResourceDefinition } from "./definitions";
-import { ironAmount, type Noise2D, terrainTile } from "./terrain";
+import { ironAmount, type Noise2D, Terrain, terrainTile } from "./terrain";
 
 export type ResourceKind = "iron";
 
@@ -22,6 +22,8 @@ export class Chunk {
   readonly explored = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
   /** Number of objects currently in communication range of each tile. */
   readonly watchers = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE);
+  /** Number of buildings standing on each tile. Occupied tiles can't be walked through. */
+  readonly occupied = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
   /** Bumped on every visible change so the renderer knows to resync this chunk. */
   version = 0;
 
@@ -94,6 +96,25 @@ export class World {
 
   isVisible(grid: GridRef): boolean {
     return (this.chunkOf(grid).watchers[grid.i] ?? 0) > 0;
+  }
+
+  /** Whether ground units can stand on or walk through a tile: no acid and no building. */
+  isPassable(grid: GridRef): boolean {
+    const chunk = this.chunkOf(grid);
+    return chunk.tiles[grid.i] !== Terrain.Acid && chunk.occupied[grid.i] === 0;
+  }
+
+  /** Whether a building may be placed here: explored, passable ground. */
+  isBuildable(grid: GridRef): boolean {
+    return this.isExplored(grid) && this.isPassable(grid);
+  }
+
+  /** Mark tiles as covered (`delta` 1) or freed (`delta` -1) by a building. */
+  occupy(tiles: readonly GridRef[], delta: 1 | -1): void {
+    for (const tile of tiles) {
+      const chunk = this.chunkOf(tile);
+      chunk.occupied[tile.i] = Math.max(0, (chunk.occupied[tile.i] ?? 0) + delta);
+    }
   }
 
   /** The resource on a tile, if the tile is explored and the resource still exists. */

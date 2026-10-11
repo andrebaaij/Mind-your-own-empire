@@ -2,7 +2,7 @@ import { Application, Container, Graphics, Sprite, type Texture } from "pixi.js"
 import { CHUNK_SIZE, FOG_EXPLORED_TILE, TILE_HEIGHT, TILE_WIDTH } from "./config";
 import { gridFromWorld, worldFromGrid } from "./coords";
 import { getTileset } from "./definitions";
-import { buildTiles, type GameState, selectionRect } from "./state";
+import { buildTiles, canPlace, type GameState, selectionRect } from "./state";
 import { loadTiles, type Tiles } from "./textures";
 import { boxCenter, type Color, type Unit } from "./units";
 import type { Chunk } from "./world";
@@ -282,7 +282,8 @@ export class Renderer {
         const position = worldFromGrid(tile.x, tile.y);
         const sprite = this.ghostPool.next(texture);
         sprite.position.set(Math.round(position.x - center.x), Math.round(position.y - center.y));
-        sprite.tint = toTint(state.player.color);
+        // Red where the building can't go, like AoE's placement preview.
+        sprite.tint = canPlace(state, state.building, tile) ? toTint(state.player.color) : 0xff4040;
         sprite.alpha = 0.6;
       }
     }

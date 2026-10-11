@@ -1,5 +1,19 @@
-import { COLLISION_LOOKAHEAD, GATHER_RATE, WALK_SPEED } from "./config";
-import { type GridRef, gridFromWorld, type Point, type Rect, worldFromGrid } from "./coords";
+import {
+  ARRIVAL_RADIUS,
+  BLOCKED_WAIT_TICKS,
+  GATHER_RATE,
+  MAX_REPATHS,
+  UNIT_RADIUS,
+  WALK_SPEED,
+} from "./config";
+import {
+  type GridRef,
+  gridFromWorld,
+  gridRef,
+  type Point,
+  type Rect,
+  worldFromGrid,
+} from "./coords";
 import {
   type Box,
   type Direction,
@@ -10,6 +24,7 @@ import {
   type Skill,
   type TilesetDefinition,
 } from "./definitions";
+import { findPath, tileKey } from "./pathfinding";
 import type { Resource, World } from "./world";
 
 export interface Color {
@@ -22,8 +37,12 @@ export interface Color {
 export interface WalkAction {
   kind: "walk";
   target: Point;
-  /** Per-tick movement towards the target. */
-  step: Point;
+  /** Remaining waypoints, planned when the walk starts (null until then). */
+  path: Point[] | null;
+  /** Ticks spent waiting on another unit in the way. */
+  waitTicks: number;
+  /** Times the route has been re-planned because the unit got stuck. */
+  repaths: number;
 }
 
 export interface GatherAction {
@@ -45,6 +64,8 @@ export interface Unit {
   /** Sprite offset from the top-left of the tile frame to `position`. */
   center: Point;
   collisionBox: Box;
+  /** Tiles a building stands on; empty for mobile units. */
+  footprint: GridRef[];
   actions: Action[];
   animation: { name: string; direction: Direction; index: number };
   /** Current frame index in the tileset. */
@@ -74,6 +95,7 @@ export function createUnit(
   const collisionBox = tileset.collisionBox ?? DEFAULT_BOX;
   const position = worldFromGrid(gx, gy);
   const grid = gridFromWorld(position);
+  const footprint = definition.skills.walk ? [] : footprintTiles(tileset, gx, gy);
 
   const unit: Unit = {
     id: nextId++,
@@ -84,6 +106,7 @@ export function createUnit(
     grid,
     center: boxCenter(collisionBox),
     collisionBox,
+    footprint,
     actions: [],
     animation: { name: "", direction: "NE", index: 0 },
     frame: 0,
@@ -95,7 +118,32 @@ export function createUnit(
   setAnimation(unit, tileset.defaultAnimation ?? "rest");
   advanceAnimation(unit);
   world.watch(grid, definition.communicationRadius);
+  world.occupy(footprint, 1);
   return unit;
+}
+
+/**
+ * Tiles a building on tile (gx, gy) covers: those whose centres fall inside its collision box
+ * (the base of the sprite). Most buildings cover one tile; the Mind covers a cluster.
+ */
+export function footprintTiles(tileset: TilesetDefinition, gx: number, gy: number): GridRef[] {
+  const box = tileset.collisionBox ?? DEFAULT_BOX;
+  const halfWidth = (box.rx - box.lx) / 2;
+  const halfHeight = (box.by - box.ty) / 2;
+  const center = worldFromGrid(gx, gy);
+  const reach = Math.ceil(halfWidth / 32) + Math.ceil(halfHeight / 16);
+
+  const tiles: GridRef[] = [gridRef(gx, gy)];
+  for (let dy = -reach; dy <= reach; dy++) {
+    for (let dx = -reach; dx <= reach; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const point = worldFromGrid(gx + dx, gy + dy);
+      if (Math.abs(point.x - center.x) < halfWidth && Math.abs(point.y - center.y) < halfHeight) {
+        tiles.push(gridRef(gx + dx, gy + dy));
+      }
+    }
+  }
+  return tiles;
 }
 
 export function hasSkill(unit: Unit, skill: Skill): boolean {
@@ -136,27 +184,23 @@ export function moveBy(world: World, unit: Unit, dx: number, dy: number): void {
   }
 }
 
-export function stepTowards(origin: Point, target: Point): Point {
-  const dx = target.x - origin.x;
-  const dy = target.y - origin.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance === 0) return { x: 0, y: 0 };
-  return { x: (dx / distance) * WALK_SPEED, y: (dy / distance) * WALK_SPEED };
+function newWalk(target: Point): WalkAction {
+  return { kind: "walk", target: { ...target }, path: null, waitTicks: 0, repaths: 0 };
 }
 
-/** Queue a walk to `target`, starting from wherever the previous queued action ends. */
+/** Queue a walk to `target`. The route is planned when the walk starts. */
 export function queueWalk(unit: Unit, target: Point): void {
-  const origin = unit.actions.at(-1)?.target ?? unit.position;
-  unit.actions.push({
-    kind: "walk",
-    target: { ...target },
-    step: stepTowards(origin, target),
-  });
+  unit.actions.push(newWalk(target));
 }
 
 export function queueGather(unit: Unit, resource: Resource): void {
   queueWalk(unit, resource.position);
   unit.actions.push({ kind: "gather", target: { ...resource.position }, resource });
+}
+
+/** Where the unit will be once its queued orders are done. */
+export function finalPosition(unit: Unit): Point {
+  return unit.actions.at(-1)?.target ?? unit.position;
 }
 
 /** Remove the next action. A walk leading to another action is removed together with it. */
@@ -167,8 +211,9 @@ export function cancelNextAction(unit: Unit): void {
   } else {
     unit.actions.splice(0, 1);
   }
+  // The next walk starts from wherever the unit is now.
   const next = unit.actions[0];
-  if (next?.kind === "walk") next.step = stepTowards(unit.position, next.target);
+  if (next?.kind === "walk") next.path = null;
 }
 
 export function cancelAllActions(unit: Unit): void {
@@ -194,62 +239,162 @@ export function unitContains(unit: Unit, point: Point): boolean {
   );
 }
 
-/** Whether moving `unit` repeatedly by (dx, dy) would run into another unit soon. */
-function isPathBlocked(unit: Unit, others: readonly Unit[], dx: number, dy: number): boolean {
-  for (const other of others) {
-    if (other === unit) continue;
-    for (let i = 1; i <= COLLISION_LOOKAHEAD; i++) {
-      if (unitContains(other, { x: unit.position.x + dx * i, y: unit.position.y + dy * i })) {
-        return true;
-      }
-    }
-  }
-  return false;
+export function isMobile(unit: Unit): boolean {
+  return hasSkill(unit, "walk");
 }
 
-function walkTick(world: World, unit: Unit, action: WalkAction, others: readonly Unit[]): void {
-  setDirection(unit, "N");
+function isWalking(unit: Unit): boolean {
+  return unit.actions[0]?.kind === "walk";
+}
 
-  let dx = action.target.x - unit.position.x;
-  let dy = action.target.y - unit.position.y;
-  if (Math.abs(dx) > Math.abs(action.step.x)) dx = action.step.x;
-  if (Math.abs(dy) > Math.abs(action.step.y)) dy = action.step.y;
+const DIRECTIONS: Direction[] = ["E", "SE", "S", "SW", "W", "NW", "N", "NE"];
 
-  if (dx === 0 && dy === 0) {
-    unit.actions.shift();
-    return;
+/** Screen-space compass direction of a movement vector. */
+export function directionOf(dx: number, dy: number): Direction {
+  const octant = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));
+  return DIRECTIONS[(octant + 8) % 8] as Direction;
+}
+
+/** A mobile unit that stepping to `next` would bump into. Moving apart is always allowed. */
+function blockingUnit(unit: Unit, next: Point, others: readonly Unit[]): Unit | undefined {
+  const space = 2 * UNIT_RADIUS;
+  return others.find((other) => {
+    if (other === unit || !isMobile(other)) return false;
+    const after = Math.hypot(other.position.x - next.x, other.position.y - next.y);
+    const before = Math.hypot(
+      other.position.x - unit.position.x,
+      other.position.y - unit.position.y,
+    );
+    return after < space && after < before;
+  });
+}
+
+/** Turns tried when swerving, in degrees clockwise. Right first, so two units meeting
+ * head-on both keep right and pass each other instead of mirroring each other's dodge. */
+const SWERVE_ANGLES = [45, 90, -45, -90].map((degrees) => (degrees * Math.PI) / 180);
+
+/** A free spot one step to the side of the heading (ux, uy), if there is one. */
+function sidestep(
+  world: World,
+  unit: Unit,
+  ux: number,
+  uy: number,
+  step: number,
+  others: readonly Unit[],
+): Point | null {
+  for (const angle of SWERVE_ANGLES) {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const candidate = {
+      x: unit.position.x + (ux * cos - uy * sin) * step,
+      y: unit.position.y + (ux * sin + uy * cos) * step,
+    };
+    const tile = gridFromWorld(candidate);
+    const leavesTile = tile.x !== unit.grid.x || tile.y !== unit.grid.y;
+    if (leavesTile && !world.isPassable(tile)) continue;
+    if (!blockingUnit(unit, candidate, others)) return candidate;
   }
+  return null;
+}
 
-  if (!isPathBlocked(unit, others, dx, dy)) {
-    moveBy(world, unit, dx, dy);
-  } else {
-    // Sweep alternately left and right of the intended heading for a free direction.
-    const length = Math.hypot(dx, dy);
-    let degrees = Math.asin(dy / length) * (180 / Math.PI);
-    if (dx < 0) degrees = 180 - degrees;
-
-    for (let j = 1; j < 180; j++) {
-      degrees += j * (2 * (j % 2) - 1);
-      const ax = Math.cos((degrees * Math.PI) / 180) * length;
-      const ay = Math.sin((degrees * Math.PI) / 180) * length;
-      if (!isPathBlocked(unit, others, ax, ay)) {
-        moveBy(world, unit, ax, ay);
-        action.step = stepTowards(unit.position, action.target);
-        break;
-      }
-    }
-    // Fully boxed in: wait for the way to clear.
-  }
-
-  // Snap on arrival so floating-point drift can't leave a unit a hair short forever.
+/**
+ * Re-plan around whatever is in the way, or end the walk when the unit is already close
+ * enough or has re-planned too often (Age of Empires style: get as close as you can, then stop).
+ */
+function replan(world: World, unit: Unit, action: WalkAction, avoid: ReadonlySet<string>): void {
   const remaining = Math.hypot(
     action.target.x - unit.position.x,
     action.target.y - unit.position.y,
   );
-  if (remaining < 1e-6) {
-    unit.position.x = action.target.x;
-    unit.position.y = action.target.y;
+  if (remaining <= ARRIVAL_RADIUS || action.repaths >= MAX_REPATHS) {
     unit.actions.shift();
+    return;
+  }
+  action.repaths++;
+  action.waitTicks = 0;
+  action.path = findPath(world, unit.position, action.target, { avoid });
+}
+
+/** Shared per-tick allowance for route planning, so a big group order can't stall a frame. */
+export interface PathBudget {
+  remaining: number;
+}
+
+function walkTick(
+  world: World,
+  unit: Unit,
+  action: WalkAction,
+  others: readonly Unit[],
+  budget: PathBudget,
+): void {
+  if (!action.path) {
+    if (budget.remaining <= 0) return; // wait for a planning slot next tick
+    budget.remaining--;
+    action.path = findPath(world, unit.position, action.target);
+  }
+
+  const waypoint = action.path[0];
+  if (!waypoint) {
+    unit.actions.shift();
+    return;
+  }
+
+  const dx = waypoint.x - unit.position.x;
+  const dy = waypoint.y - unit.position.y;
+  const distance = Math.hypot(dx, dy);
+  const step = Math.min(WALK_SPEED, distance);
+  const next =
+    distance === 0
+      ? waypoint
+      : {
+          x: unit.position.x + (dx / distance) * step,
+          y: unit.position.y + (dy / distance) * step,
+        };
+
+  // A building went up on the route since it was planned.
+  const nextTile = gridFromWorld(next);
+  if ((nextTile.x !== unit.grid.x || nextTile.y !== unit.grid.y) && !world.isPassable(nextTile)) {
+    replan(world, unit, action, new Set());
+    return;
+  }
+
+  // Another unit in the way. If it is parked on our destination, close enough counts as
+  // arrived. Otherwise swerve past it, or give a moving unit a moment to clear; when that
+  // takes too long, plan a route around it.
+  const blocker = blockingUnit(unit, next, others);
+  if (blocker) {
+    action.waitTicks++;
+    const remaining = Math.hypot(
+      action.target.x - unit.position.x,
+      action.target.y - unit.position.y,
+    );
+    if (remaining <= ARRIVAL_RADIUS && !isWalking(blocker)) {
+      unit.actions.shift();
+      return;
+    }
+    if (action.waitTicks < BLOCKED_WAIT_TICKS) {
+      const swerve = sidestep(world, unit, dx / distance, dy / distance, step, others);
+      if (swerve) {
+        setDirection(unit, directionOf(swerve.x - unit.position.x, swerve.y - unit.position.y));
+        moveBy(world, unit, swerve.x - unit.position.x, swerve.y - unit.position.y);
+        return;
+      }
+      if (isWalking(blocker)) return;
+    }
+    replan(world, unit, action, new Set([tileKey(blocker.grid.x, blocker.grid.y)]));
+    return;
+  }
+  action.waitTicks = 0;
+
+  if (distance > 0) setDirection(unit, directionOf(dx, dy));
+  moveBy(world, unit, next.x - unit.position.x, next.y - unit.position.y);
+
+  if (distance <= WALK_SPEED) {
+    // Snap exactly onto the waypoint so rounding can't leave the unit a hair short.
+    unit.position.x = waypoint.x;
+    unit.position.y = waypoint.y;
+    action.path.shift();
+    if (action.path.length === 0) unit.actions.shift();
   }
 }
 
@@ -262,7 +407,12 @@ function gatherTick(world: World, unit: Unit, action: GatherAction): void {
 }
 
 /** Advance one unit by one simulation tick. */
-export function updateUnit(world: World, unit: Unit, others: readonly Unit[]): void {
+export function updateUnit(
+  world: World,
+  unit: Unit,
+  others: readonly Unit[],
+  budget: PathBudget = { remaining: Number.POSITIVE_INFINITY },
+): void {
   advanceAnimation(unit);
 
   const action = unit.actions[0];
@@ -272,7 +422,7 @@ export function updateUnit(world: World, unit: Unit, others: readonly Unit[]): v
   }
 
   setAnimation(unit, "walk");
-  if (action.kind === "walk") walkTick(world, unit, action, others);
+  if (action.kind === "walk") walkTick(world, unit, action, others, budget);
   else gatherTick(world, unit, action);
 }
 

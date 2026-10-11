@@ -55,15 +55,21 @@ export function bindInput(canvas: HTMLCanvasElement, state: GameState, hud: Hud)
 
     if (event.button === 0) {
       if (state.building) {
-        const { outOfIron } = build(state, state.building, buildTiles(state.pointer));
+        const { built, blocked, outOfIron } = build(
+          state,
+          state.building,
+          buildTiles(state.pointer),
+        );
         if (outOfIron) hud.showMessage(`Not enough iron to build a ${state.building}`, 10_000);
-        // Hold Shift to keep placing the same building.
-        if (!event.shiftKey && !outOfIron) state.building = null;
+        else if (built === 0 && blocked > 0) hud.showMessage("You can't build there", 3_000);
+        // Hold Shift to keep placing; a click on blocked ground keeps the building selected.
+        if (!event.shiftKey && !outOfIron && built > 0) state.building = null;
       } else {
         selectInRect(state, rect);
       }
     } else if (event.button === 2) {
-      issueOrder(state, rect, state.pointer.world);
+      // Shift queues the order after the current ones instead of replacing them.
+      issueOrder(state, rect, state.pointer.world, event.shiftKey);
     }
 
     state.pointer.dragStart = null;

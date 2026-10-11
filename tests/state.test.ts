@@ -1,18 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { WHITE } from "../src/game/colors";
 import { STARTING_IRON } from "../src/game/config";
-import { gridRef, rectFromPoints } from "../src/game/coords";
+import { gridFromWorld, gridRef, rectFromPoints, worldFromGrid } from "../src/game/coords";
 import { getObjectDefinition } from "../src/game/definitions";
 import {
   build,
+  canPlace,
   createGame,
   issueOrder,
   resourcesInRect,
   selectInRect,
   setSelection,
+  spawn,
   tick,
 } from "../src/game/state";
-import { World } from "../src/game/world";
+import { ironWorld } from "./fixtures";
 
 const newGame = () => createGame({ seed: "1500", player: { name: "Test", color: WHITE } });
 
@@ -35,13 +37,39 @@ describe("build", () => {
     const cost = getObjectDefinition("solar").cost?.iron ?? 0;
     state.economy.iron = cost * 2 + 1;
     const before = state.units.length;
+    state.world.watch(gridRef(21, 20), 2);
 
     const result = build(state, "solar", [gridRef(20, 20), gridRef(21, 20), gridRef(22, 20)]);
 
-    expect(result).toEqual({ built: 2, outOfIron: true });
+    expect(result).toEqual({ built: 2, blocked: 0, outOfIron: true });
     expect(state.units.length).toBe(before + 2);
     expect(state.economy.iron).toBe(1);
     expect(state.economy.energyPerHour).toBe(4);
+  });
+
+  it("skips tiles that are unexplored or already built on", () => {
+    const state = newGame();
+    const mind = state.units.find((u) => u.name === "mind");
+    if (!mind) throw new Error("expected the Mind");
+
+    expect(canPlace(state, "solar", gridRef(5, 5))).toBe(false); // under the Mind
+    expect(canPlace(state, "solar", gridRef(40, 40))).toBe(false); // unexplored
+    expect(canPlace(state, "solar", gridRef(8, 8))).toBe(true);
+
+    const result = build(state, "solar", [gridRef(5, 5), gridRef(8, 8), gridRef(40, 40)]);
+    expect(result).toEqual({ built: 1, blocked: 2, outOfIron: false });
+  });
+
+  it("moves units off the ground a new building covers", () => {
+    const state = newGame();
+    const [block] = state.units.filter((u) => u.name === "block");
+    if (!block) throw new Error("expected a block");
+
+    build(state, "solar", [block.grid]);
+
+    expect(block.actions.map((a) => a.kind)).toEqual(["walk"]);
+    while (block.actions.length > 0) tick(state);
+    expect(state.world.isPassable(block.grid)).toBe(true);
   });
 });
 
@@ -94,7 +122,7 @@ describe("orders", () => {
   });
 
   it("finds only explored resources inside a drag rectangle", () => {
-    const world = new World(() => 1); // iron on every tile
+    const world = ironWorld();
     world.watch(gridRef(0, 0), 1); // explore tiles -1..1
 
     // A screen-aligned strip through the centres of (0, 0), (1, -1) and (1, 0), running on
@@ -126,5 +154,76 @@ describe("orders", () => {
     issueOrder(state, rectFromPoints(resource.position, resource.position), resource.position);
     expect(block.actions.map((a) => a.kind)).toEqual(["walk", "gather"]);
     expect(mind.actions).toEqual([]);
+  });
+
+  it("replaces orders on a plain right-click and queues them with Shift", () => {
+    const state = newGame();
+    const [block] = state.units.filter((u) => u.name === "block");
+    if (!block) throw new Error("expected a block");
+    setSelection(state, [block]);
+
+    const a = { x: block.position.x - 100, y: block.position.y + 100 };
+    const b = { x: block.position.x - 200, y: block.position.y + 100 };
+    issueOrder(state, rectFromPoints(a, a), a);
+    issueOrder(state, rectFromPoints(b, b), b);
+    expect(block.actions.map((x) => x.target)).toEqual([b]);
+
+    issueOrder(state, rectFromPoints(a, a), a, true);
+    expect(block.actions.map((x) => x.target)).toEqual([b, a]);
+  });
+});
+
+describe("group movement", () => {
+  it("spreads a group over separate spots that all get reached", () => {
+    const state = newGame();
+    const group = Array.from({ length: 12 }, (_, i) =>
+      spawn(state, "block", -4 + (i % 4), 2 + Math.floor(i / 4)),
+    );
+    setSelection(state, group);
+
+    // Across the map, on the far side of the Mind.
+    const target = { x: 600, y: 400 };
+    issueOrder(state, rectFromPoints(target, target), target);
+
+    const destinations = group.map((u) => u.actions[0]?.target);
+    const tiles = new Set(
+      destinations.map((d) => (d ? `${gridFromWorld(d).x},${gridFromWorld(d).y}` : "")),
+    );
+    expect(tiles.size).toBe(group.length);
+
+    let ticks = 0;
+    while (group.some((u) => u.actions.length > 0) && ticks++ < 3000) tick(state);
+    expect(ticks).toBeLessThan(3000);
+
+    // Nobody ended up inside a building, and the group didn't pile onto one point.
+    for (const unit of group) expect(state.world.isPassable(unit.grid)).toBe(true);
+    const arrived = group.filter((u, i) => {
+      const d = destinations[i];
+      return d && Math.hypot(u.position.x - d.x, u.position.y - d.y) < 30;
+    });
+    expect(arrived.length).toBeGreaterThanOrEqual(group.length - 2);
+  });
+
+  it("funnels a group through a gap in a wall", () => {
+    const state = newGame();
+    // A wall across x = 0..20 at grid y = 8 with a one-tile gap at x = 10.
+    const wallTiles = Array.from({ length: 21 }, (_, x) => gridRef(x - 2, 8)).filter(
+      (t) => t.x !== 8,
+    );
+    state.world.occupy(wallTiles, 1);
+    const group = Array.from({ length: 6 }, (_, i) => spawn(state, "block", 12 + i, 7));
+    setSelection(state, group);
+
+    const target = worldFromGrid(8, 12);
+    issueOrder(state, rectFromPoints(target, target), target);
+
+    let ticks = 0;
+    while (group.some((u) => u.actions.length > 0) && ticks++ < 5000) tick(state);
+
+    expect(ticks).toBeLessThan(5000);
+    for (const unit of group) {
+      expect(state.world.isPassable(unit.grid)).toBe(true);
+      expect(unit.grid.y).toBeGreaterThan(8); // made it through
+    }
   });
 });
