@@ -1,4 +1,5 @@
 import "../styles/game.css";
+import { Ambience } from "./audio";
 import { glowCss, playerColor } from "./colors";
 import { MAX_TICKS_PER_FRAME, TICK_MS } from "./config";
 import { Hud } from "./hud";
@@ -92,6 +93,14 @@ const renderer = await Renderer.create(game, state.world);
 
 const screen = bindInput(renderer, state, hud, game);
 
+// Wind and distant chimes, once the player has clicked or pressed something. M mutes.
+const ambience = new Ambience();
+ambience.startOnFirstGesture();
+document.addEventListener("keydown", (event) => {
+  if (event.code !== "KeyM" || document.querySelector("#mission-dialog[open]")) return;
+  hud.showMessage(ambience.toggleMuted() ? "Sound off." : "Sound on. Listen: wind.", 2_000);
+});
+
 // ?debug exposes the game to the console and to scripted browser tests.
 if (params.has("debug")) {
   Object.assign(window, { mindGame: { state, renderer, issueOrder, setSelection, build } });
@@ -109,6 +118,7 @@ requestAnimationFrame(function frame(now) {
     accumulator -= TICK_MS;
   }
   checkOutcome();
+  ambience.setPaused(state.paused);
   // The camera may have moved, so find the ground under the pointer again.
   state.pointer.world = screen.position ? renderer.groundAt(screen.position) : null;
   renderer.render(state, now / 1000);

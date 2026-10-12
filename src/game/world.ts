@@ -173,6 +173,7 @@ export class World {
     for (const tile of tiles) {
       const chunk = this.chunkOf(tile);
       chunk.occupied[tile.i] = Math.max(0, (chunk.occupied[tile.i] ?? 0) + delta);
+      chunk.version++; // scenery under a building is hidden
     }
   }
 

@@ -24,13 +24,14 @@ It started in 2014 as a 2D isometric game ([2015 screenshot](docs/screenshot-201
 | Shift + right click | Queue the order after the current ones instead of replacing them |
 | W A S D / arrow keys | Pan the camera (hold Shift to pan faster) |
 | Q / E, or middle-mouse drag | Rotate the camera |
-| Mouse wheel | Zoom |
+| Mouse wheel | Zoom (zoom right in and the camera tilts up to look out across the land) |
 | 1 / 2 / 3 | Pick a worker drone, collector or sensor spire to place (press again to put it away) |
 | Shift while placing | Keep the building selected to place more |
 | . (full stop) | Select idle worker drones and centre on them |
 | C / Shift + C | Cancel the next order / all orders of the selection |
 | Esc | Leave build mode and clear the selection |
 | P | Pause |
+| M | Sound on / off (wind and distant chimes start on your first click or key press) |
 
 In Survey mode, the seed on the start screen picks the map, so the same seed always gives the same world.
 
@@ -87,6 +88,9 @@ src/
     terrain.ts      noise-based terrain: ground types, heights and iron
     coords.ts       tile and ground-plane maths
     renderer.ts     Three.js scene: terrain meshes, units, previews, camera, picking
+    scenery.ts      flora, rocks, ruins and crash debris: placement and instanced drawing
+    atmosphere.ts   sky, sun, the gas giant and drifting spores
+    audio.ts        the synthesised ambient soundscape
     models.ts       procedural 3D models: the Mind, drones, towers, solar arrays, iron
     input.ts        mouse and keyboard handling, picking through the 3D view
     hud.ts          resources, build bar, selection panel, messages, pause dialog
@@ -107,7 +111,9 @@ docs/               design notes
 - **Cliffs:** a step between neighbouring tiles that climbs more than `MAX_CLIMB` can't be walked. Climbing gentler slopes costs extra, so routes go around hills when that isn't much further.
 - **Buildings:** they need fairly level ground, so placement is refused if the footprint varies in height by more than `MAX_BUILD_SLOPE`.
 - **Drones and flying:** worker drones hover close to the ground and follow paths. The scout flies higher and goes straight over acid, cliffs and buildings. Flying and ground units don't block each other.
-- **Fog:** unexplored ground isn't drawn, and explored ground nobody can currently see is dimmed.
+- **Fog:** unexplored ground isn't drawn (it fades into the haze), and explored ground nobody can currently see is dimmed.
+- **Scenery:** rust-grass, copperleaf shrubs, lantern stalks, parasol trees, boulders, Tessilend ruins and the wreckage of the Mind's landing. It's placed per tile from a hash of the tile's position, so a world always looks the same. It's purely visual: it never blocks anything, and it disappears under buildings. Each kind is one instanced mesh, and plants sway in the wind in the vertex shader.
+- **Atmosphere:** late-afternoon light, with a low sun for long shadows and haze in the distance. The sky has a ringed gas giant on the horizon, glowing spores drift past, and acid pools shimmer. Zooming in lowers the camera towards the horizon.
 
 ### Pathfinding
 

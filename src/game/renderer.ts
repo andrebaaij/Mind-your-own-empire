@@ -1,7 +1,8 @@
 import { bloom } from "three/addons/tsl/display/BloomNode.js";
-import { pass } from "three/tsl";
+import { color, pass, positionWorld, sin, time, vertexColor } from "three/tsl";
 import * as THREE from "three/webgpu";
-import { CHUNK_SIZE } from "./config";
+import { Atmosphere, MIST, SUN_DIRECTION } from "./atmosphere";
+import { CHUNK_SIZE, ZOOM_DEFAULT, ZOOM_MIN } from "./config";
 import { gridFromWorld, type Point, type Rect, rectContains, worldFromGrid } from "./coords";
 import { getObjectDefinition, type ObjectName } from "./definitions";
 import {
@@ -11,21 +12,33 @@ import {
   crystalMaterial,
   glowColor,
 } from "./models";
+import { Scenery, valueNoise } from "./scenery";
 import { buildTiles, canPlace, type GameState } from "./state";
-import { Terrain } from "./terrain";
+import { START_CENTER, Terrain } from "./terrain";
 import type { Unit } from "./units";
 import type { Chunk, Resource, World } from "./world";
 
-/** Camera tilt above the horizon. */
+/** Camera tilt above the horizon when zoomed out; zooming in lowers it towards the horizon. */
 const PITCH = 0.82;
-const SKY = new THREE.Color("#05060b");
+const PITCH_CLOSE = 0.24;
 
-const GROUND_COLORS: Record<number, THREE.Color> = {
-  [Terrain.Dirt]: new THREE.Color("#b5524a"),
-  [Terrain.Sand]: new THREE.Color("#c99a68"),
-  [Terrain.Acid]: new THREE.Color("#7dff57"),
+/** Camera tilt for a zoom distance: look down on the map, or across the land up close. */
+function pitchFor(distance: number): number {
+  const t = Math.min(1, Math.max(0, (distance - ZOOM_MIN) / (ZOOM_DEFAULT - ZOOM_MIN)));
+  return PITCH_CLOSE + (PITCH - PITCH_CLOSE) * t * (2 - t);
+}
+
+/** Two shades per ground type, mixed by broad patches so the land has some texture. */
+const GROUND_COLORS: Record<number, readonly [THREE.Color, THREE.Color]> = {
+  [Terrain.Dirt]: [new THREE.Color("#9c4436"), new THREE.Color("#b8683f")],
+  [Terrain.Sand]: [new THREE.Color("#c4925f"), new THREE.Color("#d8b07a")],
+  [Terrain.Acid]: [new THREE.Color("#2c4a1e"), new THREE.Color("#3a5a22")],
 };
-const CLIFF_COLOR = new THREE.Color("#5b4b49");
+const CLIFF_COLOR = new THREE.Color("#4e3f3e");
+const SCORCH_COLOR = new THREE.Color("#2a1f1e");
+/** The Mind came down hard: the ground is scorched this far around where it landed. */
+const SCORCH_RADIUS = 4.5;
+const ACID_GLOW = "#7dff57";
 /** Brightness of explored ground no unit can currently see. */
 const FOGGED = 0.35;
 
@@ -33,6 +46,8 @@ interface ChunkView {
   chunk: Chunk;
   version: number;
   terrain: THREE.Mesh;
+  /** A glowing film over the chunk's explored acid. */
+  acid: THREE.Mesh;
   crystals: THREE.InstancedMesh;
   /** Ground heights at the (CHUNK_SIZE + 1)² tile corners, and their normals. */
   cornerHeights: Float32Array;
@@ -55,6 +70,28 @@ function tileNoise(x: number, y: number): number {
   return n - Math.floor(n);
 }
 
+const CORNERS = [
+  [0, 0],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+] as const;
+
+/** Acid shimmers: slow bright ripples roll across it. Vertex colour red carries fog dimming. */
+function acidMaterial(): THREE.MeshBasicNodeMaterial {
+  const material = new THREE.MeshBasicNodeMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const ripple = sin(positionWorld.x.mul(1.7).add(positionWorld.z.mul(1.1)).add(time.mul(1.8)))
+    .mul(sin(positionWorld.z.mul(2.3).sub(time.mul(1.3))))
+    .mul(0.35)
+    .add(0.55);
+  material.colorNode = color(ACID_GLOW).mul(ripple).mul(vertexColor().r);
+  return material;
+}
+
 function angleLerp(from: number, to: number, t: number): number {
   const diff = Math.atan2(Math.sin(to - from), Math.cos(to - from));
   return from + diff * t;
@@ -64,7 +101,9 @@ export class Renderer {
   readonly canvas: HTMLCanvasElement;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(40, 1, 0.1, 400);
-  private readonly sun = new THREE.DirectionalLight("#fff0dc", 1.7);
+  private readonly sun = new THREE.DirectionalLight("#ffc890", 2.4);
+  private readonly atmosphere = new Atmosphere();
+  private readonly scenery: Scenery;
   private readonly pipeline: THREE.RenderPipeline;
   private readonly raycaster = new THREE.Raycaster();
 
@@ -77,6 +116,7 @@ export class Renderer {
     roughness: 0.92,
     metalness: 0,
   });
+  private readonly acidMaterial = acidMaterial();
 
   private readonly markers: THREE.Mesh[] = [];
   private readonly markerGeometry = new THREE.RingGeometry(0.16, 0.24, 24).rotateX(-Math.PI / 2);
@@ -110,9 +150,12 @@ export class Renderer {
   ) {
     this.canvas = renderer.domElement;
 
-    this.scene.background = SKY;
-    this.scene.fog = new THREE.Fog(SKY, 40, 120);
-    this.scene.add(new THREE.HemisphereLight("#c4d4ff", "#3a2420", 0.75));
+    // Late afternoon: a low, warm sun, a cool sky, and haze in the distance.
+    this.scene.background = MIST;
+    this.scene.fog = new THREE.Fog(MIST, 40, 120);
+    this.scene.add(new THREE.HemisphereLight("#a8b4e0", "#6a3a2c", 1.4));
+    this.scenery = new Scenery(world);
+    this.scene.add(this.atmosphere.group, this.scenery.group);
 
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -266,24 +309,34 @@ export class Renderer {
   private placeCamera(state: GameState): void {
     const { target, yaw, distance } = state.camera;
     const ground = this.world.heightAt(target.x, target.y);
-    const horizontal = Math.cos(PITCH) * distance;
+    const pitch = pitchFor(distance);
+    const horizontal = Math.cos(pitch) * distance;
+    // Up close, aim a little above the ground so the horizon comes into view.
+    const lift = (1 - (pitch - PITCH_CLOSE) / (PITCH - PITCH_CLOSE)) * 1.2;
     this.camera.position.set(
       target.x + Math.sin(yaw) * horizontal,
-      ground + Math.sin(PITCH) * distance,
+      ground + lift + Math.sin(pitch) * distance,
       target.y + Math.cos(yaw) * horizontal,
     );
-    this.camera.lookAt(target.x, ground, target.y);
+    this.camera.lookAt(target.x, ground + lift, target.y);
+    const focus = new THREE.Vector3(target.x, ground, target.y);
+    this.atmosphere.update(this.camera.position, focus);
 
-    // Keep the shadow-casting light and its shadow box centred on what we're looking at.
-    const reach = distance * 1.4;
-    this.sun.position.set(target.x - 20, ground + 40, target.y - 12);
-    this.sun.target.position.set(target.x, ground, target.y);
+    // Keep the shadow-casting light and its shadow box centred on what we're looking at. The
+    // light comes from the sun's side but higher, so shadows are long without being endless.
+    const reach = distance * 1.6 + 6;
+    this.sun.position
+      .set(SUN_DIRECTION.x, 0.55, SUN_DIRECTION.z)
+      .normalize()
+      .multiplyScalar(60)
+      .add(focus);
+    this.sun.target.position.copy(focus);
     const shadow = this.sun.shadow.camera;
     shadow.left = -reach;
     shadow.right = reach;
     shadow.top = reach;
     shadow.bottom = -reach;
-    shadow.far = 120;
+    shadow.far = 140;
     shadow.updateProjectionMatrix();
 
     const fog = this.scene.fog as THREE.Fog;
@@ -297,6 +350,9 @@ export class Renderer {
     const min = gridFromWorld({ x: target.x - reach, y: target.y - reach });
     const max = gridFromWorld({ x: target.x + reach, y: target.y + reach });
 
+    // Scenery is dense, so only the chunks near the view get it.
+    const decorReach = distance * 1.4 + 12;
+    const decor: Chunk[] = [];
     const shown = new Set<ChunkView>();
     for (let cy = min.chunkY; cy <= max.chunkY; cy++) {
       for (let cx = min.chunkX; cx <= max.chunkX; cx++) {
@@ -304,17 +360,25 @@ export class Renderer {
         const view = this.chunkView(chunk);
         if (view.version !== chunk.version) this.syncChunk(view);
         shown.add(view);
+        const middle = (CHUNK_SIZE / 2) | 0;
+        const near =
+          Math.abs(chunk.x * CHUNK_SIZE + middle - target.x) < decorReach &&
+          Math.abs(chunk.y * CHUNK_SIZE + middle - target.y) < decorReach;
+        if (near) decor.push(chunk);
       }
     }
+    this.scenery.update(decor);
     for (const view of this.shownChunks) {
       if (!shown.has(view)) {
         view.terrain.visible = false;
+        view.acid.visible = false;
         view.crystals.visible = false;
       }
     }
     this.shownChunks.clear();
     for (const view of shown) {
       view.terrain.visible = true;
+      view.acid.visible = true;
       view.crystals.visible = true;
       this.shownChunks.add(view);
     }
@@ -346,6 +410,7 @@ export class Renderer {
 
     const terrain = new THREE.Mesh(new THREE.BufferGeometry(), this.terrainMaterial);
     terrain.receiveShadow = true;
+    const acid = new THREE.Mesh(new THREE.BufferGeometry(), this.acidMaterial);
     const crystals = new THREE.InstancedMesh(
       this.crystalGeometry,
       crystalMaterial,
@@ -353,12 +418,13 @@ export class Renderer {
     );
     crystals.castShadow = true;
     crystals.count = 0;
-    this.scene.add(terrain, crystals);
+    this.scene.add(terrain, acid, crystals);
 
     const view: ChunkView = {
       chunk,
       version: -1,
       terrain,
+      acid,
       crystals,
       cornerHeights,
       cornerNormals,
@@ -375,6 +441,7 @@ export class Renderer {
     const normals: number[] = [];
     const colors: number[] = [];
     const indices: number[] = [];
+    const acid = { positions: [] as number[], colors: [] as number[], indices: [] as number[] };
     const color = new THREE.Color();
 
     for (let ly = 0; ly < CHUNK_SIZE; ly++) {
@@ -384,32 +451,54 @@ export class Renderer {
 
         const x = chunk.x * CHUNK_SIZE + lx;
         const y = chunk.y * CHUNK_SIZE + ly;
-        color.copy(
-          GROUND_COLORS[chunk.tiles[i] ?? 0] ?? (GROUND_COLORS[Terrain.Dirt] as THREE.Color),
-        );
-        if (chunk.cliffs[i] === 1 && chunk.tiles[i] !== Terrain.Acid) color.lerp(CLIFF_COLOR, 0.6);
-        color.multiplyScalar(0.9 + tileNoise(x, y) * 0.2);
-        if ((chunk.watchers[i] ?? 0) === 0) color.multiplyScalar(FOGGED);
-
+        const ground = chunk.tiles[i] ?? Terrain.Dirt;
+        const palette = GROUND_COLORS[ground] ?? GROUND_COLORS[Terrain.Dirt];
+        const cliff = chunk.cliffs[i] === 1 && ground !== Terrain.Acid;
+        const seen = (chunk.watchers[i] ?? 0) > 0;
+        const isAcid = ground === Terrain.Acid;
         const base = positions.length / 3;
-        for (const [dx, dy] of [
-          [0, 0],
-          [1, 0],
-          [1, 1],
-          [0, 1],
-        ] as const) {
+        for (const [dx, dy] of CORNERS) {
           const k = lx + dx + (ly + dy) * side;
-          positions.push(x + dx, cornerHeights[k] ?? 0, y + dy);
-          normals.push(
-            cornerNormals[k * 3] ?? 0,
-            cornerNormals[k * 3 + 1] ?? 1,
-            cornerNormals[k * 3 + 2] ?? 0,
-          );
+          const cx = x + dx;
+          const cy = y + dy;
+          const height = cornerHeights[k] ?? 0;
+          positions.push(cx, height, cy);
+          const ny = cornerNormals[k * 3 + 1] ?? 1;
+          normals.push(cornerNormals[k * 3] ?? 0, ny, cornerNormals[k * 3 + 2] ?? 0);
+
+          // Colour varies smoothly over the land, so neighbouring tiles blend into each other.
+          if (palette) {
+            const patch = valueNoise(cx / 7, cy / 7, 3) * 0.7 + valueNoise(cx / 2, cy / 2, 5) * 0.3;
+            color.copy(palette[0]).lerp(palette[1], patch);
+          }
+          // Bare rock shows on steep slopes and cliffs; high ground is sun-bleached.
+          const steep = Math.min(1, Math.max(0, (0.93 - ny) * 5));
+          color.lerp(CLIFF_COLOR, Math.max(steep, cliff ? 0.55 : 0));
+          color.multiplyScalar(0.92 + height * 0.04 + tileNoise(cx, cy) * 0.08);
+          const scorch = Math.hypot(cx - START_CENTER.x, cy - START_CENTER.y) / SCORCH_RADIUS;
+          if (scorch < 1) color.lerp(SCORCH_COLOR, (1 - scorch) * 0.7);
+          if (!seen) color.multiplyScalar(FOGGED);
           colors.push(color.r, color.g, color.b);
+
+          if (isAcid) {
+            acid.positions.push(cx, height + 0.04, cy);
+            acid.colors.push(seen ? 1 : FOGGED, 0, 0);
+          }
         }
         indices.push(base, base + 2, base + 1, base, base + 3, base + 2);
+        if (isAcid) {
+          const a = acid.positions.length / 3 - 4;
+          acid.indices.push(a, a + 2, a + 1, a, a + 3, a + 2);
+        }
       }
     }
+
+    const film = new THREE.BufferGeometry();
+    film.setAttribute("position", new THREE.Float32BufferAttribute(acid.positions, 3));
+    film.setAttribute("color", new THREE.Float32BufferAttribute(acid.colors, 3));
+    film.setIndex(acid.indices);
+    view.acid.geometry.dispose();
+    view.acid.geometry = film;
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));

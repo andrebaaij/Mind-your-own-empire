@@ -49,6 +49,15 @@ A rust-red, iron-rich world, once landscaped by its builders and now going slowl
 | Ridges and cliffs | Eroded embankments and terraces of old works, half-returned to geology |
 | Unexplored darkness | The Mind's ruined sensors; it can only see what its drones see |
 
+**What it feels like to stand there.** It is always late afternoon on the Mind's side of Lessuin, and the air is warm and full of drifting spores. The primary hangs on the horizon: a banded, ringed gas giant, mostly in shadow. The wildlife is plants that took over the Tessilend's gardens:
+
+- **Rust-grass**, red at the root and gold at the tips, on the fertile ground.
+- **Copperleaf shrubs** with verdigris hearts.
+- **Parasol spires**: thin trees with flat canopies that grow in groves.
+- **Lantern stalks**, whose bulbs pulse teal in the hollows and on the sand.
+
+Boulders gather where the old terraces broke into cliffs. Here and there a Tessilend column or arch is still standing, with nothing left to hold up. Around the Mind there is a ring of scorched ground and scattered hull plating, from its landing. The acid pools still shimmer.
+
 **Decided: Lessuin**, the builders' own name for it, which the Mind reads off a ten-thousand-year-old maintenance plaque in mission 2. On the Culture's charts it is *Survey object 31-Ledger-7*. The Mind uses the catalogue name exactly once, in mission 1, and never again: *"I refuse to be marooned somewhere with a hyphen in its name."*
 
 ## The Sublimed builders: the Tessilend — Decided
