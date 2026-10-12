@@ -41,6 +41,27 @@ import { START_CENTER, Terrain } from "./terrain";
 import type { Unit } from "./units";
 import type { Chunk, Resource, World } from "./world";
 
+/** "low" skips the expensive passes (ambient occlusion, sky lighting) for weak or software GPUs. */
+export type Quality = "high" | "low";
+
+/**
+ * The graphics quality to use: `?quality=high|low` if given, otherwise low on software
+ * rendering (no real GPU), high everywhere else.
+ */
+export function chooseQuality(params: URLSearchParams): Quality {
+  const asked = params.get("quality");
+  if (asked === "high" || asked === "low") return asked;
+  try {
+    const gl = document.createElement("canvas").getContext("webgl2");
+    const info = gl?.getExtension("WEBGL_debug_renderer_info");
+    const name = info && gl ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+    gl?.getExtension("WEBGL_lose_context")?.loseContext();
+    return /swiftshader|llvmpipe|software|basic render/i.test(name) ? "low" : "high";
+  } catch {
+    return "high";
+  }
+}
+
 /** Camera tilt above the horizon when zoomed out; zooming in lowers it towards the horizon. */
 const PITCH = 0.82;
 const PITCH_CLOSE = 0.24;
@@ -143,7 +164,7 @@ export class Renderer {
   private readonly shownChunks = new Set<ChunkView>();
   private readonly unitViews = new Map<Unit, UnitView>();
   private readonly crystalGeometry = createCrystalGeometry();
-  private readonly terrainMaterial = createGroundMaterial();
+  private readonly terrainMaterial: THREE.Material;
   private readonly acidMaterial = acidMaterial();
 
   private readonly markers: THREE.Mesh[] = [];
@@ -175,18 +196,22 @@ export class Renderer {
   private constructor(
     private readonly renderer: THREE.WebGPURenderer,
     private readonly world: World,
+    readonly quality: Quality,
   ) {
     this.canvas = renderer.domElement;
+    this.terrainMaterial = createGroundMaterial(quality === "high");
 
     // Late afternoon: a low, warm sun, a cool sky, and haze in the distance.
     this.scene.background = MIST;
     this.scene.fog = new THREE.Fog(MIST, 40, 120);
     // The sky lights the land (image-based lighting), with a hemisphere light for the bounce
     // off the red ground.
-    const sky = new THREE.PMREMGenerator(renderer).fromScene(createSkyScene(), 0.02, 0.1, 100);
-    this.scene.environment = sky.texture;
-    this.scene.environmentIntensity = 0.55;
-    this.scene.add(new THREE.HemisphereLight("#a8b4e0", "#6a3a2c", 0.8));
+    if (quality === "high") {
+      const sky = new THREE.PMREMGenerator(renderer).fromScene(createSkyScene(), 0.02, 0.1, 100);
+      this.scene.environment = sky.texture;
+      this.scene.environmentIntensity = 0.55;
+    }
+    this.scene.add(new THREE.HemisphereLight("#a8b4e0", "#6a3a2c", quality === "high" ? 0.8 : 1.4));
     this.scenery = new Scenery(world);
     this.fauna = new Fauna(world);
     this.creatures = new CreatureView(world);
@@ -207,30 +232,29 @@ export class Renderer {
     // Bloom makes the emissive parts (aura fields, seams, acid) glow.
     this.pipeline = new THREE.RenderPipeline(renderer);
     const scenePass = pass(this.scene, this.camera);
-    scenePass.setMRT(mrt({ output, normal: normalView }));
-    const sceneColor = scenePass.getTextureNode("output");
+    let shaded = scenePass.getTextureNode("output").rgb;
+    if (quality === "high") {
+      scenePass.setMRT(mrt({ output, normal: normalView }));
+      const sceneColor = scenePass.getTextureNode("output");
+      const depth = scenePass.getTextureNode("depth");
+      const normals = scenePass.getTextureNode("normal");
 
-    // Ambient occlusion: soft contact shadows where things meet the ground and each other.
-    const occlusion = ao(
-      scenePass.getTextureNode("depth"),
-      scenePass.getTextureNode("normal"),
-      this.camera,
-    );
-    occlusion.resolutionScale = 0.5;
-    occlusion.radius.value = 1.6;
-    occlusion.thickness.value = 2;
-    occlusion.scale.value = 1.6;
-    occlusion.samples.value = 12;
-    const depth = scenePass.getTextureNode("depth");
-    const normals = scenePass.getTextureNode("normal");
-    // The denoiser outputs a colour (vec4), though its type doesn't say so.
-    const smoothed = denoise(
-      occlusion.getTextureNode(),
-      depth,
-      normals,
-      this.camera,
-    ) as unknown as ReturnType<typeof vec4>;
-    const shaded = sceneColor.rgb.mul(mix(float(1), smoothed.r, 0.85));
+      // Ambient occlusion: soft contact shadows where things meet the ground and each other.
+      const occlusion = ao(depth, normals, this.camera);
+      occlusion.resolutionScale = 0.5;
+      occlusion.radius.value = 1.6;
+      occlusion.thickness.value = 2;
+      occlusion.scale.value = 1.6;
+      occlusion.samples.value = 12;
+      // The denoiser outputs a colour (vec4), though its type doesn't say so.
+      const smoothed = denoise(
+        occlusion.getTextureNode(),
+        depth,
+        normals,
+        this.camera,
+      ) as unknown as ReturnType<typeof vec4>;
+      shaded = sceneColor.rgb.mul(mix(float(1), smoothed.r, 0.85));
+    }
 
     // Bloom for the glowing parts, then a gentle grade: a touch more colour, and a vignette.
     const lit = vec4(shaded, 1);
@@ -244,15 +268,15 @@ export class Renderer {
     window.addEventListener("resize", () => this.resize());
   }
 
-  static async create(parent: HTMLElement, world: World): Promise<Renderer> {
-    const renderer = new THREE.WebGPURenderer({ antialias: true });
+  static async create(parent: HTMLElement, world: World, quality: Quality): Promise<Renderer> {
+    const renderer = new THREE.WebGPURenderer({ antialias: quality === "high" });
     await renderer.init();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality === "high" ? 2 : 1));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     parent.prepend(renderer.domElement);
-    return new Renderer(renderer, world);
+    return new Renderer(renderer, world, quality);
   }
 
   get width(): number {

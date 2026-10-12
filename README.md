@@ -56,6 +56,8 @@ npm run preview    # serve the production build
 
 Add `?debug` to the game URL to expose the running game as `window.mindGame` in the console.
 
+Graphics quality is chosen automatically: `high` (ambient occlusion, sky lighting, detailed ground) on a real GPU, `low` on software rendering such as headless CI. Add `?quality=high` or `?quality=low` to the game URL to override it.
+
 Checks, all of which run in CI:
 
 ```sh

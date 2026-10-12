@@ -5,7 +5,7 @@ import { MAX_TICKS_PER_FRAME, TICK_MS } from "./config";
 import { Hud } from "./hud";
 import { bindInput, setPaused } from "./input";
 import { getMission, MISSIONS, markCompleted, startMission, updateMission } from "./missions";
-import { Renderer } from "./renderer";
+import { chooseQuality, Renderer } from "./renderer";
 import { build, canBuild, createGame, issueOrder, say, setSelection, tick } from "./state";
 
 const params = new URLSearchParams(window.location.search);
@@ -90,7 +90,7 @@ function checkOutcome(): void {
   }
 }
 
-const renderer = await Renderer.create(game, state.world);
+const renderer = await Renderer.create(game, state.world, chooseQuality(params));
 
 const screen = bindInput(renderer, state, hud, game);
 

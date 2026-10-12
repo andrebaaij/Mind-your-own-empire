@@ -21,7 +21,11 @@ import {
 } from "three/tsl";
 import * as THREE from "three/webgpu";
 
-export function createGroundMaterial(): THREE.MeshStandardNodeMaterial {
+/** The ground: with shader detail, or (`detailed` false, for weak GPUs) vertex colours only. */
+export function createGroundMaterial(detailed = true): THREE.Material {
+  if (!detailed) {
+    return new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0 });
+  }
   const material = new THREE.MeshStandardNodeMaterial({ roughness: 0.92, metalness: 0 });
   const p = positionWorld;
 
