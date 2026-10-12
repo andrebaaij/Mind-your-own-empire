@@ -45,6 +45,11 @@ export function resourceLevel(amount: number, levels: readonly number[]): number
 /** The procedurally generated, chunked level, including fog of war and resources. */
 export class World {
   private readonly chunks = new Map<string, Chunk>();
+  /**
+   * Bumped whenever the player learns of a new obstacle (acid comes into view, a building goes
+   * up or comes down), so units can check whether their planned routes still hold.
+   */
+  knownObstaclesVersion = 0;
 
   constructor(private readonly noise: Noise2D) {}
 
@@ -104,6 +109,16 @@ export class World {
     return chunk.tiles[grid.i] !== Terrain.Acid && chunk.occupied[grid.i] === 0;
   }
 
+  /**
+   * Passability as far as the player knows, which is what routes are planned on: unexplored
+   * ground is assumed walkable, while the player's own buildings are always known.
+   */
+  isKnownPassable(grid: GridRef): boolean {
+    const chunk = this.chunkOf(grid);
+    if (chunk.occupied[grid.i] !== 0) return false;
+    return chunk.explored[grid.i] === 0 || chunk.tiles[grid.i] !== Terrain.Acid;
+  }
+
   /** Whether a building may be placed here: explored, passable ground. */
   isBuildable(grid: GridRef): boolean {
     return this.isExplored(grid) && this.isPassable(grid);
@@ -111,6 +126,7 @@ export class World {
 
   /** Mark tiles as covered (`delta` 1) or freed (`delta` -1) by a building. */
   occupy(tiles: readonly GridRef[], delta: 1 | -1): void {
+    if (tiles.length > 0) this.knownObstaclesVersion++;
     for (const tile of tiles) {
       const chunk = this.chunkOf(tile);
       chunk.occupied[tile.i] = Math.max(0, (chunk.occupied[tile.i] ?? 0) + delta);
@@ -128,7 +144,10 @@ export class World {
   watch(center: GridRef, radius: number): void {
     this.forEachInRadius(center, radius, (chunk, i) => {
       chunk.watchers[i] = (chunk.watchers[i] ?? 0) + 1;
-      chunk.explored[i] = 1;
+      if (chunk.explored[i] === 0) {
+        chunk.explored[i] = 1;
+        if (chunk.tiles[i] === Terrain.Acid) this.knownObstaclesVersion++;
+      }
     });
   }
 

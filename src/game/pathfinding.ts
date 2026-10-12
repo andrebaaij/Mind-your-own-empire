@@ -1,6 +1,7 @@
 /**
  * Long-range path planning on the tile grid, in the style of Age of Empires: A* over tile
- * passability (terrain and buildings), "as close as possible" when the goal can't be reached,
+ * passability as the player knows it (explored terrain and buildings; fog is assumed open),
+ * "as close as possible" when the goal can't be reached,
  * string-pulled into straight segments, plus destination spreading for group moves.
  * Unit-versus-unit avoidance is handled separately, at movement time, in `units.ts`.
  */
@@ -19,8 +20,9 @@ export interface PathOptions {
   maxNodes?: number;
 }
 
+/** Planning only uses what the player knows: unexplored ground counts as open. */
 function passable(world: World, x: number, y: number, avoid?: ReadonlySet<string>): boolean {
-  return world.isPassable(gridRef(x, y)) && !avoid?.has(tileKey(x, y));
+  return world.isKnownPassable(gridRef(x, y)) && !avoid?.has(tileKey(x, y));
 }
 
 /** Neighbour steps with their cost: the world-space length of the step (iso tiles aren't square). */

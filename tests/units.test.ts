@@ -14,7 +14,7 @@ import {
   updateUnit,
 } from "../src/game/units";
 import type { World } from "../src/game/world";
-import { area, ironWorld, openWorld, wall } from "./fixtures";
+import { acid, area, ironWorld, openWorld, wall } from "./fixtures";
 
 const emptyWorld = openWorld;
 
@@ -142,6 +142,49 @@ describe("walking", () => {
       expect(world.isPassable(walker.grid)).toBe(true);
     }
     expect(walker.position).toEqual(target);
+  });
+
+  it("re-plans when it discovers acid across its route through the fog", () => {
+    const world = emptyWorld();
+    acid(world, area([8, -6], [8, 6])); // unseen wall of acid
+    const scout = createUnit(world, "scout", 0, 0, WHITE);
+    const target = worldFromGrid(14, 0);
+    queueWalk(scout, target);
+
+    updateUnit(world, scout, [scout]);
+    const firstPlan = scout.actions[0]?.kind === "walk" ? scout.actions[0].path : null;
+    expect(firstPlan).toEqual([target]); // optimistic: straight through the fog
+
+    let ticks = 0;
+    while (scout.actions.length > 0 && ticks++ < 5000) {
+      updateUnit(world, scout, [scout]);
+      expect(world.isPassable(scout.grid)).toBe(true);
+    }
+    expect(scout.position).toEqual(target);
+    expect(world.isExplored(gridRef(8, 0))).toBe(true);
+  });
+
+  it("keeps its route when what it discovers is off to the side", () => {
+    const world = emptyWorld();
+    acid(world, area([5, 3], [6, 4])); // a pond beside the route, within the scout's sight
+    const scout = createUnit(world, "scout", 0, 0, WHITE);
+    const target = worldFromGrid(10, 0);
+    queueWalk(scout, target);
+
+    updateUnit(world, scout, [scout]);
+    const walk = scout.actions[0];
+    if (walk?.kind !== "walk" || !walk.path) throw new Error("expected a planned walk");
+    const route = walk.path;
+
+    const versionBefore = world.knownObstaclesVersion;
+    while (world.knownObstaclesVersion === versionBefore && scout.actions.length > 0) {
+      updateUnit(world, scout, [scout]);
+    }
+    expect(world.knownObstaclesVersion).toBeGreaterThan(versionBefore); // the pond was seen
+    updateUnit(world, scout, [scout]);
+
+    expect(walk.path).toBe(route); // same plan, not re-planned
+    expect(walk.plannedAt).toBe(world.knownObstaclesVersion);
   });
 
   it("lets two units walking head-on get past each other", () => {

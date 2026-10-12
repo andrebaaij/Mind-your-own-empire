@@ -43,12 +43,29 @@ describe("findTilePath", () => {
     for (const tile of path) expect(world.isPassable(tile)).toBe(true);
   });
 
-  it("routes around acid", () => {
+  it("routes around acid the player has seen", () => {
+    const world = openWorld();
+    acid(world, area([3, -3], [3, 3]));
+    world.watch(gridRef(3, 0), 4);
+    const path = findTilePath(world, gridRef(0, 0), gridRef(6, 0));
+
+    expect(path.at(-1)).toMatchObject({ x: 6, y: 0 });
+    for (const tile of path) expect(world.isPassable(tile)).toBe(true);
+  });
+
+  it("assumes unexplored ground is open, so the fog gives nothing away", () => {
     const world = openWorld();
     acid(world, area([3, -3], [3, 3]));
     const path = findTilePath(world, gridRef(0, 0), gridRef(6, 0));
 
-    expect(path.at(-1)).toMatchObject({ x: 6, y: 0 });
+    expect(tiles(path)).toContainEqual([3, 0]); // straight through the unseen acid
+  });
+
+  it("still knows about the player's own buildings in the fog", () => {
+    const world = openWorld();
+    wall(world, area([3, -3], [3, 3]));
+    const path = findTilePath(world, gridRef(0, 0), gridRef(6, 0));
+
     for (const tile of path) expect(world.isPassable(tile)).toBe(true);
   });
 

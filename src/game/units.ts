@@ -24,7 +24,7 @@ import {
   type Skill,
   type TilesetDefinition,
 } from "./definitions";
-import { findPath, tileKey } from "./pathfinding";
+import { findPath, hasClearLine, tileKey } from "./pathfinding";
 import type { Resource, World } from "./world";
 
 export interface Color {
@@ -43,6 +43,8 @@ export interface WalkAction {
   waitTicks: number;
   /** Times the route has been re-planned because the unit got stuck. */
   repaths: number;
+  /** `World.knownObstaclesVersion` when the route was planned. */
+  plannedAt: number;
 }
 
 export interface GatherAction {
@@ -185,7 +187,14 @@ export function moveBy(world: World, unit: Unit, dx: number, dy: number): void {
 }
 
 function newWalk(target: Point): WalkAction {
-  return { kind: "walk", target: { ...target }, path: null, waitTicks: 0, repaths: 0 };
+  return {
+    kind: "walk",
+    target: { ...target },
+    path: null,
+    waitTicks: 0,
+    repaths: 0,
+    plannedAt: -1,
+  };
 }
 
 /** Queue a walk to `target`. The route is planned when the walk starts. */
@@ -312,7 +321,22 @@ function replan(world: World, unit: Unit, action: WalkAction, avoid: ReadonlySet
   }
   action.repaths++;
   action.waitTicks = 0;
-  action.path = findPath(world, unit.position, action.target, { avoid });
+  plan(world, unit, action, avoid);
+}
+
+function plan(world: World, unit: Unit, action: WalkAction, avoid?: ReadonlySet<string>): void {
+  action.path = findPath(world, unit.position, action.target, avoid ? { avoid } : {});
+  action.plannedAt = world.knownObstaclesVersion;
+}
+
+/** Whether the rest of the route still avoids every obstacle the player knows about. */
+function routeStillClear(world: World, unit: Unit, path: readonly Point[]): boolean {
+  let from = unit.position;
+  for (const point of path) {
+    if (!hasClearLine(world, from, point)) return false;
+    from = point;
+  }
+  return true;
 }
 
 /** Shared per-tick allowance for route planning, so a big group order can't stall a frame. */
@@ -330,8 +354,18 @@ function walkTick(
   if (!action.path) {
     if (budget.remaining <= 0) return; // wait for a planning slot next tick
     budget.remaining--;
-    action.path = findPath(world, unit.position, action.target);
+    plan(world, unit, action);
+  } else if (action.plannedAt !== world.knownObstaclesVersion && budget.remaining > 0) {
+    // The player learned of new obstacles (acid came into view, a building went up). Routes
+    // through the fog were planned optimistically, so re-plan if this one now runs into one.
+    if (routeStillClear(world, unit, action.path)) {
+      action.plannedAt = world.knownObstaclesVersion;
+    } else {
+      budget.remaining--;
+      plan(world, unit, action);
+    }
   }
+  if (!action.path) return;
 
   const waypoint = action.path[0];
   if (!waypoint) {
@@ -351,7 +385,7 @@ function walkTick(
           y: unit.position.y + (dy / distance) * step,
         };
 
-  // A building went up on the route since it was planned.
+  // Safety net: never step onto ground that is actually blocked, known or not.
   const nextTile = gridFromWorld(next);
   if ((nextTile.x !== unit.grid.x || nextTile.y !== unit.grid.y) && !world.isPassable(nextTile)) {
     replan(world, unit, action, new Set());
