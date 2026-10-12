@@ -197,8 +197,8 @@ export function bindInput(
   );
 
   document.addEventListener("keydown", (event) => {
-    // Keys belong to the dialog while a briefing or result is showing.
-    if (document.querySelector("#mission-dialog[open]")) return;
+    // Keys belong to the dialog while a briefing or result is showing, and to the intro.
+    if (document.querySelector("#mission-dialog[open], .cinematic")) return;
     const key = CAMERA_KEYS[event.code];
     if (key) {
       state.keys[key] = true;

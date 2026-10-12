@@ -14,6 +14,7 @@
 import { TICK_RATE } from "./config";
 import { distance, gridRef, type Point } from "./coords";
 import { emit } from "./events";
+import { LORE, learn } from "./lore";
 import { findFreeSpots } from "./pathfinding";
 import type { Site, SiteKind } from "./sites";
 import { type GameState, say, workRate } from "./state";
@@ -224,6 +225,13 @@ export function wake(state: GameState, site: Site): void {
   state.stats.studied[site.kind] = (state.stats.studied[site.kind] ?? 0) + 1;
   switch (site.kind) {
     case "marker":
+      learn(state, {
+        id: `marker-${site.x},${site.y}`,
+        category: "Lessuin",
+        title: `Marker stone (${site.x}, ${site.y})`,
+        text:
+          site.text ?? MARKER_LINES[Math.abs(site.x * 7 + site.y * 13) % MARKER_LINES.length] ?? "",
+      });
       say(
         state,
         site.text ?? MARKER_LINES[Math.abs(site.x * 7 + site.y * 13) % MARKER_LINES.length] ?? "",
@@ -233,6 +241,12 @@ export function wake(state: GameState, site: Site): void {
     case "archive": {
       const read = (state.stats.studied.archive ?? 1) - 1;
       say(state, ARCHIVE_LINES[read % ARCHIVE_LINES.length] ?? "", "success");
+      learn(state, {
+        id: `archive-${read % ARCHIVE_LINES.length}`,
+        category: "The Tessilend",
+        title: `Archive fragment ${(read % ARCHIVE_LINES.length) + 1}`,
+        text: ARCHIVE_LINES[read % ARCHIVE_LINES.length] ?? "",
+      });
       const marked = revealNearestSites(state, site, 2);
       if (marked > 0) {
         say(
@@ -334,6 +348,12 @@ export function relicsThink(state: GameState, seconds: number): void {
       site.seen = true;
       state.discovered.add("lattice");
       say(state, SITE_INFO[site.kind].sighted, "info", { once: `sighted-site-${site.kind}` });
+      learn(state, {
+        id: `site-${site.kind}`,
+        category: "Sites",
+        title: SITE_INFO[site.kind].label,
+        text: `${SITE_INFO[site.kind].sighted} ${SITE_INFO[site.kind].dormant}`,
+      });
       if (site.seams.length > 0) {
         say(
           state,
@@ -341,6 +361,7 @@ export function relicsThink(state: GameState, seconds: number): void {
           "info",
           { once: "lattice-explained" },
         );
+        learn(state, LORE.lattice);
       }
     }
   }

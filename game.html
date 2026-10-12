@@ -132,6 +132,16 @@
         <div id="mission-dialog-actions" class="pause-actions"></div>
       </dialog>
 
+      <dialog id="codex" class="pause codex glass" aria-labelledby="codex-title">
+        <h1 id="codex-title">Codex</h1>
+        <div id="codex-entries" class="codex-entries"></div>
+        <form method="dialog" class="pause-actions">
+          <button type="submit" class="button primary">Close</button>
+        </form>
+      </dialog>
+
+      <output id="codex-toast" class="codex-toast glass" hidden></output>
+
       <dialog id="settings" class="pause settings glass" aria-labelledby="settings-title">
         <h1 id="settings-title">Settings</h1>
         <form id="settings-form" class="settings-form" method="dialog">
@@ -188,6 +198,7 @@
           <button type="button" id="pause-fullscreen" class="button">Fullscreen</button>
           <button type="button" id="pause-save" class="button">Save game</button>
           <button type="button" id="pause-settings" class="button">Settings</button>
+          <button type="button" id="pause-codex" class="button">Codex</button>
           <a class="button" href="./index.html">Main menu</a>
         </div>
       </dialog>

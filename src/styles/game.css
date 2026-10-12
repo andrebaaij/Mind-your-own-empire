@@ -806,3 +806,178 @@ body {
 :root.text-large {
   font-size: 118%;
 }
+
+/* --- Mission intros: letterbox, title card, captions --- */
+
+.cinematic {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  cursor: pointer;
+}
+
+.letterbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 11vh;
+  background: #000;
+  animation: letterbox-in 0.8s ease-out;
+}
+
+.letterbox.top {
+  top: 0;
+}
+
+.letterbox.bottom {
+  bottom: 0;
+}
+
+@keyframes letterbox-in {
+  from {
+    height: 0;
+  }
+}
+
+.cinematic.leaving {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.cinematic-title {
+  position: absolute;
+  top: 36%;
+  left: 50%;
+  translate: -50% -50%;
+  text-align: center;
+  transition: opacity 1s ease;
+  animation: title-in 1.4s ease-out;
+}
+
+.cinematic-title h1 {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 30px rgb(0 0 0 / 0.7);
+}
+
+.cinematic.titled .cinematic-title {
+  opacity: 0;
+}
+
+@keyframes title-in {
+  from {
+    opacity: 0;
+    letter-spacing: 0.4em;
+  }
+}
+
+.cinematic-caption {
+  position: absolute;
+  bottom: calc(11vh + 22px);
+  left: 50%;
+  translate: -50% 0;
+  max-width: min(720px, calc(100vw - 40px));
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  text-align: center;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 0.9);
+  opacity: 0;
+}
+
+.cinematic-caption.shown {
+  animation: caption-in 0.9s ease-out forwards;
+}
+
+@keyframes caption-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.cinematic-skip {
+  position: absolute;
+  right: 18px;
+  bottom: calc(11vh - 30px);
+  color: var(--muted);
+}
+
+/* While an intro plays, the interface steps aside. */
+#game.in-cinematic
+:is(.resources, .stealth, .objectives, .selection, .build, .help, .minimap, .toast) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+:is(.resources, .stealth, .objectives, .selection, .build, .help, .minimap) {
+  transition: opacity 0.6s ease;
+}
+
+/* --- Codex --- */
+
+.codex {
+  width: min(640px, calc(100vw - 28px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.codex-entries {
+  display: grid;
+  gap: 16px;
+  text-align: left;
+}
+
+.codex-section {
+  display: grid;
+  gap: 6px;
+}
+
+.codex-section h2 {
+  margin: 0 0 2px;
+}
+
+.codex-section details {
+  padding: 8px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.03);
+}
+
+.codex .codex-section summary {
+  cursor: pointer;
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+}
+
+.codex-section details p {
+  margin: 8px 0 2px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.codex-empty {
+  color: var(--muted);
+}
+
+.codex-toast {
+  position: absolute;
+  z-index: 2;
+  right: 70px;
+  bottom: 14px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  animation: objective-in 0.4s ease-out;
+}
+
+.codex-toast[hidden] {
+  display: none;
+}

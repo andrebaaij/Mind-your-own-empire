@@ -2,11 +2,14 @@
  * Campaign missions: a briefing, objectives revealed one at a time, scripted lines from the
  * Mind, and win or lose conditions. See docs/World.md for the story they belong to.
  */
+
+import type { Shot } from "./cinematic";
 import { TICK_RATE } from "./config";
 import { distance, gridRef } from "./coords";
 import { isBuiltToPlan, setWardenHome } from "./custody";
 import type { ObjectName } from "./definitions";
 import { emit } from "./events";
+import { LORE, learn } from "./lore";
 import type { SiteSpec } from "./sites";
 import {
   createGame,
@@ -48,6 +51,8 @@ export interface MissionDefinition {
   iron: number;
   /** Tessilend sites the mission places by hand. */
   sites?: SiteSpec[];
+  /** The camera's tour before the mission starts. */
+  intro?: Shot[];
   /** Extra setup after the starting units are placed. */
   setup?: (state: GameState) => void;
   /** Mission logic run every tick, `seconds` long. */
@@ -81,6 +86,22 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60))
 
 const arrived: MissionDefinition = {
   id: "arrived",
+  intro: [
+    {
+      target: { x: 5.5, y: 5.5 },
+      distance: 55,
+      yaw: 0.3,
+      seconds: 4.5,
+      caption: "Survey object 31-Ledger-7. Population: none. Until now.",
+    },
+    {
+      target: { x: 5.5, y: 5.5 },
+      distance: 11,
+      yaw: 1.1,
+      seconds: 5,
+      caption: "The Mind's armoured core came down hard. Three drones climbed out of the wreckage.",
+    },
+  ],
   number: 1,
   act: "Act I · Landfall",
   title: "Arrived",
@@ -146,11 +167,13 @@ const arrived: MissionDefinition = {
     },
     {
       when: (state) => seconds(state) > 22,
-      run: (state) =>
+      run: (state) => {
         say(
           state,
           "Those orange crystals are iron, but nobody mined it: it grew. Bloom, the old smelters would have called it. Someone planted these. I'd like to meet the gardener.",
-        ),
+        );
+        learn(state, LORE.bloom);
+      },
     },
     {
       // Nudge a player who hasn't started mining.
@@ -179,10 +202,35 @@ function arriveWarden(
 ): void {
   const warden = spawn(state, "warden", x, y, "custody");
   setWardenHome(warden, home, patrol);
+  learn(state, LORE.custody);
 }
 
 const theStaff: MissionDefinition = {
   id: "the-staff",
+  intro: [
+    {
+      target: { x: 5.5, y: 5.5 },
+      distance: 32,
+      yaw: 0.9,
+      seconds: 3.5,
+      caption: "The base, a few days on. Collectors, drones, and bloom in the store.",
+    },
+    {
+      target: { x: 4.5, y: -3.5 },
+      distance: 8,
+      yaw: 2.3,
+      seconds: 4.5,
+      caption: "A marker stone, older than the Culture.",
+      reveal: 3,
+    },
+    {
+      target: { x: 22, y: 3 },
+      distance: 22,
+      yaw: 1.5,
+      seconds: 4,
+      caption: "And on the edge of the sensors, something moving. Slowly. With purpose.",
+    },
+  ],
   number: 2,
   act: "Act I · Landfall",
   title: "The Staff",
@@ -299,6 +347,24 @@ const builtToPlan = (state: GameState) =>
 
 const houseRules: MissionDefinition = {
   id: "house-rules",
+  intro: [
+    {
+      target: { x: -10.5, y: 0.5 },
+      distance: 13,
+      yaw: 2.6,
+      seconds: 4.5,
+      caption: "West of the base: an archive the staff visit every day.",
+      reveal: 5,
+    },
+    {
+      target: { x: 8.5, y: -17.5 },
+      distance: 15,
+      yaw: 0.6,
+      seconds: 4.5,
+      caption: "North: a Tessilend power tap, dark for ten thousand years.",
+      reveal: 5,
+    },
+  ],
   number: 3,
   act: "Act I · Landfall",
   title: "House Rules",
@@ -442,6 +508,22 @@ const farDecoys = (state: GameState) =>
 
 const ahCompany: MissionDefinition = {
   id: "ah-company",
+  intro: [
+    {
+      target: { x: 5.5, y: 5.5 },
+      distance: 40,
+      yaw: 0.8,
+      seconds: 3.5,
+      caption: "Something followed the Mind down.",
+    },
+    {
+      target: { x: 30, y: -14 },
+      distance: 34,
+      yaw: 0.2,
+      seconds: 4.5,
+      caption: "Idiran skimmers, sweeping the hills. They know roughly where it fell. Not exactly.",
+    },
+  ],
   number: 4,
   act: "Act II · Company",
   title: "Ah. Company.",
@@ -572,6 +654,24 @@ const campsLeft = (state: GameState) =>
 
 const trespassers: MissionDefinition = {
   id: "trespassers",
+  intro: [
+    {
+      target: { x: -1.5, y: 25.5 },
+      distance: 24,
+      yaw: 0.6,
+      seconds: 5,
+      caption: "South of the base, around a Tessilend seedbed: three Idiran camps, dug in hard.",
+      reveal: 10,
+    },
+    {
+      target: { x: -1.5, y: 22.5 },
+      distance: 10,
+      yaw: 1.8,
+      seconds: 4.5,
+      caption:
+        "They're stripping it for lattice. The staff are watching. The staff are not pleased.",
+    },
+  ],
   number: 5,
   act: "Act II · Company",
   title: "Trespassers",
@@ -709,6 +809,23 @@ const SECURE_SECONDS = 40;
 
 const post: MissionDefinition = {
   id: "post",
+  intro: [
+    {
+      target: { x: 25, y: 20 },
+      distance: 50,
+      yaw: 0.5,
+      seconds: 3.5,
+      caption: "From the GSV Quiet Word In Your Ear, passing at speed: a delivery.",
+    },
+    {
+      target: { x: 43.5, y: 34.5 },
+      distance: 10,
+      yaw: 1.3,
+      seconds: 4.5,
+      caption: "Half buried, still ticking as it cools. The Idirans saw it land too.",
+      reveal: 6,
+    },
+  ],
   number: 6,
   act: "Act II · Company",
   title: "Post",
@@ -795,6 +912,23 @@ const CHARGE_SECONDS = 45;
 
 const relics: MissionDefinition = {
   id: "relics",
+  intro: [
+    {
+      target: { x: -20.5, y: -21.5 },
+      distance: 14,
+      yaw: 3.6,
+      seconds: 5,
+      caption: "A Tessilend transmitter, still aimed at somewhere a very long way off.",
+      reveal: 7,
+    },
+    {
+      target: { x: -20.5, y: -21.5 },
+      distance: 7,
+      yaw: 4.6,
+      seconds: 3.5,
+      caption: "If it wakes, the Mind can talk to home. Everyone else will hear it too.",
+    },
+  ],
   number: 7,
   act: "Act II · Company",
   title: "Relics",
@@ -891,6 +1025,23 @@ const padCount = (state: GameState) =>
 
 const sealedOrders: MissionDefinition = {
   id: "sealed-orders",
+  intro: [
+    {
+      target: { x: 5.5, y: 5.5 },
+      distance: 45,
+      yaw: 0.8,
+      seconds: 4,
+      caption: "The key opened the Mind's sealed memory. It was never only visiting.",
+    },
+    {
+      target: { x: 40.5, y: -10.5 },
+      distance: 14,
+      yaw: 0.2,
+      seconds: 4.5,
+      caption: "Eleven thousand refugees are coming. And the Tessilend left houses standing empty.",
+      reveal: 7,
+    },
+  ],
   number: 8,
   act: "Act III · Arrivals",
   title: "Sealed Orders",
@@ -977,6 +1128,24 @@ const RECORDS = [
 
 const tenancy: MissionDefinition = {
   id: "tenancy",
+  intro: [
+    {
+      target: { x: 40.5, y: -10.5 },
+      distance: 12,
+      yaw: 1,
+      seconds: 4.5,
+      caption: "The habitats are sealed to everyone but their rightful tenants.",
+      reveal: 7,
+    },
+    {
+      target: { x: 16.5, y: -20.5 },
+      distance: 16,
+      yaw: 0.4,
+      seconds: 4,
+      caption:
+        "Somewhere in the builders' records is the reason they built twice as many homes as they lived in.",
+    },
+  ],
   number: 9,
   act: "Act III · Arrivals",
   title: "Tenancy",
@@ -1089,6 +1258,29 @@ const RAIDS: { at: number; from: [number, number][] }[] = [
 
 const onlyVisiting: MissionDefinition = {
   id: "only-visiting",
+  intro: [
+    {
+      target: { x: 5.5, y: 5.5 },
+      distance: 30,
+      yaw: 0.7,
+      seconds: 4,
+      caption: "Three landing pads, lit. The first ships are coming down.",
+    },
+    {
+      target: { x: 45, y: -22 },
+      distance: 40,
+      yaw: 0.3,
+      seconds: 4,
+      caption: "And so are the Idirans.",
+    },
+    {
+      target: { x: 13.5, y: 11.5 },
+      distance: 10,
+      yaw: 1.4,
+      seconds: 3.5,
+      caption: "The staff stand with the guests now. Let's give them something to do.",
+    },
+  ],
   number: 10,
   act: "Act III · Arrivals",
   title: "Only Visiting",
@@ -1194,6 +1386,12 @@ export function startMission(definition: MissionDefinition, player: Player): Gam
     ...(definition.sites ? { sites: definition.sites } : {}),
   });
   definition.setup?.(state);
+  learn(state, {
+    id: `mission-${definition.id}`,
+    category: "Story",
+    title: `${definition.number}. ${definition.title}`,
+    text: definition.briefing.join(" "),
+  });
   state.mission = {
     definition,
     current: 0,
@@ -1238,6 +1436,7 @@ export function updateMission(state: GameState): void {
   }
   if (runtime.current >= definition.objectives.length) {
     runtime.outcome = { won: true, text: definition.victory };
+    if (definition.id === "only-visiting") learn(state, LORE.epilogue);
   }
 }
 

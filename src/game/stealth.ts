@@ -11,6 +11,7 @@
 import { TICK_RATE } from "./config";
 import { distance, type Point } from "./coords";
 import { inGrove } from "./cover";
+import { LORE, learn } from "./lore";
 import { type GameState, removeUnit, say } from "./state";
 import { isFlying, isMobile, newWalk, type Unit } from "./units";
 
@@ -155,6 +156,7 @@ export function setSilent(state: GameState, silent: boolean): void {
 export function arriveSkimmer(state: GameState, skimmer: Unit): void {
   memoryOf(skimmer);
   state.discovered.add("idirans");
+  learn(state, LORE.idirans);
 }
 
 /** Send a skimmer to hold a place: it flies there and circles it, unless something lures it off. */

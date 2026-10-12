@@ -68,12 +68,14 @@
             <a href="https://github.com/andrebaaij/mind-your-own-empire">code on GitHub</a>.
           </p>
 
+          <button type="button" id="open-codex" class="button codex-button">Codex: what the Mind has learned</button>
+
           <h3 class="label controls-title">Controls</h3>
           <dl class="controls">
             <dt>Left click / drag</dt>
             <dd>Select drones, place buildings</dd>
             <dt>Right click</dt>
-            <dd>Move, or mine bloom</dd>
+            <dd>Move, mine bloom, or study a Tessilend site</dd>
             <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <kbd>Q</kbd><kbd>E</kbd> · wheel</dt>
             <dd>Pan · rotate · zoom</dd>
             <dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></dt>
@@ -84,5 +86,13 @@
         </section>
       </div>
     </main>
+
+    <dialog id="codex" class="codex glass" aria-labelledby="codex-title">
+      <h1 id="codex-title">Codex</h1>
+      <div id="codex-entries" class="codex-entries"></div>
+      <form method="dialog">
+        <button type="submit" class="button primary">Close</button>
+      </form>
+    </dialog>
   </body>
 </html>

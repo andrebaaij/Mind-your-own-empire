@@ -27,6 +27,7 @@ import { getObjectDefinition, type ObjectName } from "./definitions";
 import { Effects } from "./effects";
 import { Fauna } from "./fauna";
 import { createGroundMaterial } from "./ground";
+import { learn } from "./lore";
 import {
   createCrystalGeometry,
   createGhost,
@@ -892,6 +893,12 @@ export class Renderer {
     this.fauna.update(state.units, state.camera.target, dt);
     for (const kind of this.creatures.update(this.fauna, time)) {
       say(state, FIRST_SIGHTING[kind], "info", { once: `sighted-${kind}` });
+      learn(state, {
+        id: `creature-${kind}`,
+        category: "Wildlife",
+        title: { trundler: "Trundlers", kite: "Kites", longshank: "Longshanks" }[kind],
+        text: FIRST_SIGHTING[kind],
+      });
     }
   }
 

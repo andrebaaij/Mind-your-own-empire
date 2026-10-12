@@ -56,6 +56,16 @@ test("start the campaign: briefing, then the first objective", async ({ page }) 
   const objectives = page.getByRole("region", { name: "Mission objectives" });
   await expect(objectives).toContainText("Harvest bloom and bring it home");
   await expect(objectives).toContainText("0 / 60");
+
+  // The intro plays, and can be skipped.
+  await expect(page.locator(".cinematic")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".cinematic")).toHaveCount(0);
+
+  // The codex has the story so far.
+  await page.keyboard.press("p");
+  await page.getByRole("button", { name: "Codex" }).click();
+  await expect(page.getByRole("dialog", { name: "Codex" })).toContainText("1. Arrived");
   expect(errors).toEqual([]);
 });
 
@@ -115,6 +125,10 @@ test("mission 4: run silent with R, shown in the stealth panel", async ({ page }
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "Begin" }).click();
   await expect(dialog).toBeHidden();
+  // Skip the intro.
+  await expect(page.locator(".cinematic")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".cinematic")).toHaveCount(0);
 
   const silent = page.getByRole("button", { name: /Run silent/ });
   await expect(silent).toHaveAttribute("aria-pressed", "false");

@@ -1,4 +1,5 @@
 import "./styles/menu.css";
+import { renderCodex } from "./game/codexStore";
 import { glowCss, PLAYER_COLORS, type PlayerColorName } from "./game/colors";
 import { completedMissions, isUnlocked, MISSIONS } from "./game/missions";
 import { loadSaved } from "./game/save";
@@ -85,3 +86,12 @@ if (saved && resume instanceof HTMLAnchorElement) {
   const detail = resume.querySelector(".continue-detail");
   if (detail) detail.textContent = `${what} · saved ${new Date(saved.savedAt).toLocaleString()}`;
 }
+
+// The codex, from what's been found in any game so far.
+const codex = document.getElementById("codex");
+document.getElementById("open-codex")?.addEventListener("click", () => {
+  const entries = document.getElementById("codex-entries");
+  if (!(codex instanceof HTMLDialogElement) || !entries) return;
+  renderCodex(entries);
+  codex.showModal();
+});

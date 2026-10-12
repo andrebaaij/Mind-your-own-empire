@@ -17,6 +17,7 @@ import { distance, type GridRef, gridFromWorld, gridRange, type Point } from "./
 import { custodyThink, tidyTick } from "./custody";
 import { type Faction, getObjectDefinition, type ObjectName } from "./definitions";
 import { emit, type GameEvent } from "./events";
+import { LORE, type LoreEntry, learn } from "./lore";
 import type { MissionRuntime } from "./missions";
 import { assignSpots, findFreeSpots, tileKey } from "./pathfinding";
 import { orderStudy, relicsThink, studyTick } from "./relics";
@@ -155,6 +156,9 @@ export interface GameState {
   custodyAllied: boolean;
   /** What happened since the last frame, for effects and sound. */
   events: GameEvent[];
+  /** Codex entries learned this game, and those not yet passed to the stored codex. */
+  lore: Set<string>;
+  newLore: LoreEntry[];
 }
 
 export type StartLayout = [ObjectName, number, number][];
@@ -227,6 +231,8 @@ export function createGame(options: {
     flags: new Set(),
     custodyAllied: false,
     events: [],
+    lore: new Set(),
+    newLore: [],
   };
 
   for (const [name, x, y] of options.layout ?? SANDBOX_LAYOUT) spawn(state, name, x, y);
@@ -348,6 +354,7 @@ function unitContext(state: GameState): UnitContext {
       if (kind === "iron") state.stats.ironDelivered += accepted;
       else state.stats.latticeDelivered += accepted;
       if (accepted > 0 && kind === "lattice") state.discovered.add("lattice");
+      if (accepted > 0) learn(state, kind === "iron" ? LORE.bloom : LORE.lattice);
       if (accepted < amount) {
         say(
           state,

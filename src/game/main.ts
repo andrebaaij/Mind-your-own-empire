@@ -1,5 +1,7 @@
 import "../styles/game.css";
 import { Ambience } from "./audio";
+import { Cinematic } from "./cinematic";
+import { addToCodex, renderCodex } from "./codexStore";
 import { glowCss, playerColor } from "./colors";
 import { MAX_TICKS_PER_FRAME, TICK_MS } from "./config";
 import { Hud } from "./hud";
@@ -42,6 +44,10 @@ if (!game) throw new Error("Missing #game");
 // Interface accents glow in the player's colour, like their drones.
 document.documentElement.style.setProperty("--accent", glowCss(state.player.color));
 
+/** The mission intro, while it plays (and whether it's waiting to start). */
+let cinematic: Cinematic | null = null;
+let introPending = false;
+
 // The interface is ready straight away; the 3D view follows once the GPU is set up.
 const hud = new Hud({
   onBuild: (name) => {
@@ -58,7 +64,9 @@ if (saved) {
 } else if (mission) {
   state.paused = true;
   hud.showBriefing(mission, () => {
-    state.paused = false;
+    // The intro tour, then the mission; it starts with the next frame, once the 3D view is up.
+    if (mission.intro) introPending = true;
+    else state.paused = false;
   });
 } else {
   say(state, "Survey mode. No objectives, no deadlines, no one shooting. Enjoy it while it lasts.");
@@ -162,6 +170,28 @@ const settingsPanel = bindSettings(settingsDialog, settings, {
 });
 document.getElementById("pause-settings")?.addEventListener("click", () => settingsPanel.open());
 
+// The codex: what the Mind has learned, kept across games.
+const codexDialog = document.getElementById("codex") as HTMLDialogElement;
+document.getElementById("pause-codex")?.addEventListener("click", () => {
+  renderCodex(document.getElementById("codex-entries") as HTMLElement);
+  codexDialog.showModal();
+});
+const codexToast = document.getElementById("codex-toast") as HTMLOutputElement;
+let codexToastTimer: number | undefined;
+/** Pass newly learned entries to the stored codex, with a small notice. */
+function recordLore(): void {
+  if (state.newLore.length === 0) return;
+  const fresh = addToCodex(state.newLore.splice(0));
+  const last = fresh.at(-1);
+  if (!last) return;
+  codexToast.textContent = `Added to the codex: ${last.title}`;
+  codexToast.hidden = false;
+  window.clearTimeout(codexToastTimer);
+  codexToastTimer = window.setTimeout(() => {
+    codexToast.hidden = true;
+  }, 3_500);
+}
+
 /** Save the game, unless it's over; says so unless `quietly`. */
 function save(quietly = false): void {
   if (state.mission?.outcome) return;
@@ -191,6 +221,7 @@ if (params.has("debug")) {
 let accumulator = 0;
 let last = performance.now();
 requestAnimationFrame(function frame(now) {
+  const wallSeconds = Math.min(0.5, (now - last) / 1000);
   accumulator = Math.min(accumulator + (now - last), TICK_MS * MAX_TICKS_PER_FRAME);
   last = now;
   while (accumulator >= TICK_MS) {
@@ -199,6 +230,7 @@ requestAnimationFrame(function frame(now) {
     accumulator -= TICK_MS;
   }
   checkOutcome();
+  recordLore();
   if (state.ticks - lastAutosave >= 120 * 60) {
     lastAutosave = state.ticks;
     save(true);
@@ -207,6 +239,20 @@ requestAnimationFrame(function frame(now) {
   ambience.playEvents(state.events);
   // The camera may have moved, so find the ground under the pointer again.
   state.pointer.world = screen.position ? renderer.groundAt(screen.position) : null;
+  if (introPending && mission?.intro) {
+    introPending = false;
+    cinematic = new Cinematic(
+      state,
+      mission.intro,
+      { kicker: `${mission.act} · Mission ${mission.number}`, title: mission.title },
+      () => {
+        cinematic = null;
+      },
+      (text) => voice.say(text),
+    );
+  }
+  // The intro keeps to the wall clock, even on a slow machine.
+  cinematic?.update(wallSeconds);
   renderer.render(state, now / 1000);
   // The minimap's corners of view are found by ray-marching, so refresh them a few times a second.
   minimapClock += 1;

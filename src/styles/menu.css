@@ -331,3 +331,73 @@ body {
   grid-column: 1 / -1;
   margin: 10px 0 2px;
 }
+
+.codex-button {
+  width: 100%;
+  margin: 6px 0 4px;
+}
+
+.codex {
+  width: min(640px, calc(100vw - 28px));
+  max-height: calc(100vh - 40px);
+  padding: 24px 28px;
+  overflow-y: auto;
+  color: var(--text);
+}
+
+.codex::backdrop {
+  background: rgb(4 5 10 / 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.codex h1 {
+  margin: 0 0 16px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.codex-entries {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.codex-section {
+  display: grid;
+  gap: 6px;
+}
+
+.codex-section h2 {
+  margin: 0 0 2px;
+}
+
+.codex-section details {
+  padding: 8px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.03);
+}
+
+.codex .codex-section summary {
+  cursor: pointer;
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+}
+
+.codex-section details p {
+  margin: 8px 0 2px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.codex-empty {
+  color: var(--muted);
+}
+
+.codex form {
+  display: flex;
+  justify-content: center;
+}

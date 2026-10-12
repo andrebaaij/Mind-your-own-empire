@@ -25,6 +25,8 @@ The whole ten-mission campaign is playable, in three acts:
 9. **Tenancy.** Find the builders' records that prove the habitats were built for guests, and present them to the staff.
 10. **Only Visiting.** The flotilla lands under Idiran attack, with the staff on your side.
 
+Each mission opens with a short, skippable intro: the camera tours the places that matter, with a title card and captions. The **Codex** (main menu or pause menu) keeps everything the Mind has learned across games: the story so far, the Tessilend archive fragments, marker inscriptions, the sites, the Custody, the Idirans and the wildlife. In Settings, the Mind can speak its lines aloud with the browser's own speech synthesis.
+
 There's also **Survey** mode: free play on any seed, with no objectives.
 
 ![The Mind and its drones](docs/screenshot-3d.png)
@@ -125,6 +127,14 @@ src/
     stealth.ts      the Idiran search: signatures, detection, skimmers, decoys
     cover.ts        shared noise, and where the groves (cover) are
     ground.ts       the ground's shader detail
+    events.ts       game events the simulation records for effects and sound
+    effects.ts      particles, rings, floating text, camera shake
+    minimap.ts      the minimap
+    save.ts         saving and loading
+    settings.ts     player settings (and settingsPanel.ts, the dialog)
+    voice.ts        the Mind's spoken voice (browser speech synthesis)
+    cinematic.ts    mission intros
+    lore.ts         codex entries (and codexStore.ts, the stored codex)
     audio.ts        the synthesised ambient soundscape
     models.ts       procedural 3D models: the Mind, drones, towers, solar arrays, bloom crystals
     input.ts        mouse and keyboard handling, picking through the 3D view
