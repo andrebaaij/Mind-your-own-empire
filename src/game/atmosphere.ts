@@ -154,6 +154,13 @@ function createSpores(center: SporeCenter): THREE.InstancedMesh {
   return spores;
 }
 
+/** The sky on its own, for lighting the scene with it (image-based lighting). */
+export function createSkyScene(): THREE.Scene {
+  const scene = new THREE.Scene();
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(50, 32, 16), skyMaterial()));
+  return scene;
+}
+
 export class Atmosphere {
   readonly group = new THREE.Group();
   private readonly sky: THREE.Group;

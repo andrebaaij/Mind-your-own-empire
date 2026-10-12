@@ -1,12 +1,31 @@
 import { bloom } from "three/addons/tsl/display/BloomNode.js";
-import { color, pass, positionWorld, sin, time, vertexColor } from "three/tsl";
+import { denoise } from "three/addons/tsl/display/DenoiseNode.js";
+import { ao } from "three/addons/tsl/display/GTAONode.js";
+import {
+  color,
+  float,
+  mix,
+  mrt,
+  normalView,
+  output,
+  pass,
+  positionWorld,
+  saturation,
+  screenUV,
+  sin,
+  smoothstep,
+  time,
+  vec4,
+  vertexColor,
+} from "three/tsl";
 import * as THREE from "three/webgpu";
-import { Atmosphere, MIST, SUN_DIRECTION } from "./atmosphere";
+import { Atmosphere, createSkyScene, MIST, SUN_DIRECTION } from "./atmosphere";
 import { CHUNK_SIZE, ZOOM_DEFAULT, ZOOM_MIN } from "./config";
 import { gridFromWorld, type Point, type Rect, rectContains, worldFromGrid } from "./coords";
 import { CreatureView, FIRST_SIGHTING } from "./creatures";
 import { getObjectDefinition, type ObjectName } from "./definitions";
 import { Fauna } from "./fauna";
+import { createGroundMaterial } from "./ground";
 import {
   createCrystalGeometry,
   createGhost,
@@ -124,11 +143,7 @@ export class Renderer {
   private readonly shownChunks = new Set<ChunkView>();
   private readonly unitViews = new Map<Unit, UnitView>();
   private readonly crystalGeometry = createCrystalGeometry();
-  private readonly terrainMaterial = new THREE.MeshStandardMaterial({
-    vertexColors: true,
-    roughness: 0.92,
-    metalness: 0,
-  });
+  private readonly terrainMaterial = createGroundMaterial();
   private readonly acidMaterial = acidMaterial();
 
   private readonly markers: THREE.Mesh[] = [];
@@ -166,7 +181,12 @@ export class Renderer {
     // Late afternoon: a low, warm sun, a cool sky, and haze in the distance.
     this.scene.background = MIST;
     this.scene.fog = new THREE.Fog(MIST, 40, 120);
-    this.scene.add(new THREE.HemisphereLight("#a8b4e0", "#6a3a2c", 1.4));
+    // The sky lights the land (image-based lighting), with a hemisphere light for the bounce
+    // off the red ground.
+    const sky = new THREE.PMREMGenerator(renderer).fromScene(createSkyScene(), 0.02, 0.1, 100);
+    this.scene.environment = sky.texture;
+    this.scene.environmentIntensity = 0.55;
+    this.scene.add(new THREE.HemisphereLight("#a8b4e0", "#6a3a2c", 0.8));
     this.scenery = new Scenery(world);
     this.fauna = new Fauna(world);
     this.creatures = new CreatureView(world);
@@ -187,8 +207,38 @@ export class Renderer {
     // Bloom makes the emissive parts (aura fields, seams, acid) glow.
     this.pipeline = new THREE.RenderPipeline(renderer);
     const scenePass = pass(this.scene, this.camera);
-    const color = scenePass.getTextureNode("output");
-    this.pipeline.outputNode = color.add(bloom(color, 0.8, 0.4, 0.95));
+    scenePass.setMRT(mrt({ output, normal: normalView }));
+    const sceneColor = scenePass.getTextureNode("output");
+
+    // Ambient occlusion: soft contact shadows where things meet the ground and each other.
+    const occlusion = ao(
+      scenePass.getTextureNode("depth"),
+      scenePass.getTextureNode("normal"),
+      this.camera,
+    );
+    occlusion.resolutionScale = 0.5;
+    occlusion.radius.value = 1.6;
+    occlusion.thickness.value = 2;
+    occlusion.scale.value = 1.6;
+    occlusion.samples.value = 12;
+    const depth = scenePass.getTextureNode("depth");
+    const normals = scenePass.getTextureNode("normal");
+    // The denoiser outputs a colour (vec4), though its type doesn't say so.
+    const smoothed = denoise(
+      occlusion.getTextureNode(),
+      depth,
+      normals,
+      this.camera,
+    ) as unknown as ReturnType<typeof vec4>;
+    const shaded = sceneColor.rgb.mul(mix(float(1), smoothed.r, 0.85));
+
+    // Bloom for the glowing parts, then a gentle grade: a touch more colour, and a vignette.
+    const lit = vec4(shaded, 1);
+    const glowing = lit.add(bloom(lit, 0.8, 0.4, 0.95));
+    const vignette = float(1).sub(
+      smoothstep(0.45, 1.05, screenUV.sub(0.5).length().mul(1.5)).mul(0.4),
+    );
+    this.pipeline.outputNode = vec4(saturation(glowing.rgb, 1.12).mul(vignette), 1);
 
     this.resize();
     window.addEventListener("resize", () => this.resize());
