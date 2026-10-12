@@ -95,3 +95,26 @@ convert them to WebP before committing. It needs OpenRouter access from the envi
 3. Add `<name>` with its size in tiles to `SPECS` in `src/game/assets.ts`. The game loads it
    behind the loading screen and uses it in place of the model built in code; the glow and
    aura stay.
+
+## Review notes (first production pass)
+
+What a reference image needs before it goes to 3D:
+
+- **One solid object.** Floating parts (the spire's orbiting lenses), hair-thin strands (the
+  warden's filaments) and baked-in ground don't survive image-to-3D. Redraw them first: the
+  `-v2` plates are the redrawn ones.
+- **Leave motion, glow and state to the game.** Rings that spin, lamps that pulse and cargo that
+  fills are made in code, so the model is the static body. Generate holds empty (the drone's
+  bed, the Mind's trough) and measure them from the mesh.
+- **Glowing parts** come out as plain paint; the game lights up the strongly cyan, amber or red
+  parts of the texture, and the Culture's cyan takes the player's colour.
+- **Check it from the game camera.** The first collector, a cloud of dark hexagonal panels,
+  read as a black blob from above and spilled over its tile; it was rejected and redrawn as one
+  tilted panel (`asset-solar-array-v2`), still to be generated.
+
+| Model | Status |
+| --- | --- |
+| Worker drone, Mind core, scout, sensor spire, warden, skimmer, Idiran camp | in the game |
+| Collector (v2 plate), decoy, landing pad, uplink (v2 plate) | plates ready, to generate |
+| Bloom and lattice deposits, flora, ruins | next pass: drawn in bulk (instanced) |
+| Trundler, kite, longshank | next pass: generate, rig, animate in place |

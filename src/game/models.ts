@@ -6,7 +6,7 @@
 
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import * as THREE from "three/webgpu";
-import { authoredModel, type Bed } from "./assets";
+import { authoredModel, type Hold } from "./assets";
 import { glowCss } from "./colors";
 import type { ObjectName } from "./definitions";
 import { latticeMaterial } from "./ruins";
@@ -74,6 +74,18 @@ function plinth(width: number, depth: number): THREE.Mesh {
 function mind(glow: THREE.Color): THREE.Group {
   const group = new THREE.Group();
   group.add(plinth(2.9, 2.9));
+  const authored = authoredModel("mind", glow);
+  if (authored) {
+    // The core stands in its cradle; what the Mind stores heaps up in the trough around it.
+    group.add(authored.model);
+    if (authored.hold) group.add(cargoHold(authored.hold));
+    const halo = mesh(new THREE.TorusGeometry(1.15, 0.025, 8, 64), glowMaterial(glow, 1.4));
+    halo.name = "spin";
+    halo.rotation.x = Math.PI / 2;
+    halo.position.y = authored.height * 0.62;
+    group.add(halo);
+    return group;
+  }
 
   const body = new THREE.Group();
   body.name = "hover";
@@ -94,10 +106,10 @@ function mind(glow: THREE.Color): THREE.Group {
 /** Worker drone: a small rounded casing with a sensor band, inside a faint aura. */
 function workerDrone(glow: THREE.Color): THREE.Group {
   const group = new THREE.Group();
-  const authored = authoredModel("block");
+  const authored = authoredModel("block", glow);
   if (authored) {
     group.add(authored.model);
-    if (authored.bed) group.add(cargoBed(authored.bed));
+    if (authored.hold) group.add(cargoHold(authored.hold));
     group.add(aura(glow, 0.34, 0.12));
     return group;
   }
@@ -112,6 +124,19 @@ function workerDrone(glow: THREE.Color): THREE.Group {
 /** Scout drone: a sleek flier with glowing fins and a wide aura. */
 function scoutDrone(glow: THREE.Color): THREE.Group {
   const group = new THREE.Group();
+  const authored = authoredModel("scout", glow);
+  if (authored) {
+    group.add(authored.model);
+    // Its aura vanes, which the model lost on the way to 3D.
+    for (const side of [-1, 1]) {
+      const vane = mesh(new THREE.BoxGeometry(0.2, 0.015, 0.12), glowMaterial(glow));
+      vane.position.set(-0.12, 0.02, side * 0.2);
+      vane.rotation.y = side * 0.35;
+      group.add(vane);
+    }
+    group.add(aura(glow, 0.45, 0.08));
+    return group;
+  }
   const body = mesh(new THREE.CapsuleGeometry(0.11, 0.42, 6, 16), hull);
   body.rotation.z = Math.PI / 2; // lie along +x
   group.add(body);
@@ -128,6 +153,16 @@ function scoutDrone(glow: THREE.Color): THREE.Group {
 function tower(glow: THREE.Color): THREE.Group {
   const group = new THREE.Group();
   group.add(plinth(0.8, 0.8));
+  const authored = authoredModel("tower", glow);
+  if (authored) {
+    group.add(authored.model);
+    const ring = mesh(new THREE.TorusGeometry(0.26, 0.016, 6, 32), glowMaterial(glow, 1.4));
+    ring.name = "spin";
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = authored.height * 0.66;
+    group.add(ring);
+    return group;
+  }
   const spire = mesh(new THREE.CylinderGeometry(0.06, 0.26, 2.4, 6), darkHull);
   spire.position.y = 1.2;
   group.add(spire);
@@ -172,6 +207,11 @@ const bronze = new THREE.MeshStandardMaterial({
  */
 function warden(): THREE.Group {
   const group = new THREE.Group();
+  const authored = authoredModel("warden");
+  if (authored) {
+    group.add(authored.model);
+    return group;
+  }
   const ring = mesh(new THREE.TorusGeometry(0.36, 0.07, 10, 32), bronze);
   ring.rotation.x = Math.PI / 2;
   group.add(ring);
@@ -210,6 +250,11 @@ const idiranTrim = new THREE.MeshStandardMaterial({
  */
 function skimmer(): THREE.Group {
   const group = new THREE.Group();
+  const authored = authoredModel("skimmer");
+  if (authored) {
+    group.add(authored.model);
+    return group;
+  }
   const hull = mesh(new THREE.CylinderGeometry(0.18, 0.55, 1.5, 4, 1), idiranHull);
   hull.rotation.z = -Math.PI / 2;
   hull.rotation.x = Math.PI / 4;
@@ -266,6 +311,11 @@ function decoy(glow: THREE.Color): THREE.Group {
 /** An Idiran forward camp: a dug-in hexagonal bunker under a tall, blinking mast. */
 function camp(): THREE.Group {
   const group = new THREE.Group();
+  const authored = authoredModel("camp");
+  if (authored) {
+    group.add(authored.model);
+    return group;
+  }
   const pad = mesh(new THREE.CylinderGeometry(1.45, 1.6, 0.35, 6), idiranHull);
   pad.position.y = 0.1;
   const bunker = mesh(new THREE.CylinderGeometry(0.85, 1.15, 0.8, 6), idiranHull);
@@ -378,42 +428,85 @@ export const crystalMaterial = new THREE.MeshStandardMaterial({
 
 // --- Cargo ---------------------------------------------------------------------------------------
 
-/** Crystals in a full bed: a layer of nine on the floor, heaped with three more. */
-const CARGO_SLOTS = 12;
 const cargoGeometry = new THREE.OctahedronGeometry(1, 0).scale(0.8, 1.5, 0.8);
 
-/**
- * Where each crystal sits, as fractions of the bed (0–1 back to front, 0–1 side to side) and a
- * lift above the floor in crystal sizes. Loading starts in the middle and spreads out, then heaps.
- */
-const CARGO_LAYOUT: readonly [number, number, number][] = [
-  [0.5, 0.5, 0],
-  [0.17, 0.5, 0],
-  [0.83, 0.5, 0],
-  [0.5, 0.17, 0],
-  [0.5, 0.83, 0],
-  [0.17, 0.17, 0],
-  [0.83, 0.83, 0],
-  [0.17, 0.83, 0],
-  [0.83, 0.17, 0],
-  [0.5, 0.5, 1.1],
-  [0.33, 0.35, 0.9],
-  [0.67, 0.65, 0.9],
-];
+/** A crystal's place in a hold, in the order holds fill up. */
+interface Slot {
+  position: THREE.Vector3;
+  size: number;
+}
 
-/** An empty cargo bed: crystals for a full load, all hidden. `setCargo` shows what's carried. */
-function cargoBed(bed: Bed): THREE.Group {
+/**
+ * A drone's bed: a layer of nine crystals on the floor, heaped with three more. Loading starts
+ * in the middle and spreads out, then heaps.
+ */
+function bedSlots(bed: Extract<Hold, { shape: "box" }>): Slot[] {
+  const layout: [number, number, number][] = [
+    [0.5, 0.5, 0],
+    [0.17, 0.5, 0],
+    [0.83, 0.5, 0],
+    [0.5, 0.17, 0],
+    [0.5, 0.83, 0],
+    [0.17, 0.17, 0],
+    [0.83, 0.83, 0],
+    [0.17, 0.83, 0],
+    [0.83, 0.17, 0],
+    [0.5, 0.5, 1.1],
+    [0.33, 0.35, 0.9],
+    [0.67, 0.65, 0.9],
+  ];
+  const size = (Math.min(bed.x[1] - bed.x[0], bed.z[1] - bed.z[0]) / 3) * 0.55;
+  return layout.map(([u, v, lift]) => {
+    const floor = bed.floor[0] + (bed.floor[1] - bed.floor[0]) * u;
+    return {
+      position: new THREE.Vector3(
+        bed.x[0] + (bed.x[1] - bed.x[0]) * u,
+        floor + size * (0.9 + lift),
+        bed.z[0] + (bed.z[1] - bed.z[0]) * v,
+      ),
+      size,
+    };
+  });
+}
+
+/**
+ * A storage trough around a building: two rows of crystals all the way round, then a heap along
+ * the middle. Stock goes in all round the ring rather than in one place, so it reads at a glance.
+ */
+function troughSlots(ring: Extract<Hold, { shape: "ring" }>): Slot[] {
+  const around = 24;
+  const width = ring.outer - ring.inner;
+  const size = width * 0.38;
+  const slots: Slot[] = [];
+  const place = (k: number, radius: number, lift: number, offset: number) => {
+    const angle = ((k + offset) / around) * Math.PI * 2;
+    slots.push({
+      position: new THREE.Vector3(
+        Math.cos(angle) * radius,
+        ring.floor + size * (0.9 + lift),
+        Math.sin(angle) * radius,
+      ),
+      size,
+    });
+  };
+  // Stepping by 7 (which shares no factor with 24) spreads each round evenly.
+  for (let n = 0; n < around; n++) {
+    const k = (n * 7) % around;
+    place(k, ring.inner + width * 0.3, 0, 0);
+    place(k, ring.inner + width * 0.72, 0, 0.5);
+  }
+  for (let n = 0; n < around; n++) place((n * 7) % around, ring.inner + width * 0.5, 1, 0.25);
+  return slots;
+}
+
+/** An empty hold: a crystal for every slot, all hidden. `setCargo` shows what's carried. */
+function cargoHold(hold: Hold): THREE.Group {
   const group = new THREE.Group();
   group.name = "cargo";
-  const size = (Math.min(bed.x[1] - bed.x[0], bed.z[1] - bed.z[0]) / 3) * 0.55;
-  CARGO_LAYOUT.forEach(([u, v, lift], i) => {
+  const slots = hold.shape === "box" ? bedSlots(hold) : troughSlots(hold);
+  slots.forEach(({ position, size }, i) => {
     const crystal = new THREE.Mesh(cargoGeometry, crystalMaterial);
-    const floor = bed.floor[0] + (bed.floor[1] - bed.floor[0]) * u;
-    crystal.position.set(
-      bed.x[0] + (bed.x[1] - bed.x[0]) * u,
-      floor + size * (0.9 + lift),
-      bed.z[0] + (bed.z[1] - bed.z[0]) * v,
-    );
+    crystal.position.copy(position);
     // Tumbled in any old way, but the same way every time.
     crystal.rotation.set(Math.sin(i * 7.1) * 0.6, i * 2.4, Math.cos(i * 3.3) * 0.6);
     crystal.userData.size = size * (0.85 + ((i * 37) % 10) / 40);
@@ -426,9 +519,9 @@ function cargoBed(bed: Bed): THREE.Group {
 }
 
 /**
- * Fill a cargo bed with what a unit carries: one crystal per twelfth of a full load (any load
- * shows at least one), bloom orange and lattice teal in proportion. New crystals pop in and
- * unloaded ones shrink away over `dt` seconds.
+ * Fill a hold with what a unit carries or stores: one crystal per slot's share of a full load
+ * (any load shows at least one), bloom orange and lattice teal in proportion. New crystals pop in
+ * and unloaded ones shrink away over `dt` seconds.
  */
 export function setCargo(
   cargo: THREE.Object3D,
@@ -437,8 +530,9 @@ export function setCargo(
   capacity: number,
   dt: number,
 ): void {
+  const slots = cargo.children.length;
   const total = bloom + lattice;
-  const shown = total <= 0 ? 0 : Math.min(CARGO_SLOTS, Math.ceil((total / capacity) * CARGO_SLOTS));
+  const shown = total <= 0 ? 0 : Math.min(slots, Math.ceil((total / capacity) * slots));
   const bloomShown = total <= 0 ? 0 : Math.round((shown * bloom) / total);
   const rate = Math.min(1, dt * 12);
   cargo.children.forEach((child, i) => {

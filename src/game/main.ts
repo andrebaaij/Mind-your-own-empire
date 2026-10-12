@@ -14,7 +14,7 @@ import { chooseQuality, Renderer } from "./renderer";
 import { loadSaved, restore, saveGame } from "./save";
 import { loadSettings } from "./settings";
 import { bindSettings } from "./settingsPanel";
-import { build, canBuild, createGame, issueOrder, say, setSelection, tick } from "./state";
+import { build, canBuild, createGame, issueOrder, say, setSelection, spawn, tick } from "./state";
 import { setSilent } from "./stealth";
 import { Voice } from "./voice";
 
@@ -226,7 +226,7 @@ let lastAutosave = state.ticks;
 // ?debug exposes the game to the console and to scripted browser tests.
 if (params.has("debug")) {
   Object.assign(window, {
-    mindGame: { state, renderer, issueOrder, setSelection, build, tick, updateMission },
+    mindGame: { state, renderer, issueOrder, setSelection, build, spawn, tick, updateMission },
   });
 }
 

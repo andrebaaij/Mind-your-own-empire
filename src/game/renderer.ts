@@ -876,13 +876,18 @@ export class Renderer {
         continue;
       }
 
-      // What a drone carries heaps up in its cargo bed.
+      // What a drone carries heaps up in its cargo bed,
+      // and what the Mind has in store heaps up in the trough around it.
       if (view.cargo) {
+        const { economy } = state;
+        const stores = unit.footprint.length > 0;
         setCargo(
           view.cargo,
-          unit.carrying.iron,
-          unit.carrying.lattice,
-          definition.capacity?.load ?? 1,
+          stores ? economy.iron : unit.carrying.iron,
+          stores ? economy.lattice : unit.carrying.lattice,
+          stores
+            ? economy.storage.iron + economy.storage.lattice
+            : (definition.capacity?.load ?? 1),
           dt,
         );
       }
