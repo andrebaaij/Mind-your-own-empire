@@ -6,9 +6,10 @@
 
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import * as THREE from "three/webgpu";
-import { authoredModel } from "./assets";
+import { authoredModel, type Bed } from "./assets";
 import { glowCss } from "./colors";
 import type { ObjectName } from "./definitions";
+import { latticeMaterial } from "./ruins";
 import type { Color } from "./units";
 
 /** A saturated glow colour derived from a (pastel) player colour. */
@@ -95,7 +96,8 @@ function workerDrone(glow: THREE.Color): THREE.Group {
   const group = new THREE.Group();
   const authored = authoredModel("block");
   if (authored) {
-    group.add(authored);
+    group.add(authored.model);
+    if (authored.bed) group.add(cargoBed(authored.bed));
     group.add(aura(glow, 0.34, 0.12));
     return group;
   }
@@ -373,3 +375,79 @@ export const crystalMaterial = new THREE.MeshStandardMaterial({
   emissiveIntensity: 0.35,
   flatShading: true,
 });
+
+// --- Cargo ---------------------------------------------------------------------------------------
+
+/** Crystals in a full bed: a layer of nine on the floor, heaped with three more. */
+const CARGO_SLOTS = 12;
+const cargoGeometry = new THREE.OctahedronGeometry(1, 0).scale(0.8, 1.5, 0.8);
+
+/**
+ * Where each crystal sits, as fractions of the bed (0–1 back to front, 0–1 side to side) and a
+ * lift above the floor in crystal sizes. Loading starts in the middle and spreads out, then heaps.
+ */
+const CARGO_LAYOUT: readonly [number, number, number][] = [
+  [0.5, 0.5, 0],
+  [0.17, 0.5, 0],
+  [0.83, 0.5, 0],
+  [0.5, 0.17, 0],
+  [0.5, 0.83, 0],
+  [0.17, 0.17, 0],
+  [0.83, 0.83, 0],
+  [0.17, 0.83, 0],
+  [0.83, 0.17, 0],
+  [0.5, 0.5, 1.1],
+  [0.33, 0.35, 0.9],
+  [0.67, 0.65, 0.9],
+];
+
+/** An empty cargo bed: crystals for a full load, all hidden. `setCargo` shows what's carried. */
+function cargoBed(bed: Bed): THREE.Group {
+  const group = new THREE.Group();
+  group.name = "cargo";
+  const size = (Math.min(bed.x[1] - bed.x[0], bed.z[1] - bed.z[0]) / 3) * 0.55;
+  CARGO_LAYOUT.forEach(([u, v, lift], i) => {
+    const crystal = new THREE.Mesh(cargoGeometry, crystalMaterial);
+    const floor = bed.floor[0] + (bed.floor[1] - bed.floor[0]) * u;
+    crystal.position.set(
+      bed.x[0] + (bed.x[1] - bed.x[0]) * u,
+      floor + size * (0.9 + lift),
+      bed.z[0] + (bed.z[1] - bed.z[0]) * v,
+    );
+    // Tumbled in any old way, but the same way every time.
+    crystal.rotation.set(Math.sin(i * 7.1) * 0.6, i * 2.4, Math.cos(i * 3.3) * 0.6);
+    crystal.userData.size = size * (0.85 + ((i * 37) % 10) / 40);
+    crystal.scale.setScalar(0);
+    crystal.visible = false;
+    crystal.castShadow = true;
+    group.add(crystal);
+  });
+  return group;
+}
+
+/**
+ * Fill a cargo bed with what a unit carries: one crystal per twelfth of a full load (any load
+ * shows at least one), bloom orange and lattice teal in proportion. New crystals pop in and
+ * unloaded ones shrink away over `dt` seconds.
+ */
+export function setCargo(
+  cargo: THREE.Object3D,
+  bloom: number,
+  lattice: number,
+  capacity: number,
+  dt: number,
+): void {
+  const total = bloom + lattice;
+  const shown = total <= 0 ? 0 : Math.min(CARGO_SLOTS, Math.ceil((total / capacity) * CARGO_SLOTS));
+  const bloomShown = total <= 0 ? 0 : Math.round((shown * bloom) / total);
+  const rate = Math.min(1, dt * 12);
+  cargo.children.forEach((child, i) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    const wanted = i < shown;
+    if (wanted) child.material = i < bloomShown ? crystalMaterial : latticeMaterial;
+    const target = wanted ? (child.userData.size as number) : 0;
+    const scale = child.scale.x + (target - child.scale.x) * rate;
+    child.scale.setScalar(Math.abs(scale - target) < 0.0005 ? target : scale);
+    child.visible = child.scale.x > 0;
+  });
+}

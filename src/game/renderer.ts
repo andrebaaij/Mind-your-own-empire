@@ -34,6 +34,7 @@ import {
   createModel,
   crystalMaterial,
   glowColor,
+  setCargo,
 } from "./models";
 import { createLatticeGeometry, latticeMaterial, RuinView } from "./ruins";
 import { Scenery, valueNoise } from "./scenery";
@@ -117,6 +118,8 @@ interface UnitView {
   /** An Idiran skimmer's sensor sweep, drawn on the ground. */
   sensor?: THREE.Mesh;
   hover: THREE.Object3D | undefined;
+  /** A cargo bed that fills with what the unit carries. */
+  cargo: THREE.Object3D | undefined;
   spinners: THREE.Object3D[];
   heading: number;
   /** When a building went up (seconds), for its materialising animation; null for old ones. */
@@ -508,7 +511,7 @@ export class Renderer {
     this.effects.handle(state.events);
     this.placeCamera(state, realDt);
     this.renderChunks(state);
-    this.renderUnits(state, time);
+    this.renderUnits(state, time, realDt);
     this.renderFauna(state, time, dt);
     const { target, distance } = state.camera;
     this.ruins.update(state.world.sitesNear(target, distance * 2.5 + 12), time, dt);
@@ -826,6 +829,7 @@ export class Renderer {
       ring,
       alert,
       hover: model.getObjectByName("hover"),
+      cargo: model.getObjectByName("cargo"),
       spinners,
       heading: unit.heading,
       born: unit.footprint.length > 0 && this.started ? this.frameTime : null,
@@ -840,7 +844,7 @@ export class Renderer {
     return Math.max(...unit.footprint.map((tile) => this.world.tileHeight(tile)));
   }
 
-  private renderUnits(state: GameState, time: number): void {
+  private renderUnits(state: GameState, time: number, dt: number): void {
     // Units that left the game (dismantled buildings) take their models with them.
     for (const [unit, view] of this.unitViews) {
       if (!state.units.includes(unit)) {
@@ -870,6 +874,17 @@ export class Renderer {
       if (!seen) {
         view.ring.visible = false;
         continue;
+      }
+
+      // What a drone carries heaps up in its cargo bed.
+      if (view.cargo) {
+        setCargo(
+          view.cargo,
+          unit.carrying.iron,
+          unit.carrying.lattice,
+          definition.capacity?.load ?? 1,
+          dt,
+        );
       }
 
       // Drones hover with a gentle bob; each one is out of phase with the others.

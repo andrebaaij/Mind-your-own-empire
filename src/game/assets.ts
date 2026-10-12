@@ -8,17 +8,28 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import * as THREE from "three/webgpu";
 import type { ObjectName } from "./definitions";
 
+/** A cargo bed on top of a model, which fills with what the unit carries. */
+export interface Bed {
+  /** Extent of the bed's floor along the model's forward (x) and sideways (z) axes. */
+  x: [number, number];
+  z: [number, number];
+  /** Height of the floor at the back (x[0]) and the front (x[1]) of the bed. */
+  floor: [number, number];
+}
+
 interface ModelSpec {
   /** Length of the model's longest side, in tiles. */
   size: number;
+  /** Where its cargo bed is, in the model file's own units (measured from the mesh). */
+  bed?: Bed;
 }
 
 /** The authored models, and how big each one is in the world. */
 const SPECS: Partial<Record<ObjectName, ModelSpec>> = {
-  block: { size: 0.42 },
+  block: { size: 0.42, bed: { x: [-0.27, 0.11], z: [-0.24, 0.24], floor: [0.29, 0.23] } },
 };
 
-const loaded = new Map<ObjectName, THREE.Object3D>();
+const loaded = new Map<ObjectName, { model: THREE.Object3D; bed: Bed | null }>();
 
 /** Load every authored model; reports progress from 0 to 1. A model that fails is skipped. */
 export async function loadModels(onProgress: (fraction: number) => void = () => {}): Promise<void> {
@@ -29,7 +40,8 @@ export async function loadModels(onProgress: (fraction: number) => void = () => 
     names.map(async (name) => {
       try {
         const gltf = await loader.loadAsync(`./models/${name}.glb`);
-        loaded.set(name, fitted(gltf.scene, SPECS[name]?.size ?? 1));
+        const spec = SPECS[name] ?? { size: 1 };
+        loaded.set(name, fitted(gltf.scene, spec.size, spec.bed));
       } catch {
         // Fall back to the model built in code.
       }
@@ -38,8 +50,15 @@ export async function loadModels(onProgress: (fraction: number) => void = () => 
   );
 }
 
-/** Scale a model so its longest side is `size`, centred on the origin. */
-function fitted(scene: THREE.Object3D, size: number): THREE.Object3D {
+/**
+ * Scale a model so its longest side is `size`, centred on the origin; its bed, if it has one,
+ * goes along with it.
+ */
+function fitted(
+  scene: THREE.Object3D,
+  size: number,
+  bed: Bed | undefined,
+): { model: THREE.Object3D; bed: Bed | null } {
   const box = new THREE.Box3().setFromObject(scene);
   const extent = box.getSize(new THREE.Vector3());
   const scale = size / Math.max(extent.x, extent.y, extent.z);
@@ -54,10 +73,21 @@ function fitted(scene: THREE.Object3D, size: number): THREE.Object3D {
       child.receiveShadow = true;
     }
   });
-  return holder;
+  const move = (value: number, axis: "x" | "y" | "z") => (value - centre[axis]) * scale;
+  return {
+    model: holder,
+    bed: bed
+      ? {
+          x: [move(bed.x[0], "x"), move(bed.x[1], "x")],
+          z: [move(bed.z[0], "z"), move(bed.z[1], "z")],
+          floor: [move(bed.floor[0], "y"), move(bed.floor[1], "y")],
+        }
+      : null,
+  };
 }
 
-/** A fresh copy of the authored model for `name`, if there is one. */
-export function authoredModel(name: ObjectName): THREE.Object3D | null {
-  return loaded.get(name)?.clone() ?? null;
+/** A fresh copy of the authored model for `name`, if there is one, and where its bed is. */
+export function authoredModel(name: ObjectName): { model: THREE.Object3D; bed: Bed | null } | null {
+  const found = loaded.get(name);
+  return found ? { model: found.model.clone(), bed: found.bed } : null;
 }
