@@ -15,6 +15,7 @@ import {
   setSelection,
   zoomCamera,
 } from "./state";
+import { setSilent } from "./stealth";
 
 /** Screen drags shorter than this many pixels count as a click. */
 const CLICK_PIXELS = 4;
@@ -211,6 +212,8 @@ export function bindInput(
         const first = idle[0];
         if (first) state.camera.target = { ...first.position };
       }
+    } else if (event.code === "KeyR") {
+      setSilent(state, !state.silent);
     } else if (event.code === "KeyP") {
       setPaused(state, hud, !state.paused);
     } else {

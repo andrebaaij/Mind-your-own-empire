@@ -15,6 +15,7 @@ import {
   say,
   spawn,
 } from "./state";
+import { arriveSkimmer } from "./stealth";
 
 export interface Objective {
   text: string;
@@ -404,7 +405,136 @@ const houseRules: MissionDefinition = {
     "Contractors, then. On probation, I imagine, for the next few thousand years. And somewhere out east there's a house with the lights on, waiting for someone.",
 };
 
-export const MISSIONS: readonly MissionDefinition[] = [arrived, theStaff, houseRules];
+// --- Mission 4 ------------------------------------------------------------------------------
+
+const HIDE_SECONDS = 150;
+const DECOY_DISTANCE = 14;
+const MIND = { x: 5.5, y: 5.5 };
+
+function arriveIdiran(state: GameState, x: number, y: number): void {
+  arriveSkimmer(state, spawn(state, "skimmer", x, y, "idiran"));
+}
+
+const farDecoys = (state: GameState) =>
+  state.units.filter(
+    (u) =>
+      u.faction === "player" && u.name === "decoy" && distance(u.position, MIND) >= DECOY_DISTANCE,
+  ).length;
+
+const ahCompany: MissionDefinition = {
+  id: "ah-company",
+  number: 4,
+  act: "Act II · Company",
+  title: "Ah. Company.",
+  briefing: [
+    "Something has followed the Mind down. An Idiran scouting party has landed on Lessuin, and its skimmers are sweeping the country around the crash.",
+    "They know roughly where it came down. They don't know exactly. The Mind would like to keep it that way: it can run silent, hide its drones under the groves, and give the Idirans something more interesting to find.",
+  ],
+  seed: "lessuin",
+  layout: [
+    ["mind", 5, 5],
+    ["block", 3, 8],
+    ["block", 4, 9],
+    ["block", 8, 8],
+    ["block", 2, 3],
+    ["block", 9, 2],
+    ["block", 7, 10],
+    ["scout", 7, 1],
+    ["solar", 10, 9],
+    ["solar", 1, 11],
+    ["solar", 12, 3],
+    ["solar", -1, 4],
+    ["tower", 9, 12],
+  ],
+  iron: 350,
+  setup: (state) => {
+    // The Mind improvises decoys from spare parts; the stealth controls are shown from the start.
+    state.designs.add("decoy");
+    state.discovered.add("idirans");
+  },
+  objectives: [
+    {
+      text: "Run silent",
+      hint: "Press R, or the button by the power readout. Half speed, a third of the noise.",
+      done: (state) => state.silent,
+    },
+    {
+      text: "Plant a decoy beacon well away from the base",
+      hint: `Press 5 and place it at least ${DECOY_DISTANCE} tiles from the Mind, out where the skimmers are searching.`,
+      progress: (state) => `${Math.min(farDecoys(state), 1)} / 1`,
+      done: (state) => farDecoys(state) >= 1,
+      completed:
+        "A decoy. It's very loud and very confident, and none of it is true. Like a diplomat.",
+    },
+    {
+      text: "Lure a skimmer to a decoy",
+      hint: "A skimmer that passes within 6 tiles of a decoy goes to look. Keep the base quiet meanwhile.",
+      progress: (state) => `suspicion ${Math.round(state.suspicion)}%`,
+      done: (state) => state.stats.decoysFound >= 1,
+    },
+    {
+      text: "Stay hidden until they give up",
+      hint: "Keep quiet, keep drones under the groves, and keep planting decoys.",
+      progress: (state, runtime) =>
+        `${clock(Math.max(0, HIDE_SECONDS - (runtime.elapsed - (runtime.counters.hideFrom ?? runtime.elapsed))))} left · suspicion ${Math.round(state.suspicion)}%`,
+      done: (_state, runtime) =>
+        runtime.elapsed - (runtime.counters.hideFrom ?? runtime.elapsed) >= HIDE_SECONDS,
+    },
+  ],
+  events: [
+    {
+      when: (state) => seconds(state) > 1,
+      run: (state) =>
+        say(
+          state,
+          "Something's come over the horizon. Several somethings. They're not ours, and they're not the Custody's.",
+          "warning",
+        ),
+    },
+    {
+      when: (state) => seconds(state) > 20,
+      run: (state) => {
+        state.search = { center: { x: MIND.x + 20, y: MIND.y - 16 }, radius: 22 };
+        arriveIdiran(state, 48, -30);
+        say(
+          state,
+          "Idiran skimmers. They know roughly where I came down; they don't know exactly. Let's keep it that way.",
+          "warning",
+        );
+      },
+    },
+    {
+      when: (state) => seconds(state) > 60,
+      run: (state) => {
+        arriveIdiran(state, -36, -28);
+        say(
+          state,
+          "A second skimmer, from the west. They're thorough. It's practically their religion.",
+        );
+      },
+    },
+    {
+      when: (state) => seconds(state) > 110,
+      run: (state) => {
+        arriveIdiran(state, 40, 44);
+        say(state, "And a third. I'm flattered, in a terrified sort of way.");
+      },
+    },
+    {
+      // The clock starts once a decoy has worked (or after a while regardless).
+      when: (state, runtime) => runtime.current >= 3 || seconds(state) > 180,
+      run: (_state, runtime) => {
+        runtime.counters.hideFrom = runtime.elapsed;
+      },
+    },
+  ],
+  failure: (state) =>
+    state.suspicion >= 100 ? "Found. I can hear them calling it in. I'd hoped for longer." : null,
+  victory:
+    "They've gone, for now. Ah. Company: the kind that brings its own opinions about me. Next time I'd like some of my own ready.",
+};
+
+export const MISSIONS: readonly MissionDefinition[] = [arrived, theStaff, houseRules, ahCompany];
 
 export function getMission(id: string): MissionDefinition | undefined {
   return MISSIONS.find((m) => m.id === id);

@@ -1,0 +1,16 @@
+{
+  "label": "Decoy beacon",
+  "description": "Shouts 'Mind here!' on every frequency. It isn't.",
+  "skills": {},
+  "footprint": 1,
+  "radius": 0.35,
+  "communicationRadius": 1,
+  "energy": 0,
+  "cost": {
+    "iron": 60
+  },
+  "storage": {
+    "iron": 0,
+    "energy": 0
+  }
+}

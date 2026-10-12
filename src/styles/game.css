@@ -25,6 +25,7 @@ body {
 
 /* Overlay panels sit above the canvas, clear of the screen edges. */
 .resources,
+.stealth,
 .toast,
 .objectives,
 .selection,
@@ -95,6 +96,67 @@ body {
 
 .value .negative {
   color: var(--danger);
+}
+
+/* Stealth: the Idirans' detection meter and the run-silent switch. */
+.stealth {
+  top: 86px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px 8px 16px;
+}
+
+.stealth[hidden] {
+  display: none;
+}
+
+.detection-meter {
+  width: 90px;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.08);
+  overflow: hidden;
+}
+
+.detection-meter span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--energy), var(--danger));
+  transition: width 0.3s;
+}
+
+.stealth.alarm .value {
+  color: var(--danger);
+}
+
+.silent-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.04);
+  color: var(--text);
+  font-family: var(--font-display);
+  cursor: pointer;
+}
+
+.silent-toggle:hover,
+.silent-toggle:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.silent-toggle[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 /* --- Toast (top centre) --- */

@@ -182,7 +182,80 @@ function warden(): THREE.Group {
   return group;
 }
 
+const idiranHull = new THREE.MeshStandardMaterial({
+  color: "#3b3532",
+  metalness: 0.75,
+  roughness: 0.35,
+  flatShading: true,
+});
+const idiranTrim = new THREE.MeshStandardMaterial({
+  color: "#8a3a22",
+  metalness: 0.5,
+  roughness: 0.4,
+});
+
+/**
+ * Idiran skimmer: a heavy, armoured wedge on two engine pods, with a red sensor eye. Built by a
+ * species three metres tall that has never seen a reason to make anything light.
+ */
+function skimmer(): THREE.Group {
+  const group = new THREE.Group();
+  const hull = mesh(new THREE.CylinderGeometry(0.18, 0.55, 1.5, 4, 1), idiranHull);
+  hull.rotation.z = -Math.PI / 2;
+  hull.rotation.x = Math.PI / 4;
+  hull.scale.set(1, 1, 0.55);
+  const spine = mesh(new THREE.BoxGeometry(1.1, 0.12, 0.16), idiranTrim);
+  spine.position.set(-0.1, 0.24, 0);
+  const eye = mesh(
+    new THREE.SphereGeometry(0.09, 12, 8),
+    glowMaterial(new THREE.Color("#ff3b1f"), 4),
+  );
+  eye.position.set(0.72, 0.02, 0);
+  group.add(hull, spine, eye);
+  for (const side of [-1, 1]) {
+    const pod = mesh(new THREE.CylinderGeometry(0.13, 0.16, 0.7, 8), idiranHull);
+    pod.rotation.z = Math.PI / 2;
+    pod.position.set(-0.25, -0.12, side * 0.42);
+    const flare = mesh(
+      new THREE.CircleGeometry(0.11, 12),
+      glowMaterial(new THREE.Color("#ff8a3d"), 3),
+    );
+    flare.rotation.y = -Math.PI / 2;
+    flare.position.set(-0.61, -0.12, side * 0.42);
+    group.add(pod, flare);
+  }
+  return group;
+}
+
+/** Decoy beacon: a spindly mast with a turning dish and a loud, false glow. */
+function decoy(glow: THREE.Color): THREE.Group {
+  const group = new THREE.Group();
+  for (let i = 0; i < 3; i++) {
+    const angle = (i / 3) * Math.PI * 2;
+    const leg = mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.75, 5), darkHull);
+    leg.position.set(Math.cos(angle) * 0.14, 0.34, Math.sin(angle) * 0.14);
+    leg.rotation.z = Math.cos(angle) * 0.35;
+    leg.rotation.x = -Math.sin(angle) * 0.35;
+    group.add(leg);
+  }
+  const head = new THREE.Group();
+  head.name = "spin";
+  head.position.y = 0.78;
+  head.rotation.x = Math.PI / 2;
+  const dish = mesh(new THREE.ConeGeometry(0.2, 0.1, 12, 1, true), hull);
+  dish.rotation.x = Math.PI / 2;
+  dish.position.x = 0.08;
+  head.add(dish);
+  group.add(head);
+  const light = mesh(new THREE.SphereGeometry(0.07, 10, 8), glowMaterial(glow, 4));
+  light.position.y = 0.82;
+  group.add(light, aura(glow, 0.35, 0.12));
+  return group;
+}
+
 const builders: Record<ObjectName, (glow: THREE.Color) => THREE.Group> = {
+  skimmer,
+  decoy,
   mind,
   block: workerDrone,
   scout: scoutDrone,

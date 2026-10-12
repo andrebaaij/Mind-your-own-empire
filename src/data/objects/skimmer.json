@@ -1,0 +1,17 @@
+{
+  "label": "Idiran skimmer",
+  "description": "An armoured Idiran search craft, sweeping the ground for anything that thinks.",
+  "skills": {
+    "walk": true
+  },
+  "movement": "air",
+  "speed": 2.4,
+  "radius": 0.7,
+  "altitude": 1.6,
+  "communicationRadius": 0,
+  "energy": 0,
+  "storage": {
+    "iron": 0,
+    "energy": 0
+  }
+}

@@ -86,6 +86,10 @@ export class Hud {
   private readonly lattice = byId("lattice");
   private readonly latticeStorage = byId("lattice-storage");
   private readonly latticeStat = byId("lattice-stat");
+  private readonly stealth = byId("stealth");
+  private readonly detection = byId("detection");
+  private readonly detectionFill = byId("detection-fill");
+  private readonly silent = byId("silent");
   private readonly power = byId("energy");
   private readonly powerStatus = byId("power-status");
   private readonly message = byId<HTMLOutputElement>("message");
@@ -105,7 +109,11 @@ export class Hud {
   private shownSelection = "";
   private shownObjectives = "";
 
-  constructor(handlers: { onBuild: (name: ObjectName) => void; onResume: () => void }) {
+  constructor(handlers: {
+    onBuild: (name: ObjectName) => void;
+    onResume: () => void;
+    onSilent: () => void;
+  }) {
     const items = byId("build-items");
     BUILDABLE.forEach((name, index) => {
       const definition = getObjectDefinition(name);
@@ -132,6 +140,7 @@ export class Hud {
     });
 
     byId("pause-continue").addEventListener("click", () => handlers.onResume());
+    this.silent.addEventListener("click", () => handlers.onSilent());
     byId("pause-fullscreen").addEventListener("click", () => {
       if (document.fullscreenElement) void document.exitFullscreen();
       else void document.documentElement.requestFullscreen();
@@ -155,7 +164,18 @@ export class Hud {
 
   private updateEconomy(state: GameState): void {
     const { economy, building } = state;
-    const key = `${economy.iron}|${economy.storage.iron}|${economy.lattice}|${economy.storage.lattice}|${economy.power}|${building}|${[...state.designs]}|${state.discovered.has("lattice")}`;
+    // Stealth: shown once the Idirans are about.
+    const hunted = state.discovered.has("idirans");
+    this.stealth.hidden = !hunted;
+    if (hunted) {
+      const detection = Math.round(state.suspicion);
+      this.detection.textContent = `${detection}%`;
+      this.detectionFill.style.width = `${detection}%`;
+      this.stealth.classList.toggle("alarm", detection >= 70);
+      this.silent.setAttribute("aria-pressed", String(state.silent));
+    }
+
+    const key = `${economy.iron}|${economy.storage.iron}|${economy.lattice}|${economy.storage.lattice}|${economy.power}|${building}|${[...state.designs]}|${state.discovered.has("lattice")}|${state.silent}`;
     if (key === this.shownEconomy) return;
     this.shownEconomy = key;
 
@@ -167,7 +187,11 @@ export class Hud {
     this.latticeStorage.textContent = format(economy.storage.lattice);
     this.power.textContent = signed(economy.power);
     this.power.classList.toggle("negative", economy.power < 0);
-    this.powerStatus.textContent = economy.power < 0 ? "· brownout" : "";
+    this.powerStatus.textContent = state.silent
+      ? "· silent"
+      : economy.power < 0
+        ? "· brownout"
+        : "";
 
     for (const [name, button] of this.buildButtons) {
       button.hidden = !canBuild(state, name);

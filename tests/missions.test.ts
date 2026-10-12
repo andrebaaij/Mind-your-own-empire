@@ -4,6 +4,7 @@ import { TICK_RATE } from "../src/game/config";
 import { gridRef } from "../src/game/coords";
 import { isUnlocked, MISSIONS, startMission, updateMission } from "../src/game/missions";
 import { build, type GameState, issueOrder, setSelection, tick } from "../src/game/state";
+import { setSilent } from "../src/game/stealth";
 
 const player = { name: "Test", color: WHITE };
 
@@ -166,6 +167,48 @@ describe("mission 3: House Rules", () => {
     run(state, 30);
     expect(state.mission?.outcome?.won).toBe(true);
     expect(state.stats.tidied).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("mission 4: Ah. Company.", () => {
+  it("is lost if the Mind just sits there", () => {
+    const state = startMission(mission("ah-company"), player);
+    run(state, 600);
+    expect(state.mission?.outcome?.won).toBe(false);
+    expect(state.suspicion).toBe(100);
+  });
+
+  it("can be won by running silent and leading the skimmers off with decoys", () => {
+    const state = startMission(mission("ah-company"), player);
+    setSilent(state, true);
+    const scout = state.units.filter((u) => u.name === "scout");
+    const spots = [
+      [24, -10],
+      [20, -18],
+      [30, -2],
+      [14, -20],
+      [28, -14],
+    ];
+    for (let round = 0; round < 12 && !state.mission?.outcome; round++) {
+      // Scout out a spot where the search is, plant a decoy there, and come home.
+      const [x = 24, y = -10] = spots[round % spots.length] ?? [];
+      setSelection(state, scout);
+      issueOrder(state, { x: x + 0.5, y: y + 0.5 });
+      run(state, 10);
+      for (const [dx, dy] of [
+        [0, 0],
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+      ]) {
+        if (build(state, "decoy", [gridRef(x + (dx ?? 0), y + (dy ?? 0))]).built) break;
+      }
+      setSelection(state, scout);
+      issueOrder(state, { x: 6, y: 1 });
+      run(state, 20);
+    }
+    expect(state.mission?.outcome?.won).toBe(true);
+    expect(state.stats.decoysFound).toBeGreaterThan(0);
   });
 });
 

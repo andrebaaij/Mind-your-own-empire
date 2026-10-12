@@ -15,7 +15,7 @@ import { TICK_RATE } from "./config";
 import { distance, gridRef, type Point } from "./coords";
 import { findFreeSpots } from "./pathfinding";
 import type { Site, SiteKind } from "./sites";
-import { type GameState, say } from "./state";
+import { type GameState, say, workRate } from "./state";
 import { cancelAllActions, queueWalk, type StudyAction, type Unit } from "./units";
 
 export interface SiteInfo {
@@ -163,8 +163,7 @@ export function studyTick(state: GameState, unit: Unit, action: StudyAction): vo
     return;
   }
   site.status = "studying";
-  const power = state.economy.power < 0 ? 0.5 : 1;
-  site.progress += power / TICK_RATE;
+  site.progress += workRate(state) / TICK_RATE;
   if (site.progress >= info.study) {
     site.progress = info.study;
     if (info.lattice > 0) {

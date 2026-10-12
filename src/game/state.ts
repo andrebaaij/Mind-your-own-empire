@@ -20,6 +20,7 @@ import type { MissionRuntime } from "./missions";
 import { assignSpots, findFreeSpots, tileKey } from "./pathfinding";
 import { orderStudy, relicsThink, studyTick } from "./relics";
 import type { Site, SiteKind, SiteSpec } from "./sites";
+import { idiranThink, type Search } from "./stealth";
 import { createNoise, noiseTerrain } from "./terrain";
 import {
   type Color,
@@ -92,6 +93,8 @@ export interface Stats {
   built: Partial<Record<ObjectName, number>>;
   /** Player buildings the Custody dismantled. */
   tidied: number;
+  /** Decoy beacons the Idirans found (and smashed). */
+  decoysFound: number;
 }
 
 export interface GameState {
@@ -127,6 +130,14 @@ export interface GameState {
   awake: Site[];
   /** The site the player last clicked, shown in the selection panel. */
   inspecting: Site | null;
+  /** Running silent: everything at half speed, and much harder for the Idirans to detect. */
+  silent: boolean;
+  /** How sure the Idirans are of where the Mind is, from 0 to 100 (found). */
+  suspicion: number;
+  /** Where the Idirans last picked something up. */
+  lastContact: Point | null;
+  /** The Idiran search, once they're here. */
+  search: Search | null;
 }
 
 export type StartLayout = [ObjectName, number, number][];
@@ -173,13 +184,24 @@ export function createGame(options: {
     random: alea(`${options.seed}:sim`),
     messages: [],
     said: new Set(),
-    stats: { ironDelivered: 0, latticeDelivered: 0, studied: {}, built: {}, tidied: 0 },
+    stats: {
+      ironDelivered: 0,
+      latticeDelivered: 0,
+      studied: {},
+      built: {},
+      tidied: 0,
+      decoysFound: 0,
+    },
     custodyTidying: true,
     mission: null,
     designs: new Set(),
     discovered: new Set(),
     awake: [],
     inspecting: null,
+    silent: false,
+    suspicion: 0,
+    lastContact: null,
+    search: null,
   };
 
   for (const [name, x, y] of options.layout ?? SANDBOX_LAYOUT) spawn(state, name, x, y);
@@ -262,10 +284,15 @@ function nearestStore(state: GameState, from: Point): Unit | undefined {
   return best;
 }
 
+/** How fast the player's machines work: halved by a power shortage, and again by running silent. */
+export function workRate(state: GameState): number {
+  return (state.economy.power < 0 ? BROWNOUT_FACTOR : 1) * (state.silent ? 0.5 : 1);
+}
+
 function unitContext(state: GameState): UnitContext {
   return {
     budget: { remaining: PATHS_PER_TICK },
-    power: (unit) => (unit.faction === "player" && state.economy.power < 0 ? BROWNOUT_FACTOR : 1),
+    power: (unit) => (unit.faction === "player" ? workRate(state) : 1),
     dropOff: (unit) => {
       const store = nearestStore(state, unit.position);
       return store ? { ...store.position } : null;
@@ -315,6 +342,7 @@ export function tick(state: GameState): void {
   }
   if (state.ticks % 10 === 0) custodyThink(state);
   if (state.ticks % TICK_RATE === 0) relicsThink(state, 1);
+  if (state.ticks % 10 === 0) idiranThink(state, 10 / TICK_RATE);
   watchPower(state);
 }
 

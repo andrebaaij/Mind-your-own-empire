@@ -37,6 +37,7 @@ import { createLatticeGeometry, latticeMaterial, RuinView } from "./ruins";
 import { Scenery, valueNoise } from "./scenery";
 import type { Site } from "./sites";
 import { buildTiles, canPlace, type GameState, say } from "./state";
+import { SENSOR_RADIUS } from "./stealth";
 import { START_CENTER, Terrain } from "./terrain";
 import type { Unit } from "./units";
 import type { Chunk, Resource, World } from "./world";
@@ -107,6 +108,8 @@ interface UnitView {
   ring: THREE.Mesh;
   /** Pulses amber while a warden is eyeing the building. */
   alert: THREE.Mesh;
+  /** An Idiran skimmer's sensor sweep, drawn on the ground. */
+  sensor?: THREE.Mesh;
   hover: THREE.Object3D | undefined;
   spinners: THREE.Object3D[];
   heading: number;
@@ -138,6 +141,20 @@ function acidMaterial(): THREE.MeshBasicNodeMaterial {
     .add(0.55);
   material.colorNode = color(ACID_GLOW).mul(ripple).mul(vertexColor().r);
   return material;
+}
+
+/** The sensor sweep: a thin ring at the sensor's reach, and a wedge that turns. */
+function mergeSensor(): THREE.BufferGeometry {
+  const ring = new THREE.RingGeometry(SENSOR_RADIUS - 0.12, SENSOR_RADIUS, 64).toNonIndexed();
+  const wedge = new THREE.RingGeometry(0.4, SENSOR_RADIUS, 24, 1, 0, 0.5).toNonIndexed();
+  const positions = new Float32Array([
+    ...(ring.getAttribute("position").array as Float32Array),
+    ...(wedge.getAttribute("position").array as Float32Array),
+  ]);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.rotateX(-Math.PI / 2);
+  return geometry;
 }
 
 function angleLerp(from: number, to: number, t: number): number {
@@ -173,6 +190,16 @@ export class Renderer {
     transparent: true,
     opacity: 0.85,
     depthWrite: false,
+  });
+  /** A skimmer's sensor reach: a faint red disc with a sweeping wedge. */
+  private readonly sensorGeometry = mergeSensor();
+  private readonly sensorMaterial = new THREE.MeshBasicMaterial({
+    color: "#ff4a2a",
+    transparent: true,
+    opacity: 0.22,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
   });
   private readonly alertMaterial = new THREE.MeshBasicMaterial({
     color: "#ffb347",
@@ -689,7 +716,14 @@ export class Renderer {
       if (child.name === "spin") spinners.push(child);
     });
     this.scene.add(model, ring, alert);
+    let sensor: THREE.Mesh | undefined;
+    if (unit.faction === "idiran") {
+      sensor = new THREE.Mesh(this.sensorGeometry, this.sensorMaterial);
+      sensor.visible = false;
+      this.scene.add(sensor);
+    }
     view = {
+      ...(sensor ? { sensor } : {}),
       model,
       ring,
       alert,
@@ -712,6 +746,7 @@ export class Renderer {
     for (const [unit, view] of this.unitViews) {
       if (!state.units.includes(unit)) {
         this.scene.remove(view.model, view.ring, view.alert);
+        if (view.sensor) this.scene.remove(view.sensor);
         this.unitViews.delete(unit);
       }
     }
@@ -725,6 +760,14 @@ export class Renderer {
       // Other factions are only seen where the player has eyes.
       const seen = unit.faction === "player" || this.world.isVisible(unit.grid);
       view.model.visible = seen;
+      if (view.sensor) {
+        view.sensor.visible = seen;
+        if (seen) {
+          const ground = this.world.heightAt(position.x, position.y);
+          view.sensor.position.set(position.x, ground + 0.08, position.y);
+          view.sensor.rotation.y = -time * 1.4;
+        }
+      }
       if (!seen) {
         view.ring.visible = false;
         continue;

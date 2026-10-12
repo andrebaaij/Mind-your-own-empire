@@ -7,6 +7,7 @@ import { bindInput, setPaused } from "./input";
 import { getMission, MISSIONS, markCompleted, startMission, updateMission } from "./missions";
 import { chooseQuality, Renderer } from "./renderer";
 import { build, canBuild, createGame, issueOrder, say, setSelection, tick } from "./state";
+import { setSilent } from "./stealth";
 
 const params = new URLSearchParams(window.location.search);
 const player = {
@@ -32,6 +33,7 @@ const hud = new Hud({
     state.building = state.building === name ? null : name;
   },
   onResume: () => setPaused(state, hud, false),
+  onSilent: () => setSilent(state, !state.silent),
 });
 hud.update(state);
 
@@ -104,7 +106,9 @@ document.addEventListener("keydown", (event) => {
 
 // ?debug exposes the game to the console and to scripted browser tests.
 if (params.has("debug")) {
-  Object.assign(window, { mindGame: { state, renderer, issueOrder, setSelection, build } });
+  Object.assign(window, {
+    mindGame: { state, renderer, issueOrder, setSelection, build, tick, updateMission },
+  });
 }
 
 // Fixed-timestep simulation, decoupled from the display refresh rate.

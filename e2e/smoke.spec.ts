@@ -108,3 +108,21 @@ test("number keys pick buildings from the build bar", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(collector).toHaveAttribute("aria-pressed", "false");
 });
+
+test("mission 4: run silent with R, shown in the stealth panel", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/game.html?mission=ah-company");
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Begin" }).click();
+  await expect(dialog).toBeHidden();
+
+  const silent = page.getByRole("button", { name: /Run silent/ });
+  await expect(silent).toHaveAttribute("aria-pressed", "false");
+  await page.keyboard.press("r");
+  await expect(silent).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("region", { name: "Mission objectives" })).toContainText(
+    "Plant a decoy beacon",
+  );
+  await expect(page.getByRole("button", { name: /Decoy beacon/ })).toBeVisible();
+  expect(errors).toEqual([]);
+});

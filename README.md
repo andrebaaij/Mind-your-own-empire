@@ -31,6 +31,7 @@ It started in 2014 as a 2D isometric game ([2015 screenshot](docs/screenshot-201
 | C / Shift + C | Cancel the next order / all orders of the selection |
 | Esc | Leave build mode and clear the selection |
 | P | Pause |
+| R | Run silent: half speed, a third as easy for the Idirans to detect |
 | M | Sound on / off (wind and distant chimes start on your first click or key press) |
 
 In Survey mode, the seed on the start screen picks the map, so the same seed always gives the same world.
@@ -41,6 +42,7 @@ In Survey mode, the seed on the start screen picks the map, so the same seed alw
 - **Power** comes from the Mind's reactor and from collectors, and every drone and spire uses some. If it drops below zero, every drone works at half speed.
 - **The Custody's wardens** patrol and dismantle any building that has no drone nearby and isn't covered by a sensor spire. A building they're eyeing gets an amber ring, which is your warning to send someone over. Anything built on Tessilend paving is "built to plan", and they leave it alone.
 - **Tessilend sites** are scattered across the map. Right-click one with worker drones to study it; more drones study faster, and clicking a site shows what it is and how the study is going. Archives tell the builders' story and chart other sites. Power taps give +8 power once restored. Fabrication beds teach new designs (the scout drone). Seedbeds make lattice grow back. Habitats stay sealed.
+- **The Idirans** (from mission 4) search with skimmers. Everything you own gives off a signature: the Mind most of all, moving drones more than idle ones. Whatever a skimmer picks up raises the detection meter, and at 100% you're found. Run silent, keep drones under the parasol groves, and plant **decoy beacons**: a skimmer that hears one goes to smash it, calms down, and searches around there instead. Left alone, the Idirans narrow the search and close in.
 - **Lattice** is the builders' crystal, found in seams around their sites. Drones mine it at half the speed of iron; the Mind stores up to 200. It restores power taps and pays for designs learned from the Tessilend.
 
 ## Development
@@ -99,6 +101,9 @@ src/
     sites.ts        where Tessilend sites are: placement, paving, lattice seams
     relics.ts       studying sites and what each kind does
     ruins.ts        site models and their look as they wake
+    stealth.ts      the Idiran search: signatures, detection, skimmers, decoys
+    cover.ts        shared noise, and where the groves (cover) are
+    ground.ts       the ground's shader detail
     audio.ts        the synthesised ambient soundscape
     models.ts       procedural 3D models: the Mind, drones, towers, solar arrays, iron
     input.ts        mouse and keyboard handling, picking through the 3D view

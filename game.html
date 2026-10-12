@@ -51,6 +51,19 @@
         </div>
       </section>
 
+      <section id="stealth" class="stealth glass" aria-label="Stealth" hidden>
+        <div class="stat" title="How sure the Idirans are of where we are. At 100%, they've found us.">
+          <div>
+            <div class="label">Detection</div>
+            <div class="detection-meter" aria-hidden="true"><span id="detection-fill"></span></div>
+          </div>
+          <div class="value"><span id="detection"></span></div>
+        </div>
+        <button type="button" id="silent" class="silent-toggle" aria-pressed="false" title="Run silent (R): everything at half speed, a third as easy to detect">
+          <kbd>R</kbd> Run silent
+        </button>
+      </section>
+
       <output id="message" class="toast glass" hidden>
         <span id="message-speaker" class="label toast-speaker"></span>
         <span id="message-text"></span>
@@ -97,6 +110,8 @@
           <dd>Cancel placing, deselect</dd>
           <dt><kbd>P</kbd></dt>
           <dd>Pause</dd>
+          <dt><kbd>R</kbd></dt>
+          <dd>Run silent (hide from the Idirans)</dd>
           <dt><kbd>M</kbd></dt>
           <dd>Sound on / off</dd>
           <dt>Zoom in</dt>

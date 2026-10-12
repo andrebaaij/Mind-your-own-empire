@@ -8,8 +8,11 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { color, cos, float, positionGeometry, positionLocal, sin, time, vec3 } from "three/tsl";
 import * as THREE from "three/webgpu";
 import { CHUNK_SIZE } from "./config";
+import { GROVE_THRESHOLD, groveDensity, hash, valueNoise } from "./cover";
 import { START_CENTER, Terrain } from "./terrain";
 import type { Chunk, World } from "./world";
+
+export { hash, valueNoise };
 
 export type DecorKind =
   | "grass"
@@ -33,32 +36,6 @@ export interface DecorItem {
   scale: number;
   /** Brightness variation, around 1. */
   shade: number;
-}
-
-// --- Deterministic randomness ------------------------------------------------------------------
-
-/** A repeatable pseudo-random number in [0, 1) for a tile and a purpose. */
-export function hash(x: number, y: number, salt: number): number {
-  let h =
-    Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(salt | 0, 2147483647);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  h ^= h >>> 16;
-  return (h >>> 0) / 4294967296;
-}
-
-/** Smooth value noise in [0, 1], for patches of growth that span several tiles. */
-export function valueNoise(x: number, y: number, salt: number): number {
-  const x0 = Math.floor(x);
-  const y0 = Math.floor(y);
-  const fx = x - x0;
-  const fy = y - y0;
-  const sx = fx * fx * (3 - 2 * fx);
-  const sy = fy * fy * (3 - 2 * fy);
-  const a = hash(x0, y0, salt);
-  const b = hash(x0 + 1, y0, salt);
-  const c = hash(x0, y0 + 1, salt);
-  const d = hash(x0 + 1, y0 + 1, salt);
-  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
 }
 
 // --- Placement ---------------------------------------------------------------------------------
@@ -123,7 +100,7 @@ export function generateDecor(world: World, chunk: Chunk): DecorItem[] {
 
       const hasIron = chunk.resources[i] !== undefined;
       const fertile = valueNoise(x / 9, y / 9, 7);
-      const grove = valueNoise(x / 23 + 50, y / 23 - 20, 11);
+      const grove = groveDensity(x, y);
       const height = chunk.heights[i] ?? 0;
       const flat = fromStart > 18 && chunk.cliffs[i] === 0;
 
@@ -131,7 +108,7 @@ export function generateDecor(world: World, chunk: Chunk): DecorItem[] {
         place(r(8) < 0.35 ? "arch" : "column", 60);
         continue;
       }
-      if (!hasIron && grove > 0.68 && r(9) < 0.16) {
+      if (!hasIron && grove > GROVE_THRESHOLD && r(9) < 0.16) {
         place("tree", 70, 0.85);
         continue;
       }

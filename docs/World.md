@@ -143,7 +143,7 @@ A campaign of missions in three acts. Each mission teaches or twists one idea, a
 
 ### Act II: Company (the war arrives)
 
-4. **Ah. Company.** An Idiran scouting party lands, searching for the Mind. *Objectives:* stay hidden; keep emissions low by powering down and avoiding open ground; mislead the search. *Teaches:* stealth and detection. *Closing line:* *"Ah. Company. The kind that brings its own opinions about me."*
+4. **Ah. Company.** *(Built.)* An Idiran scouting party lands, and its skimmers sweep the country around the crash. *Objectives:* run silent, plant a decoy beacon away from the base, lure a skimmer to it, then stay hidden until they give up. *Teaches:* stealth and detection: signatures (the Mind loudest, moving drones louder than idle ones), cover under the groves, running silent, decoys. Left alone, the Idirans narrow the search and triangulate on the Mind; a smashed decoy resets the search around itself. *Closing line:* *"Ah. Company: the kind that brings its own opinions about me."*
 5. **Trespassers.** The Idirans dig in near a builders' site. *Objectives:* lure them into caretaker territory and let the staff evict them. *Teaches:* using a third party; the caretakers are as hostile to Idirans as to anyone.
 6. **Post.** A Culture supply pod streaks in, fired from far away by the General Systems Vehicle *Quiet Word In Your Ear*. The GSV couldn't stop, and wouldn't have explained itself if it could. It lands on the far side of the map, and the Idirans saw it too. *Objectives:* race them to it and recover it. *Reward:* a one-off delivery of materials and designs. *Clue:* the cargo is oddly specific, including habitat seed stock the Mind has no use for. The pod also carries something the Mind can't open yet.
 7. **Relics.** Deep in a builders' facility the Mind finds a working long-range transmitter. *Objectives:* restore it under Idiran pressure. *Twist:* powering it opens the sealed key from the pod.
@@ -175,6 +175,9 @@ In rough order of need, this is the feature roadmap:
 | Solar array | Collector | Power for the drones |
 | Sensor spire | Sensor spire | Sees far, and counts as "attending" nearby buildings in the Custody's eyes |
 | Warden | Warden (the Custody) | Dismantles unattended buildings |
+| Skimmer | Idiran skimmer | Armoured search craft; sweeps the ground with sensors |
+| Decoy beacon | Decoy beacon | Shouts "Mind here!" on every frequency. It isn't. |
+| Detection | Idiran suspicion | At 100%, the Idirans have found the Mind |
 | Iron | Iron (feedstock) | |
 | Lattice | Lattice | The Tessilend's grown crystal, mined around their sites |
 | Paving | Tessilend foundations | Built on, a building is "to plan" and the Custody leaves it alone |
