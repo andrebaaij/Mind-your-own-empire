@@ -468,7 +468,38 @@ export class Renderer {
 
   // --- Frame -----------------------------------------------------------------------------
 
+  /** Draw a frame of the game as it stands at `time` (seconds). */
   render(state: GameState, time: number): void {
+    this.prepare(state, time);
+    this.pipeline.render();
+    this.started = true;
+  }
+
+  /**
+   * Get the first frames out of the way before the player sees anything: build the meshes
+   * around the camera, compile every shader the scene needs (the long part, on most GPUs), and
+   * draw a couple of frames so the post-processing has its targets. Reports progress from 0 to 1.
+   */
+  async warmUp(state: GameState, onProgress: (fraction: number) => void = () => {}): Promise<void> {
+    this.prepare(state, performance.now() / 1000);
+    onProgress(0.1);
+    try {
+      await this.renderer.compileAsync(this.scene, this.camera);
+    } catch {
+      // Not every backend can compile ahead; the first frames will just take longer.
+    }
+    onProgress(0.6);
+    for (let i = 0; i < 3; i++) {
+      this.render(state, performance.now() / 1000);
+      onProgress(0.6 + (i + 1) * 0.13);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    // The warm-up frames shouldn't count as time passing for the camera or the effects.
+    this.lastFrame = null;
+  }
+
+  /** Bring the scene up to date with the game, ready to draw. */
+  private prepare(state: GameState, time: number): void {
     // Ambient life runs on its own clock, which stops when the game is paused.
     const realDt = this.lastFrame === null ? 0 : Math.min(0.1, time - this.lastFrame);
     const dt = state.paused ? 0 : realDt;
@@ -485,8 +516,6 @@ export class Renderer {
     this.renderGhosts(state);
     this.renderBeams(state, time);
     this.effects.update(dt, this.camera, this.width, this.height);
-    this.pipeline.render();
-    this.started = true;
   }
 
   private placeCamera(state: GameState, dt: number): void {

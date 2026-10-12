@@ -6,15 +6,9 @@ import { glowCss, playerColor } from "./colors";
 import { MAX_TICKS_PER_FRAME, TICK_MS } from "./config";
 import { Hud } from "./hud";
 import { bindInput, setPaused } from "./input";
+import { LoadingScreen, nextPaint } from "./loading";
 import { Minimap } from "./minimap";
-import {
-  getMission,
-  MISSIONS,
-  type MissionDefinition,
-  markCompleted,
-  startMission,
-  updateMission,
-} from "./missions";
+import { getMission, MISSIONS, markCompleted, startMission, updateMission } from "./missions";
 import { chooseQuality, Renderer } from "./renderer";
 import { loadSaved, restore, saveGame } from "./save";
 import { loadSettings } from "./settings";
@@ -32,12 +26,31 @@ const player = {
 // ?load carries on from the save; ?mission=<id> plays a campaign mission; anything else is
 // the free-play survey.
 const saved = params.has("load") ? loadSaved() : null;
+const chosen = getMission(params.get("mission") ?? "");
+const seed = params.get("seed") || "1500";
+
+// Up goes the loading screen (it's already on the page), named for what's being loaded.
+const savedMission = saved?.missionId ? getMission(saved.missionId) : undefined;
+const loading = new LoadingScreen(
+  saved
+    ? { kicker: "Continue", title: savedMission?.title ?? `Survey · world ${saved.seed}` }
+    : chosen
+      ? { kicker: `${chosen.act} · Mission ${chosen.number}`, title: chosen.title }
+      : { kicker: "Survey · free play", title: `World ${seed}` },
+);
+loading.progress("Charting Lessuin", 0.05);
+await nextPaint();
+
 const state = saved
   ? restore(saved)
-  : getMission(params.get("mission") ?? "")
-    ? startMission(getMission(params.get("mission") ?? "") as MissionDefinition, player)
-    : createGame({ seed: params.get("seed") || "1500", player });
+  : chosen
+    ? startMission(chosen, player)
+    : createGame({ seed, player });
 const mission = state.mission?.definition;
+// Nothing happens until the player can see it.
+state.paused = true;
+loading.progress("Waking the renderer", 0.25);
+await nextPaint();
 
 const game = document.getElementById("game");
 if (!game) throw new Error("Missing #game");
@@ -48,7 +61,7 @@ document.documentElement.style.setProperty("--accent", glowCss(state.player.colo
 let cinematic: Cinematic | null = null;
 let introPending = false;
 
-// The interface is ready straight away; the 3D view follows once the GPU is set up.
+// The interface sits under the loading screen until the 3D view is ready.
 const hud = new Hud({
   onBuild: (name) => {
     if (!canBuild(state, name)) return;
@@ -58,19 +71,6 @@ const hud = new Hud({
   onSilent: () => setSilent(state, !state.silent),
 });
 hud.update(state);
-
-if (saved) {
-  say(state, "Where were we? Ah, yes.");
-} else if (mission) {
-  state.paused = true;
-  hud.showBriefing(mission, () => {
-    // The intro tour, then the mission; it starts with the next frame, once the 3D view is up.
-    if (mission.intro) introPending = true;
-    else state.paused = false;
-  });
-} else {
-  say(state, "Survey mode. No objectives, no deadlines, no one shooting. Enjoy it while it lasts.");
-}
 
 /** Link to a mission, keeping the player's name and colour. */
 function missionHref(id: string): string {
@@ -120,6 +120,16 @@ function checkOutcome(): void {
 
 const settings = loadSettings();
 const renderer = await Renderer.create(game, state.world, chooseQuality(params, settings.quality));
+// Compile the shaders and draw the first frames behind the loading screen, so the game starts
+// smoothly instead of stuttering through its first seconds.
+await renderer.warmUp(state, (fraction) =>
+  loading.progress(
+    fraction < 0.6 ? "Compiling shaders" : "Growing the grass",
+    0.35 + fraction * 0.6,
+  ),
+);
+state.events.length = 0;
+loading.progress("Briefing the drones", 1);
 
 const screen = bindInput(renderer, state, hud, game);
 
@@ -264,3 +274,19 @@ requestAnimationFrame(function frame(now) {
   hud.update(state);
   requestAnimationFrame(frame);
 });
+
+// The world is drawn and running: take the loading screen away, then hand over to the player.
+await loading.finish();
+if (saved) {
+  state.paused = false;
+  say(state, "Where were we? Ah, yes.");
+} else if (mission) {
+  hud.showBriefing(mission, () => {
+    // The intro tour, then the mission; it starts with the next frame.
+    if (mission.intro) introPending = true;
+    else state.paused = false;
+  });
+} else {
+  state.paused = false;
+  say(state, "Survey mode. No objectives, no deadlines, no one shooting. Enjoy it while it lasts.");
+}

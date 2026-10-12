@@ -1,5 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
 
+/** Wait for the loading screen to finish: shaders compile slowly on software renderers. */
+async function loaded(page: Page): Promise<void> {
+  await expect(page.locator("#loading")).toHaveCount(0, { timeout: 120_000 });
+}
+
 function collectErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -19,6 +24,7 @@ test("explore a world from the menu and build a collector", async ({ page }) => 
   await page.getByRole("button", { name: "Explore" }).click();
 
   await expect(page).toHaveURL(/game\.html\?name=Tester&color=green&seed=1500&mission=survey/);
+  await loaded(page);
   await expect(page.locator("#message-text")).toHaveText(/Survey mode/);
   await expect(page.locator("#message-speaker")).toHaveText("Tester");
   await expect(page.locator("#iron")).toHaveText("150");
@@ -46,6 +52,7 @@ test("start the campaign: briefing, then the first objective", async ({ page }) 
   const errors = collectErrors(page);
   await page.goto("/");
   await page.getByRole("button", { name: /Arrived/ }).click();
+  await loaded(page);
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
@@ -71,6 +78,7 @@ test("start the campaign: briefing, then the first objective", async ({ page }) 
 
 test("pause and resume with the keyboard", async ({ page }) => {
   await page.goto("/game.html");
+  await loaded(page);
   await expect(page.locator("#iron")).toHaveText("150");
 
   await page.keyboard.press("p");
@@ -82,6 +90,7 @@ test("pause and resume with the keyboard", async ({ page }) => {
 
 test("the game canvas renders the world", async ({ page }) => {
   await page.goto("/game.html");
+  await loaded(page);
   await expect(page.locator("#iron")).toHaveText("150");
 
   // Sample a pixel left of centre: explored terrain, not the black void. A WebGL canvas can't be
@@ -106,6 +115,7 @@ test("the game canvas renders the world", async ({ page }) => {
 
 test("number keys pick buildings from the build bar", async ({ page }) => {
   await page.goto("/game.html");
+  await loaded(page);
   await expect(page.locator("#iron")).toHaveText("150");
   const drone = page.getByRole("button", { name: /Worker drone/ });
   const collector = page.getByRole("button", { name: /Collector/ });
@@ -122,6 +132,7 @@ test("number keys pick buildings from the build bar", async ({ page }) => {
 test("mission 4: run silent with R, shown in the stealth panel", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto("/game.html?mission=ah-company");
+  await loaded(page);
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "Begin" }).click();
   await expect(dialog).toBeHidden();
@@ -144,6 +155,7 @@ test("mission 4: run silent with R, shown in the stealth panel", async ({ page }
 test("the minimap, settings and save, then continue from the menu", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto("/game.html?seed=77");
+  await loaded(page);
   await expect(page.locator("#iron")).toHaveText("150");
   await expect(page.getByLabel("Minimap")).toBeVisible();
 
@@ -164,6 +176,7 @@ test("the minimap, settings and save, then continue from the menu", async ({ pag
   await expect(resume).toContainText("world 77");
   await resume.click();
   await expect(page).toHaveURL(/load=1/);
+  await loaded(page);
   await expect(page.locator("#iron")).toHaveText("150");
   expect(errors).toEqual([]);
 });

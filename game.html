@@ -5,9 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <title>Mind your own Empire</title>
+    <style>
+      /* The loading screen, here rather than in a stylesheet so it's up on the first paint. */
+      html, body { margin: 0; background: #05060b; }
+      #loading {
+        position: fixed; inset: 0; z-index: 1000; display: grid; place-items: end start;
+        padding: clamp(24px, 6vw, 96px); color: #e7edf6; overflow: hidden;
+        font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(120% 90% at 78% 22%, rgb(255 160 110 / 0.22), transparent 55%),
+          radial-gradient(60% 60% at 80% 26%, #3a1d2b 0 30%, transparent 31%),
+          radial-gradient(90% 70% at 10% 110%, rgb(120 40 30 / 0.55), transparent 60%),
+          linear-gradient(180deg, #0a0c16 0%, #120d18 55%, #1e0f10 100%);
+        transition: opacity 0.7s ease, filter 0.7s ease;
+      }
+      #loading.done { opacity: 0; filter: blur(6px); pointer-events: none; }
+      #loading .loading-planet {
+        position: absolute; right: 8%; top: 8%; width: min(38vw, 520px); aspect-ratio: 1;
+        border-radius: 50%; opacity: 0.9;
+        background:
+          repeating-linear-gradient(172deg, transparent 0 7%, rgb(255 210 170 / 0.07) 7% 9%),
+          radial-gradient(circle at 34% 30%, #f3b98d, #b9614a 38%, #4a1f2c 70%, #12080e 100%);
+        box-shadow: 0 0 120px 10px rgb(255 140 90 / 0.18);
+        animation: loading-drift 40s linear infinite alternate;
+      }
+      #loading .loading-ring {
+        position: absolute; right: calc(8% - 12vw); top: calc(8% + min(17vw, 230px));
+        width: calc(min(38vw, 520px) + 24vw); height: 6px; border-radius: 50%;
+        background: linear-gradient(90deg, transparent, rgb(255 220 190 / 0.35), transparent);
+        transform: rotate(-12deg); filter: blur(0.5px);
+      }
+      #loading .loading-copy { position: relative; max-width: 560px; }
+      #loading .loading-kicker {
+        letter-spacing: 0.32em; text-transform: uppercase; font-size: 12px; color: #8e99ab;
+      }
+      #loading .loading-title {
+        margin: 6px 0 28px; font: 400 clamp(36px, 6vw, 72px)/1 "Ropa Sans", system-ui, sans-serif;
+        letter-spacing: 0.04em;
+      }
+      #loading .loading-bar {
+        height: 2px; width: min(420px, 80vw); background: rgb(170 220 255 / 0.12); overflow: hidden;
+      }
+      #loading .loading-bar span {
+        display: block; height: 100%; transform-origin: left; transform: scaleX(0);
+        background: linear-gradient(90deg, #5fe0ff, #e7f9ff); box-shadow: 0 0 12px #5fe0ff;
+      }
+      #loading .loading-step { margin-top: 10px; font-size: 13px; color: #8e99ab; min-height: 1.4em; }
+      #loading .loading-tip {
+        margin-top: 28px; padding-left: 14px; border-left: 2px solid rgb(170 220 255 / 0.25);
+        color: #c3cbd8; font-style: italic; max-width: 460px; min-height: 2.9em;
+      }
+      @keyframes loading-drift { to { transform: translate(-2vw, 1vh) rotate(4deg); } }
+      @media (prefers-reduced-motion: reduce) { #loading .loading-planet { animation: none; } }
+    </style>
     <script type="module" src="/src/game/main.ts"></script>
   </head>
   <body>
+    <div id="loading" aria-live="polite" aria-busy="true">
+      <div class="loading-planet" aria-hidden="true"></div>
+      <div class="loading-ring" aria-hidden="true"></div>
+      <div class="loading-copy">
+        <div class="loading-kicker">Lessuin</div>
+        <div class="loading-title">Mind your own Empire</div>
+        <div class="loading-bar" aria-hidden="true"><span></span></div>
+        <div class="loading-step">Charting Lessuin…</div>
+        <p class="loading-tip"></p>
+      </div>
+    </div>
     <main id="game" class="game">
       <svg class="symbols" aria-hidden="true">
         <symbol id="icon-iron" viewBox="0 0 24 24">
