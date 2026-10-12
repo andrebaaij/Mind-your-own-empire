@@ -93,3 +93,24 @@ describe("wardens", () => {
     expect(state.world.isExplored({ x: 40, y: 40, chunkX: 4, chunkY: 4, i: 0 })).toBe(false);
   });
 });
+
+describe("Idiran camps", () => {
+  it("are attended by their own guard, and evicted quickly once it's gone", () => {
+    const state = base();
+    const camp = spawn(state, "camp", 20, 20, "idiran");
+    const guard = spawn(state, "skimmer", 21, 20, "idiran");
+    expect(isAttended(state, camp)).toBe(true);
+
+    const warden = spawn(state, "warden", 24, 20, "custody");
+    setWardenHome(warden, { x: 24, y: 20 }, 2);
+    run(state, 20);
+    expect(state.units.includes(camp)).toBe(true);
+
+    // The guard leaves; the staff move in, and don't count it as one of ours.
+    guard.position = { x: 60, y: 60 };
+    run(state, 20);
+    expect(state.units.includes(camp)).toBe(false);
+    expect(state.stats.evicted).toBe(1);
+    expect(state.stats.tidied).toBe(0);
+  });
+});

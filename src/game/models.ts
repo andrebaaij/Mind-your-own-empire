@@ -253,7 +253,38 @@ function decoy(glow: THREE.Color): THREE.Group {
   return group;
 }
 
+/** An Idiran forward camp: a dug-in hexagonal bunker under a tall, blinking mast. */
+function camp(): THREE.Group {
+  const group = new THREE.Group();
+  const pad = mesh(new THREE.CylinderGeometry(1.45, 1.6, 0.35, 6), idiranHull);
+  pad.position.y = 0.1;
+  const bunker = mesh(new THREE.CylinderGeometry(0.85, 1.15, 0.8, 6), idiranHull);
+  bunker.position.y = 0.65;
+  const band = mesh(new THREE.CylinderGeometry(0.88, 0.88, 0.1, 6), idiranTrim);
+  band.position.y = 0.8;
+  const mast = mesh(new THREE.CylinderGeometry(0.04, 0.07, 2.4, 6), idiranHull);
+  mast.position.set(0.4, 2, 0.3);
+  const beacon = mesh(
+    new THREE.SphereGeometry(0.1, 10, 8),
+    glowMaterial(new THREE.Color("#ff3b1f"), 4),
+  );
+  beacon.position.set(0.4, 3.25, 0.3);
+  group.add(pad, bunker, band, mast, beacon);
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2;
+    const slit = mesh(
+      new THREE.BoxGeometry(0.3, 0.06, 0.05),
+      glowMaterial(new THREE.Color("#ff8a3d"), 2),
+    );
+    slit.position.set(Math.cos(angle) * 1.02, 0.75, Math.sin(angle) * 1.02);
+    slit.rotation.y = -angle + Math.PI / 2;
+    group.add(slit);
+  }
+  return group;
+}
+
 const builders: Record<ObjectName, (glow: THREE.Color) => THREE.Group> = {
+  camp,
   skimmer,
   decoy,
   mind,

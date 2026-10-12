@@ -212,6 +212,66 @@ describe("mission 4: Ah. Company.", () => {
   });
 });
 
+describe("mission 5: Trespassers", () => {
+  const CAMPS = [
+    [-9, 24],
+    [4, 27],
+    [-3, 30],
+  ];
+
+  it("is lost if the camps are left to strip the seedbed", () => {
+    const state = startMission(mission("trespassers"), player);
+    run(state, 610);
+    expect(state.mission?.outcome?.won).toBe(false);
+  });
+
+  it("can be won by luring each camp's guard away while a warden is near", () => {
+    const state = startMission(mission("trespassers"), player);
+    setSilent(state, true);
+    for (const [cx = 0, cy = 0] of CAMPS) {
+      const camp = state.units.find(
+        (u) =>
+          u.name === "camp" && Math.hypot(u.position.x - cx - 0.5, u.position.y - cy - 0.5) < 1,
+      );
+      if (!camp) throw new Error("no camp");
+      for (let attempt = 0; attempt < 8 && state.units.includes(camp); attempt++) {
+        // Wait for a warden to wander close, then lay a chain of two decoys leading away.
+        for (let wait = 0; wait < 60; wait++) {
+          const near = state.units.some(
+            (u) =>
+              u.faction === "custody" &&
+              Math.hypot(u.position.x - camp.position.x, u.position.y - camp.position.y) < 6,
+          );
+          if (near) break;
+          run(state, 1);
+        }
+        const dx = cx + 1.5;
+        const dy = cy - 22.5;
+        const length = Math.hypot(dx, dy);
+        for (let k = 0; k < 2; k++) {
+          const x = Math.round(cx + (dx / length) * (7 + k * 3.5));
+          const y = Math.round(cy + (dy / length) * (7 + k * 3.5));
+          // (Charted for the test; in play the scout finds the ground first.)
+          state.world.watch(gridRef(x, y), 2);
+          state.world.unwatch(gridRef(x, y), 2);
+          for (const [ox, oy] of [
+            [0, 0],
+            [1, 0],
+            [0, 1],
+            [-1, 0],
+          ]) {
+            if (build(state, "decoy", [gridRef(x + (ox ?? 0), y + (oy ?? 0))]).built) break;
+          }
+        }
+        run(state, 30);
+      }
+    }
+    run(state, 5);
+    expect(state.stats.evicted).toBe(3);
+    expect(state.mission?.outcome?.won).toBe(true);
+  });
+});
+
 describe("unlocking", () => {
   it("opens each mission once the one before is complete", () => {
     expect(isUnlocked(mission("arrived"), new Set())).toBe(true);

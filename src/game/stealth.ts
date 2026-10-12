@@ -37,14 +37,19 @@ const TRIANGULATION = 0.12;
 const INVESTIGATE_SECONDS = 6;
 const IGNORE_SECONDS = 45;
 /** How long a skimmer spends smashing a decoy, and how much that calms the search. */
-const DECOY_SECONDS = 4;
+const DECOY_SECONDS = 6;
 const DECOY_RELIEF = 15;
 
 export interface Search {
   /** Where the Idirans think the Mind came down, and how far around it they look. */
   center: Point;
   radius: number;
+  /** Whether they narrow the search and home in on the Mind over time (default yes). */
+  closing?: boolean;
 }
+
+/** How close a guard skimmer keeps to its camp. */
+const GUARD_RADIUS = 2.5;
 
 interface SkimmerMemory {
   decoy: Unit | null;
@@ -54,6 +59,10 @@ interface SkimmerMemory {
   hovered: number;
   /** Things it has looked at already, until when (in seconds of game time). */
   ignoring: Map<Unit, number>;
+  /** The camp it guards, if it's a guard rather than a searcher. */
+  guarding: Unit | null;
+  /** Where it's flying off to, having lost its camp. */
+  leaving: Point | null;
   /** Seconds left hovering at a waypoint, scanning. */
   pause: number;
 }
@@ -70,6 +79,8 @@ function memoryOf(skimmer: Unit): SkimmerMemory {
       closing: null,
       hovered: 0,
       ignoring: new Map(),
+      guarding: null,
+      leaving: null,
     };
     memories.set(skimmer, memory);
   }
@@ -125,6 +136,12 @@ export function arriveSkimmer(state: GameState, skimmer: Unit): void {
   state.discovered.add("idirans");
 }
 
+/** Post a skimmer to guard a camp: it circles close by, unless something lures it off. */
+export function guardCamp(state: GameState, skimmer: Unit, camp: Unit): void {
+  arriveSkimmer(state, skimmer);
+  memoryOf(skimmer).guarding = camp;
+}
+
 /** One step of the Idiran search, `seconds` long. */
 export function idiranThink(state: GameState, seconds: number): void {
   const search = state.search;
@@ -136,6 +153,20 @@ export function idiranThink(state: GameState, seconds: number): void {
   let noticed = false;
   for (const skimmer of skimmers) {
     const memory = memoryOf(skimmer);
+
+    // A guard whose camp has been taken apart pulls out, and leaves Lessuin to the staff.
+    if (memory.guarding && !state.units.includes(memory.guarding)) {
+      const away = { x: skimmer.position.x * 3, y: skimmer.position.y * 3 + 60 };
+      memory.guarding = null;
+      memory.leaving = away;
+      skimmer.actions = [newWalk(away)];
+    }
+    if (memory.leaving) {
+      if (distance(skimmer.position, memory.leaving) < 3 || skimmer.actions.length === 0) {
+        removeUnit(state, skimmer);
+      }
+      continue;
+    }
 
     // Busy with a decoy: fly to it, look it over, smash it.
     if (memory.decoy) {
@@ -206,18 +237,19 @@ export function idiranThink(state: GameState, seconds: number): void {
       search.center.x += (best.position.x - search.center.x) * pull;
       search.center.y += (best.position.y - search.center.y) * pull;
     } else if (skimmer.actions.length === 0) {
-      // Nothing here: hover and scan for a moment, then on to the next part of the search.
+      // Nothing here: hover and scan for a moment, then on to the next part of the search,
+      // or (for a guard) another slow circle of its camp.
       memory.pause -= seconds;
       if (memory.pause <= 0) {
+        const camp =
+          memory.guarding && state.units.includes(memory.guarding) ? memory.guarding : null;
+        const center = camp ? camp.position : search.center;
         const angle = state.random() * Math.PI * 2;
-        const reach = Math.sqrt(state.random()) * search.radius;
+        const reach = camp ? GUARD_RADIUS : Math.sqrt(state.random()) * search.radius;
         skimmer.actions = [
-          newWalk({
-            x: search.center.x + Math.cos(angle) * reach,
-            y: search.center.y + Math.sin(angle) * reach,
-          }),
+          newWalk({ x: center.x + Math.cos(angle) * reach, y: center.y + Math.sin(angle) * reach }),
         ];
-        memory.pause = 1.5 + state.random() * 2;
+        memory.pause = (camp ? 0.5 : 1.5) + state.random() * 2;
       }
     }
   }
@@ -225,9 +257,9 @@ export function idiranThink(state: GameState, seconds: number): void {
   if (!noticed) state.suspicion = Math.max(0, state.suspicion - SUSPICION_DECAY * seconds);
   // Given time, they narrow the search down, and triangulate on the Mind's emissions (more
   // slowly when it runs silent). Waiting them out doesn't work for long.
-  search.radius = Math.max(MIN_SEARCH_RADIUS, search.radius - NARROWING * seconds);
-  const mind = ours.find((u) => u.name === "mind");
+  const mind = search.closing === false ? undefined : ours.find((u) => u.name === "mind");
   if (mind) {
+    search.radius = Math.max(MIN_SEARCH_RADIUS, search.radius - NARROWING * seconds);
     const d = distance(search.center, mind.position);
     const step = Math.min(d, TRIANGULATION * (state.silent ? 0.5 : 1) * seconds);
     if (d > 0) {

@@ -15,7 +15,7 @@ import {
   say,
   spawn,
 } from "./state";
-import { arriveSkimmer } from "./stealth";
+import { arriveSkimmer, guardCamp } from "./stealth";
 
 export interface Objective {
   text: string;
@@ -157,9 +157,15 @@ const ALLOWED_LOSSES = 2;
 /** The marker stone the first warden keeps straightening. */
 const MARKER = { x: 4, y: -4 };
 
-function arriveWarden(state: GameState, x: number, y: number, home = WARDEN_DRAW): void {
+function arriveWarden(
+  state: GameState,
+  x: number,
+  y: number,
+  home = WARDEN_DRAW,
+  patrol?: number,
+): void {
   const warden = spawn(state, "warden", x, y, "custody");
-  setWardenHome(warden, home);
+  setWardenHome(warden, home, patrol);
 }
 
 const theStaff: MissionDefinition = {
@@ -534,7 +540,125 @@ const ahCompany: MissionDefinition = {
     "They've gone, for now. Ah. Company: the kind that brings its own opinions about me. Next time I'd like some of my own ready.",
 };
 
-export const MISSIONS: readonly MissionDefinition[] = [arrived, theStaff, houseRules, ahCompany];
+// --- Mission 5 ------------------------------------------------------------------------------
+
+const SEEDBED = { x: -2, y: 22 };
+const CAMPS: [number, number][] = [
+  [-9, 24],
+  [4, 27],
+  [-3, 30],
+];
+
+/** How long until the Idirans have stripped the seedbed and moved on. */
+const STRIP_SECONDS = 600;
+const stripClock = (runtime: MissionRuntime) =>
+  `seedbed stripped in ${clock(Math.max(0, STRIP_SECONDS - runtime.elapsed))}`;
+
+const campsLeft = (state: GameState) =>
+  state.units.filter((u) => u.faction === "idiran" && u.name === "camp").length;
+
+const trespassers: MissionDefinition = {
+  id: "trespassers",
+  number: 5,
+  act: "Act II · Company",
+  title: "Trespassers",
+  briefing: [
+    "The Idirans didn't leave. They've dug in south of the base, around a Tessilend seedbed, and they're stripping its lattice for their war. Three camps, each with a skimmer standing guard.",
+    "The Mind can't fight them. But the camps are in the Custody's territory, and the staff tidy away anything left unattended, Idiran or otherwise. The guards just need to be somewhere else for a little while.",
+  ],
+  seed: "lessuin",
+  layout: [
+    ["mind", 5, 5],
+    ["block", 3, 8],
+    ["block", 4, 9],
+    ["block", 8, 8],
+    ["block", 2, 3],
+    ["scout", 7, 1],
+    ["solar", 10, 9],
+    ["solar", 12, 3],
+    ["solar", -1, 4],
+    ["tower", 9, 12],
+  ],
+  iron: 700,
+  sites: [{ kind: "seedbed", ...SEEDBED }],
+  setup: (state) => {
+    state.designs.add("decoy");
+    // They're dug in, not searching: detection still matters, but they won't close in.
+    state.search = {
+      center: { x: SEEDBED.x + 0.5, y: SEEDBED.y + 4.5 },
+      radius: 8,
+      closing: false,
+    };
+    for (const [x, y] of CAMPS) {
+      const camp = spawn(state, "camp", x, y, "idiran");
+      guardCamp(state, spawn(state, "skimmer", x + 2, y - 2, "idiran"), camp);
+    }
+    // The staff tend the seedbed, and take a dim view of the neighbours: one keeps a close eye
+    // on each camp.
+    for (const [x, y] of CAMPS) {
+      arriveWarden(state, x, y - 4, { x: x + 0.5, y: y + 0.5 }, 6);
+    }
+  },
+  objectives: [
+    {
+      text: "Find the Idiran camps",
+      hint: "Run silent and send the scout south, carefully. Skimmers hear things up to 6 tiles away.",
+      done: (state) =>
+        state.stats.evicted > 0 ||
+        state.units.some(
+          (u) => u.name === "camp" && u.footprint.some((tile) => state.world.isExplored(tile)),
+        ),
+      completed:
+        "There. Three camps around the seedbed, a skimmer on each, and the staff circling all of it with their lamps very bright. They don't like the neighbours either.",
+    },
+    {
+      text: "Get the staff to evict a camp",
+      progress: (_state, runtime) => stripClock(runtime),
+      hint: "Wait for a warden to come near a camp, then plant a decoy 6–8 tiles out: the guard goes to smash it, and the staff move in. A second decoy about 4 tiles beyond the first keeps it away longer.",
+      done: (state) => state.stats.evicted >= 1,
+    },
+    {
+      text: "Evict every camp",
+      hint: "Chain decoys away from each camp, about 4 tiles apart: a guard that smashes one hears the next.",
+      progress: (state, runtime) =>
+        `${CAMPS.length - campsLeft(state)} / ${CAMPS.length} · ${stripClock(runtime)}`,
+      done: (state) => campsLeft(state) === 0,
+    },
+  ],
+  events: [
+    {
+      when: (state) => seconds(state) > 1,
+      run: (state) =>
+        say(
+          state,
+          "South of here, around the seedbed. Something heavy is digging, and it isn't the staff.",
+        ),
+    },
+    {
+      when: (state) => campsLeft(state) === 0,
+      run: (state) => {
+        // With their camps gone, the guards leave too.
+        for (const unit of [...state.units]) if (unit.faction === "idiran") removeUnit(state, unit);
+      },
+    },
+  ],
+  failure: (state, runtime) => {
+    if (state.suspicion >= 100) return "They've traced the decoys back to us. Found.";
+    if (runtime.elapsed >= STRIP_SECONDS && campsLeft(state) > 0)
+      return "They've stripped the seedbed bare and moved on. The staff will be a long time forgiving us for watching.";
+    return null;
+  },
+  victory:
+    "The staff have evicted them: politely, thoroughly, and with what I can only describe as a receipt. I could get used to having landlords.",
+};
+
+export const MISSIONS: readonly MissionDefinition[] = [
+  arrived,
+  theStaff,
+  houseRules,
+  ahCompany,
+  trespassers,
+];
 
 export function getMission(id: string): MissionDefinition | undefined {
   return MISSIONS.find((m) => m.id === id);

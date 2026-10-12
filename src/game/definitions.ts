@@ -65,7 +65,8 @@ export type ObjectName =
   | "tower"
   | "warden"
   | "skimmer"
-  | "decoy";
+  | "decoy"
+  | "camp";
 
 /** Who controls an object. */
 export type Faction = "player" | "custody" | "idiran";

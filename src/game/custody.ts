@@ -12,6 +12,7 @@ import {
   WARDEN_SIGHT,
 } from "./config";
 import { distance, type Point } from "./coords";
+import { findFreeSpots } from "./pathfinding";
 import { type GameState, removeUnit, say } from "./state";
 import { isMobile, newWalk, type TidyAction, type Unit } from "./units";
 
@@ -20,6 +21,8 @@ const PATROL_RADIUS = 11;
 
 interface WardenMemory {
   home: Point;
+  /** How far from home it wanders. */
+  patrol: number;
   target: Unit | null;
   /** Tick at which an idle warden picks a new patrol point. */
   nextWander: number;
@@ -33,15 +36,17 @@ const neglected = new WeakMap<Unit, number>();
 function memoryOf(warden: Unit): WardenMemory {
   let memory = memories.get(warden);
   if (!memory) {
-    memory = { home: { ...warden.position }, target: null, nextWander: 0 };
+    memory = { home: { ...warden.position }, patrol: PATROL_RADIUS, target: null, nextWander: 0 };
     memories.set(warden, memory);
   }
   return memory;
 }
 
 /** Give a warden a patrol centre (by default, where it was created). */
-export function setWardenHome(warden: Unit, home: Point): void {
-  memoryOf(warden).home = { ...home };
+export function setWardenHome(warden: Unit, home: Point, patrol = PATROL_RADIUS): void {
+  const memory = memoryOf(warden);
+  memory.home = { ...home };
+  memory.patrol = patrol;
 }
 
 export function isWarden(unit: Unit): boolean {
@@ -56,8 +61,9 @@ export function isWarden(unit: Unit): boolean {
 export function isAttended(state: GameState, building: Unit): boolean {
   if (building.name === "mind" || building.name === "tower") return true;
   if (isBuiltToPlan(state, building)) return true;
+  // A building is attended by its own side: our drones for ours, skimmers for an Idiran camp.
   return state.units.some((unit) => {
-    if (unit.faction !== "player" || unit === building) return false;
+    if (unit.faction !== building.faction || unit === building) return false;
     const d = distance(unit.position, building.position);
     if (isMobile(unit)) return d <= ATTEND_RADIUS;
     return unit.name === "tower" && d <= SPIRE_ATTEND_RADIUS;
@@ -67,6 +73,20 @@ export function isAttended(state: GameState, building: Unit): boolean {
 /** A building standing on Tessilend paving. */
 export function isBuiltToPlan(state: GameState, building: Unit): boolean {
   return building.footprint.length > 0 && building.footprint.every((t) => state.world.isPaved(t));
+}
+
+/** Buildings the Custody considers clutter when left alone: ours, and the Idirans'. */
+function isTidyable(unit: Unit): boolean {
+  return (unit.faction === "player" || unit.faction === "idiran") && !isMobile(unit);
+}
+
+/** The Custody has much less patience with Idiran camps than with ours, and takes them apart faster. */
+function inspectSeconds(unit: Unit): number {
+  return unit.faction === "idiran" ? INSPECT_SECONDS / 4 : INSPECT_SECONDS;
+}
+
+function tidySeconds(unit: Unit): number {
+  return unit.faction === "idiran" ? TIDY_SECONDS / 2 : TIDY_SECONDS;
 }
 
 function isTarget(state: GameState, unit: Unit): boolean {
@@ -81,7 +101,7 @@ function isTarget(state: GameState, unit: Unit): boolean {
 function updateNeglect(state: GameState): void {
   const wardens = state.units.filter(isWarden);
   for (const unit of state.units) {
-    if (unit.faction !== "player" || isMobile(unit)) continue;
+    if (!isTidyable(unit)) continue;
     const watched = wardens.some((w) => distance(w.position, unit.position) <= WARDEN_SIGHT);
     if (!state.custodyTidying || !watched || isAttended(state, unit)) {
       neglected.delete(unit);
@@ -89,19 +109,20 @@ function updateNeglect(state: GameState): void {
     } else if (!neglected.has(unit)) {
       neglected.set(unit, state.ticks);
       unit.inspected = true;
-      say(
-        state,
-        `A warden is looking very hard at our ${unit.definition.label.toLowerCase()}. I'd send someone over.`,
-        "warning",
-        { once: "first-inspection" },
-      );
+      if (unit.faction === "player")
+        say(
+          state,
+          `A warden is looking very hard at our ${unit.definition.label.toLowerCase()}. I'd send someone over.`,
+          "warning",
+          { once: "first-inspection" },
+        );
     }
   }
 }
 
 function neglectedLongEnough(state: GameState, unit: Unit): boolean {
   const since = neglected.get(unit);
-  return since !== undefined && state.ticks - since >= INSPECT_SECONDS * TICK_RATE;
+  return since !== undefined && state.ticks - since >= inspectSeconds(unit) * TICK_RATE;
 }
 
 /** Decide what each warden does next. Called a few times a second, not every tick. */
@@ -117,7 +138,7 @@ export function custodyThink(state: GameState): void {
       const gone = !state.units.includes(target);
       if (!gone && !isAttended(state, target)) continue; // on its way, or busy tidying
 
-      if (!gone && warden.actions[0]?.kind === "tidy") {
+      if (!gone && target.faction === "player" && warden.actions[0]?.kind === "tidy") {
         say(state, "A warden hesitates, then goes back to its rounds. Someone's home.", "info", {
           once: "warden-backs-off",
         });
@@ -134,8 +155,7 @@ export function custodyThink(state: GameState): void {
       : state.units
           .filter(
             (unit) =>
-              unit.faction === "player" &&
-              !isMobile(unit) &&
+              isTidyable(unit) &&
               distance(unit.position, warden.position) <= WARDEN_SIGHT &&
               !isAttended(state, unit) &&
               neglectedLongEnough(state, unit) &&
@@ -147,8 +167,10 @@ export function custodyThink(state: GameState): void {
     const target = candidates[0];
     if (target) {
       memory.target = target;
+      // Walk to open ground beside it, not into the building itself.
+      const beside = findFreeSpots(state.world, target.position, 1)[0] ?? target.position;
       warden.actions = [
-        newWalk(target.position),
+        newWalk(beside),
         { kind: "tidy", target: { ...target.position }, building: target, progress: 0 },
       ];
       continue;
@@ -157,7 +179,7 @@ export function custodyThink(state: GameState): void {
     // Nothing to do: wander the patrol.
     if (warden.actions.length === 0 && state.ticks >= memory.nextWander) {
       const angle = state.random() * Math.PI * 2;
-      const reach = state.random() * PATROL_RADIUS;
+      const reach = state.random() * memory.patrol;
       warden.actions = [
         newWalk({
           x: memory.home.x + Math.cos(angle) * reach,
@@ -190,18 +212,30 @@ export function tidyTick(state: GameState, warden: Unit, action: TidyAction): vo
   }
 
   action.progress += 1 / TICK_RATE;
-  building.dismantling = Math.min(1, action.progress / TIDY_SECONDS);
-  if (action.progress === 1 / TICK_RATE) {
+  building.dismantling = Math.min(1, action.progress / tidySeconds(building));
+  const ours = building.faction === "player";
+  if (action.progress === 1 / TICK_RATE && ours) {
     say(
       state,
       `A warden is dismantling our ${building.definition.label.toLowerCase()}. Send a drone to stand by it.`,
       "warning",
     );
   }
-  if (action.progress >= TIDY_SECONDS) {
+  if (action.progress >= tidySeconds(building)) {
     removeUnit(state, building);
-    state.stats.tidied++;
-    say(state, "Tidied away. I'd object, but there's no one to object to.", "warning");
+    if (ours) {
+      state.stats.tidied++;
+      say(state, "Tidied away. I'd object, but there's no one to object to.", "warning");
+    } else {
+      state.stats.evicted++;
+      say(
+        state,
+        state.stats.evicted === 1
+          ? "The staff have taken the Idiran camp apart, bolt by bolt, and stacked the bolts. Evicted."
+          : "Another camp evicted. The staff are very thorough about unwanted guests.",
+        "success",
+      );
+    }
     finish();
   }
 }

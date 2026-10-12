@@ -95,6 +95,8 @@ export interface Stats {
   tidied: number;
   /** Decoy beacons the Idirans found (and smashed). */
   decoysFound: number;
+  /** Idiran camps the Custody dismantled. */
+  evicted: number;
 }
 
 export interface GameState {
@@ -191,6 +193,7 @@ export function createGame(options: {
       built: {},
       tidied: 0,
       decoysFound: 0,
+      evicted: 0,
     },
     custodyTidying: true,
     mission: null,
