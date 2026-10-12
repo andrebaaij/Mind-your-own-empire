@@ -97,6 +97,78 @@ describe("mission 2: The Staff", () => {
   });
 });
 
+describe("mission 2: reading the marker", () => {
+  it("has a marker stone a drone can read", () => {
+    const state = startMission(mission("the-staff"), player);
+    const marker = state.world.siteAt(gridRef(4, -4));
+    expect(marker?.kind).toBe("marker");
+    const drone = state.units.find((u) => u.name === "block");
+    if (!drone) throw new Error("no drone");
+    state.world.watch(gridRef(4, -4), 2);
+    setSelection(state, [drone]);
+    issueOrder(state, marker?.center ?? { x: 0, y: 0 });
+    run(state, 20);
+    expect(marker?.status).toBe("awake");
+    expect(state.stats.studied.marker).toBe(1);
+  });
+});
+
+describe("mission 3: House Rules", () => {
+  /** Drones of the player's, and the explored lattice around a site. */
+  const drones = (state: GameState) =>
+    state.units.filter((u) => u.faction === "player" && u.name === "block");
+  const lattice = (state: GameState, x: number, y: number) =>
+    (state.world.siteAt(gridRef(x, y))?.seams ?? [])
+      .map((seam) => state.world.resourceAt(gridRef(seam.x, seam.y)))
+      .filter((r) => r !== undefined);
+
+  it("can be won: read the archive, mine lattice, restore the tap, build to plan, find the habitat", () => {
+    const state = startMission(mission("house-rules"), player);
+    const order = (
+      units: ReturnType<typeof drones>,
+      target: { x: number; y: number },
+      resources = [] as ReturnType<typeof lattice>,
+    ) => {
+      setSelection(state, units);
+      issueOrder(state, target, resources);
+    };
+    run(state, 8); // the archive is charted
+
+    order(drones(state), { x: -10.5, y: 0.5 });
+    run(state, 30);
+    expect(state.mission?.current).toBe(1);
+
+    const seams = lattice(state, -11, 0);
+    expect(seams.length).toBeGreaterThan(0);
+    order(drones(state), seams[0]?.position ?? { x: 0, y: 0 }, seams);
+    for (let i = 0; i < 12 && (state.mission?.current ?? 0) < 2; i++) run(state, 10);
+    expect(state.mission?.current).toBe(2);
+
+    order(drones(state), { x: 8.5, y: -17.5 });
+    for (let i = 0; i < 12 && (state.mission?.current ?? 0) < 3; i++) run(state, 10);
+    expect(state.mission?.current).toBe(3);
+
+    // Mine iron for three collectors, then build them on the archive's paving.
+    const archive = state.world.siteAt(gridRef(-11, 0));
+    const paving = archive?.paving ?? [];
+    for (let i = 0; i < 20 && (state.mission?.current ?? 0) < 4; i++) {
+      for (const [x, y] of paving) {
+        if (state.economy.iron < 100) break;
+        build(state, "solar", [gridRef(x, y)]);
+      }
+      mineEverything(state);
+      run(state, 15);
+    }
+    expect(state.mission?.current).toBe(4);
+
+    const scout = state.units.filter((u) => u.name === "scout");
+    order(scout, { x: 36, y: -11 });
+    run(state, 30);
+    expect(state.mission?.outcome?.won).toBe(true);
+    expect(state.stats.tidied).toBeLessThanOrEqual(3);
+  });
+});
+
 describe("unlocking", () => {
   it("opens each mission once the one before is complete", () => {
     expect(isUnlocked(mission("arrived"), new Set())).toBe(true);

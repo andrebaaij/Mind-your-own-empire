@@ -3,8 +3,9 @@
  * Mind, and win or lose conditions. See docs/World.md for the story they belong to.
  */
 import { TICK_RATE } from "./config";
-import { distance } from "./coords";
-import { setWardenHome } from "./custody";
+import { distance, gridRef } from "./coords";
+import { isBuiltToPlan, setWardenHome } from "./custody";
+import type { SiteSpec } from "./sites";
 import {
   createGame,
   type GameState,
@@ -41,6 +42,8 @@ export interface MissionDefinition {
   seed: string;
   layout: StartLayout;
   iron: number;
+  /** Tessilend sites the mission places by hand. */
+  sites?: SiteSpec[];
   /** Extra setup after the starting units are placed. */
   setup?: (state: GameState) => void;
   objectives: Objective[];
@@ -150,10 +153,12 @@ const arrived: MissionDefinition = {
 const WARDEN_DRAW = { x: 5.5, y: 5.5 };
 const SURVIVE_SECONDS = 180;
 const ALLOWED_LOSSES = 2;
+/** The marker stone the first warden keeps straightening. */
+const MARKER = { x: 4, y: -4 };
 
-function arriveWarden(state: GameState, x: number, y: number): void {
+function arriveWarden(state: GameState, x: number, y: number, home = WARDEN_DRAW): void {
   const warden = spawn(state, "warden", x, y, "custody");
-  setWardenHome(warden, WARDEN_DRAW);
+  setWardenHome(warden, home);
 }
 
 const theStaff: MissionDefinition = {
@@ -180,6 +185,13 @@ const theStaff: MissionDefinition = {
     ["solar", 9, 13],
   ],
   iron: 300,
+  sites: [
+    {
+      kind: "marker",
+      ...MARKER,
+      text: "'Lessuin. Kept by the Custody for the Tessilend, until they return.' Ten thousand years old and still legible. So: the world is Lessuin, its builders were the Tessilend, and these are their staff.",
+    },
+  ],
   // The wardens look around first; they start tidying once the player has met one.
   setup: (state) => {
     state.custodyTidying = false;
@@ -191,7 +203,12 @@ const theStaff: MissionDefinition = {
       progress: (_state, runtime) => `${Math.floor(runtime.counters.watched ?? 0)} / 10 s`,
       done: (_state, runtime) => (runtime.counters.watched ?? 0) >= 10,
       completed:
-        "There's a plaque on this one. Ten thousand years old, and still legible: this world is called Lessuin. Its builders were the Tessilend. These are their staff.",
+        "It keeps going back to that stone north of the base and straightening it. There's writing on it.",
+    },
+    {
+      text: "Read the marker stone",
+      hint: "Select a worker drone and right-click the stone north of the base.",
+      done: (state) => (state.stats.studied.marker ?? 0) >= 1,
     },
     {
       text: "Hold on to your base",
@@ -248,7 +265,146 @@ const theStaff: MissionDefinition = {
   victory: "They're not hostile. They're house-proud. I can work with house-proud.",
 };
 
-export const MISSIONS: readonly MissionDefinition[] = [arrived, theStaff];
+// --- Mission 3 ------------------------------------------------------------------------------
+
+const ARCHIVE = { x: -11, y: 0 };
+const TAP = { x: 8, y: -18 };
+const HABITAT = { x: 40, y: -11 };
+const PLAN_BUILDINGS = 3;
+const LATTICE_GOAL = 30;
+const ALLOWED_LOSSES_3 = 3;
+
+const builtToPlan = (state: GameState) =>
+  state.units.filter((u) => u.faction === "player" && isBuiltToPlan(state, u)).length;
+
+const houseRules: MissionDefinition = {
+  id: "house-rules",
+  number: 3,
+  act: "Act I · Landfall",
+  title: "House Rules",
+  briefing: [
+    "The staff tolerate the Mind the way a museum tolerates pigeons. They tidy away whatever is left lying about, and they have a very broad idea of 'lying about'.",
+    "To stay, the Mind needs to know the rules of the house. The wardens keep visiting a Tessilend archive west of the base. Whatever they're so careful of, it's written down.",
+  ],
+  seed: "lessuin",
+  layout: [
+    ["mind", 5, 5],
+    ["block", 3, 8],
+    ["block", 4, 9],
+    ["block", 8, 8],
+    ["block", 2, 3],
+    ["scout", 7, 1],
+    ["solar", 10, 9],
+    ["solar", 1, 11],
+    ["solar", 12, 3],
+    ["tower", 9, 12],
+  ],
+  iron: 250,
+  sites: [
+    { kind: "archive", ...ARCHIVE },
+    { kind: "tap", ...TAP },
+    { kind: "habitat", ...HABITAT },
+  ],
+  setup: (state) => {
+    // The staff go about their rounds: one at the archive, one at the tap, one at the habitat.
+    for (const [site, x, y] of [
+      [ARCHIVE, -8, 4],
+      [TAP, 11, -14],
+      [HABITAT, 36, -6],
+    ] as const) {
+      arriveWarden(state, x, y, { x: site.x + 0.5, y: site.y + 0.5 });
+    }
+  },
+  objectives: [
+    {
+      text: "Study the Tessilend archive",
+      hint: "Select worker drones and right-click the archive west of the base. More drones read faster.",
+      done: (state) => (state.stats.studied.archive ?? 0) >= 1,
+      completed:
+        "It's a building code. Ten thousand years of it. The short version: build on their foundations and the staff treat it as part of the estate. Build anywhere else and it's litter.",
+    },
+    {
+      text: `Mine ${LATTICE_GOAL} lattice`,
+      hint: "The green crystals around Tessilend sites. Drones mine it at half the speed of iron.",
+      progress: (state) =>
+        `${Math.min(state.stats.latticeDelivered, LATTICE_GOAL)} / ${LATTICE_GOAL}`,
+      done: (state) => state.stats.latticeDelivered >= LATTICE_GOAL,
+      completed: "Lattice. It hums, very faintly, in a key I don't recognise.",
+    },
+    {
+      text: "Restore the power tap",
+      hint: "It's north of the base. Study it with drones; bringing it back uses 30 lattice.",
+      done: (state) => (state.stats.studied.tap ?? 0) >= 1,
+    },
+    {
+      text: `Build ${PLAN_BUILDINGS} things on Tessilend paving`,
+      hint: "The pale stone around the sites. The staff never tidy anything built to plan.",
+      progress: (state) => `${Math.min(builtToPlan(state), PLAN_BUILDINGS)} / ${PLAN_BUILDINGS}`,
+      done: (state) => builtToPlan(state) >= PLAN_BUILDINGS,
+      completed:
+        "The nearest warden just logged us. We've been reclassified from 'clutter' to 'contractor'. I've been called worse. I've been called 'it'.",
+    },
+    {
+      text: "Find out what the staff are tending in the east",
+      hint: "Send the scout east, past the ridge.",
+      done: (state) =>
+        state.units.some(
+          (u) =>
+            u.faction === "player" &&
+            distance(u.position, { x: HABITAT.x + 0.5, y: HABITAT.y + 0.5 }) <= 9,
+        ),
+    },
+  ],
+  events: [
+    {
+      when: (state) => seconds(state) > 1,
+      run: (state) =>
+        say(
+          state,
+          "The staff tolerate us the way a museum tolerates pigeons. I'd like to learn the house rules before they decide we're an exhibit.",
+        ),
+    },
+    {
+      when: (state) => seconds(state) > 7,
+      run: (state) => {
+        // The archive is charted from the start: the wardens have worn a path to it.
+        state.world.watch(gridRef(ARCHIVE.x, ARCHIVE.y), 4);
+        state.world.unwatch(gridRef(ARCHIVE.x, ARCHIVE.y), 4);
+        say(
+          state,
+          "There, west of the base: the archive the wardens keep visiting. Let's go and read it.",
+        );
+      },
+    },
+    {
+      when: (_state, runtime) => runtime.current >= 2,
+      run: (state) => {
+        state.world.watch(gridRef(TAP.x, TAP.y), 5);
+        state.world.unwatch(gridRef(TAP.x, TAP.y), 5);
+        say(
+          state,
+          "The archive mentions a power tap just north of here, 'awaiting a qualified contractor'. I'm qualified. I'm fairly sure I'm qualified.",
+        );
+      },
+    },
+    {
+      when: (_state, runtime) => runtime.current >= 4,
+      run: (state) =>
+        say(
+          state,
+          "One more thing. The wardens on the eastern ridge never come this way. Whatever they're looking after over there, it matters more to them than we do.",
+        ),
+    },
+  ],
+  failure: (state) =>
+    state.stats.tidied > ALLOWED_LOSSES_3
+      ? "The staff have tidied us away. The paperwork was immaculate."
+      : null,
+  victory:
+    "Contractors, then. On probation, I imagine, for the next few thousand years. And somewhere out east there's a house with the lights on, waiting for someone.",
+};
+
+export const MISSIONS: readonly MissionDefinition[] = [arrived, theStaff, houseRules];
 
 export function getMission(id: string): MissionDefinition | undefined {
   return MISSIONS.find((m) => m.id === id);
@@ -261,6 +417,7 @@ export function startMission(definition: MissionDefinition, player: Player): Gam
     player,
     layout: definition.layout,
     iron: definition.iron,
+    ...(definition.sites ? { sites: definition.sites } : {}),
   });
   definition.setup?.(state);
   state.mission = {

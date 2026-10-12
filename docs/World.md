@@ -75,6 +75,21 @@ A civilization that reached the point where the material universe stopped being 
 What they left behind:
 - **Infrastructure** still half-working: power taps, fabrication beds, transit lines.
 - **Relics** that are hard to interpret. These are the natural tech tree and the source of the game's mysteries.
+
+### Sites and lattice — Decided, in the game
+
+The Tessilend built in **lattice**, a green-blue crystal they grew rather than mined. It still grows in seams around their sites, wherever their machines go on feeding it. Lattice is the game's second resource, after iron. It's scarce and slow to mine, and it's what you need for anything Tessilend: restoring their machines and building from their patterns. The Mind finds it hums, very faintly, in a key it doesn't recognise.
+
+Every site stands on a paved apron, the Tessilend's **foundations**. The Custody treats anything built on them as built to plan, part of the estate, and never tidies it. That's the first house rule the Mind learns, in mission 3.
+
+| Site | What studying it does |
+| --- | --- |
+| **Marker stone** | An inscription: a label, a notice, a line of history. The one in mission 2 gives the planet its name. |
+| **Archive** | A fragment of the Tessilend story (in order: departure, census, guests, instructions, the open door), and a chart of the nearest sites not yet found |
+| **Power tap** | Studied, then restored with 30 lattice: +8 power, permanently |
+| **Fabrication bed** | Teaches a design. The first teaches the scout drone, which costs lattice. Later ones give salvaged lattice. |
+| **Seedbed** | Woken, its lattice seams grow back after mining: the only renewable lattice |
+| **Habitat** | Sealed. Lit, aired, swept, and empty. The Custody keeps house for someone, and won't say who. (It is for the refugees; mission 9 opens it.) |
 - **Their caretakers.**
 
 ## The caretakers: the Custody — Agreed in outline; name Decided
@@ -123,8 +138,8 @@ A campaign of missions in three acts. Each mission teaches or twists one idea, a
 ### Act I: Landfall (learning to live here)
 
 1. **Arrived.** The Mind wakes in its wrecked core with three drones built from the debris. *Objectives:* mine iron, build a sensor spire to restore some sight, raise a solar collector. *Teaches:* selection, orders, building, fog. *Closing line:* *"Sensors at four per cent. Drones at three. Optimism at a cautious nine."*
-2. **The Staff.** Caretakers appear and calmly dismantle a building left unattended. *Objectives:* protect your buildings, observe the caretakers without provoking them. *Teaches:* caretakers as a third party that can't simply be shot. *Twist:* attacking them works briefly, then they escalate.
-3. **House Rules.** The Mind works out one caretaker protocol: they leave alone anything that follows their builders' layout rules. *Objectives:* rebuild to the rules, get classed as a *contractor*. *Teaches:* the reputation and protocol system. *Clue:* the caretakers are maintaining large, empty habitats.
+2. **The Staff.** *(Built.)* Caretakers appear and calmly dismantle a building left unattended. *Objectives:* watch a warden, read the marker stone it keeps straightening (which names Lessuin and the Tessilend), and hold on to your base. *Teaches:* caretakers as a third party that can't simply be shot, and studying sites.
+3. **House Rules.** *(Built.)* The Mind reads a Tessilend archive and learns the first house rule: anything built on the builders' foundations is part of the estate. *Objectives:* study the archive, mine lattice, restore a power tap, build three things on the paving and get classed as a *contractor*, then find what the staff are tending in the east. *Teaches:* sites, lattice, foundations. *Clue:* a habitat, lights on, kept ready for ten thousand years.
 
 ### Act II: Company (the war arrives)
 
@@ -156,11 +171,14 @@ In rough order of need, this is the feature roadmap:
 | --- | --- | --- |
 | Player | *Only Visiting* | The Mind; its core is the base. Stores iron and has a small emergency reactor. |
 | Worker drone | Worker drone | Mines iron and carries it home to the Mind |
-| Scout drone | Scout drone | The Mind's replacement for its lost sensors; flies |
+| Scout drone | Scout drone | The Mind's replacement for its lost sensors; flies. Buildable once a fabrication bed has been studied. |
 | Solar array | Collector | Power for the drones |
 | Sensor spire | Sensor spire | Sees far, and counts as "attending" nearby buildings in the Custody's eyes |
 | Warden | Warden (the Custody) | Dismantles unattended buildings |
 | Iron | Iron (feedstock) | |
+| Lattice | Lattice | The Tessilend's grown crystal, mined around their sites |
+| Paving | Tessilend foundations | Built on, a building is "to plan" and the Custody leaves it alone |
+| Sites | Marker stones, archives, power taps, fabrication beds, seedbeds, habitats | Studied by worker drones |
 | Power | Power | A shortfall slows every drone ("brownout") |
 | Acid | Spill | |
 | Fog of war | Sensor blindness | In-world reason the map is dark |

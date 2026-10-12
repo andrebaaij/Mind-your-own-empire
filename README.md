@@ -20,12 +20,12 @@ It started in 2014 as a 2D isometric game ([2015 screenshot](docs/screenshot-201
 | Input | Action |
 | --- | --- |
 | Left click / drag | Select units, or place the chosen building on every free tile in the drag area (red tiles are blocked) |
-| Right click / drag | Order the selection: mine the iron in the area, or walk to the pointer |
+| Right click / drag | Order the selection: mine the iron or lattice in the area, study a Tessilend site, or walk to the pointer |
 | Shift + right click | Queue the order after the current ones instead of replacing them |
 | W A S D / arrow keys | Pan the camera (hold Shift to pan faster) |
 | Q / E, or middle-mouse drag | Rotate the camera |
 | Mouse wheel | Zoom (zoom right in and the camera tilts up to look out across the land) |
-| 1 / 2 / 3 | Pick a worker drone, collector or sensor spire to place (press again to put it away) |
+| 1 / 2 / 3 / 4 | Pick a worker drone, collector, sensor spire or (once learned) scout drone to place (press again to put it away) |
 | Shift while placing | Keep the building selected to place more |
 | . (full stop) | Select idle worker drones and centre on them |
 | C / Shift + C | Cancel the next order / all orders of the selection |
@@ -39,7 +39,9 @@ In Survey mode, the seed on the start screen picks the map, so the same seed alw
 
 - **Iron** is mined by worker drones. Each drone carries 10 at a time back to the Mind, which stores up to 1,000.
 - **Power** comes from the Mind's reactor and from collectors, and every drone and spire uses some. If it drops below zero, every drone works at half speed.
-- **The Custody's wardens** patrol and dismantle any building that has no drone nearby and isn't covered by a sensor spire. A building they're eyeing gets an amber ring, which is your warning to send someone over.
+- **The Custody's wardens** patrol and dismantle any building that has no drone nearby and isn't covered by a sensor spire. A building they're eyeing gets an amber ring, which is your warning to send someone over. Anything built on Tessilend paving is "built to plan", and they leave it alone.
+- **Tessilend sites** are scattered across the map. Right-click one with worker drones to study it; more drones study faster, and clicking a site shows what it is and how the study is going. Archives tell the builders' story and chart other sites. Power taps give +8 power once restored. Fabrication beds teach new designs (the scout drone). Seedbeds make lattice grow back. Habitats stay sealed.
+- **Lattice** is the builders' crystal, found in seams around their sites. Drones mine it at half the speed of iron; the Mind stores up to 200. It restores power taps and pays for designs learned from the Tessilend.
 
 ## Development
 
@@ -92,6 +94,9 @@ src/
     atmosphere.ts   sky, sun, the gas giant and drifting spores
     fauna.ts        wildlife behaviour: grazing herds, circling flocks, the longshank
     creatures.ts    wildlife models and animation
+    sites.ts        where Tessilend sites are: placement, paving, lattice seams
+    relics.ts       studying sites and what each kind does
+    ruins.ts        site models and their look as they wake
     audio.ts        the synthesised ambient soundscape
     models.ts       procedural 3D models: the Mind, drones, towers, solar arrays, iron
     input.ts        mouse and keyboard handling, picking through the 3D view
