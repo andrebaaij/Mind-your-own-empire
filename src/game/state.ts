@@ -332,7 +332,7 @@ function unitContext(state: GameState): UnitContext {
         say(
           state,
           kind === "iron"
-            ? "The store is full. Build nothing, or build something; just not more iron."
+            ? "The store is full. Build nothing, or build something; just not more bloom."
             : "No room for more lattice. It's precious, not plentiful; spend some.",
           "warning",
           {

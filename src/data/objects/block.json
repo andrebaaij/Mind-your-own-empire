@@ -1,6 +1,6 @@
 {
   "label": "Worker drone",
-  "description": "Mines iron and carries it home.",
+  "description": "Harvests bloom and carries it home.",
   "skills": {
     "walk": true,
     "gather": true

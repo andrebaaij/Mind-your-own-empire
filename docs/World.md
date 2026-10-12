@@ -31,7 +31,7 @@ Its name was a joke when the ship was commissioned. It is less funny now, and th
 **Sample lines (tone reference):**
 - On landing: *"Arrived. Not, I'll concede, in the manner intended."*
 - Starting the game: *"Sensors at four per cent. Drones at three. Optimism at a cautious nine."*
-- Out of iron: *"We appear to have built everything we can afford, and one thing we can't."*
+- Out of bloom: *"We appear to have built everything we can afford, and one thing we can't."*
 - Can't build there: *"I could put it there. It would then fall over. Let's not."*
 - First caretaker sighting: *"Someone's tidying up. Whoever it is, they've been at it for a while."*
 - First Idiran contact: *"Ah. Company. The kind that brings its own opinions about me."*
@@ -44,7 +44,7 @@ A rust-red, iron-rich world, once landscaped by its builders and now going slowl
 | In the game | In the world |
 | --- | --- |
 | Red iron-rich dirt | Ground saturated with metal from the builders' industry; the iron "grows" back slowly where caretakers still seed it |
-| Iron crystal clusters | Feedstock deposits the caretakers cultivated for manufacture that no longer happens |
+| Bloom (orange crystal clusters) | Iron the builders grew rather than mined: feedstock the caretakers still cultivate, for manufacture that no longer happens. "Bloom" is the old smelters' word for raw iron; the Mind borrows it. |
 | Acid pools in hollows | Spill basins from abandoned processing: still active, still dangerous |
 | Ridges and cliffs | Eroded embankments and terraces of old works, half-returned to geology |
 | Unexplored darkness | The Mind's ruined sensors; it can only see what its drones see |
@@ -78,7 +78,7 @@ What they left behind:
 
 ### Sites and lattice — Decided, in the game
 
-The Tessilend built in **lattice**, a green-blue crystal they grew rather than mined. It still grows in seams around their sites, wherever their machines go on feeding it. Lattice is the game's second resource, after iron. It's scarce and slow to mine, and it's what you need for anything Tessilend: restoring their machines and building from their patterns. The Mind finds it hums, very faintly, in a key it doesn't recognise.
+The Tessilend built in **lattice**, a green-blue crystal they grew rather than mined. It still grows in seams around their sites, wherever their machines go on feeding it. Lattice is the game's second resource, after bloom. It's scarce and slow to mine, and it's what you need for anything Tessilend: restoring their machines and building from their patterns. The Mind finds it hums, very faintly, in a key it doesn't recognise.
 
 Every site stands on a paved apron, the Tessilend's **foundations**. The Custody treats anything built on them as built to plan, part of the estate, and never tidies it. That's the first house rule the Mind learns, in mission 3.
 
@@ -137,7 +137,7 @@ A campaign of missions in three acts. Each mission teaches or twists one idea, a
 
 ### Act I: Landfall (learning to live here)
 
-1. **Arrived.** The Mind wakes in its wrecked core with three drones built from the debris. *Objectives:* mine iron, build a sensor spire to restore some sight, raise a solar collector. *Teaches:* selection, orders, building, fog. *Closing line:* *"Sensors at four per cent. Drones at three. Optimism at a cautious nine."*
+1. **Arrived.** The Mind wakes in its wrecked core with three drones built from the debris. *Objectives:* harvest bloom, build a sensor spire to restore some sight, raise a solar collector. *Teaches:* selection, orders, building, fog. *Closing line:* *"Sensors at four per cent. Drones at three. Optimism at a cautious nine."*
 2. **The Staff.** *(Built.)* Caretakers appear and calmly dismantle a building left unattended. *Objectives:* watch a warden, read the marker stone it keeps straightening (which names Lessuin and the Tessilend), and hold on to your base. *Teaches:* caretakers as a third party that can't simply be shot, and studying sites.
 3. **House Rules.** *(Built.)* The Mind reads a Tessilend archive and learns the first house rule: anything built on the builders' foundations is part of the estate. *Objectives:* study the archive, mine lattice, restore a power tap, build three things on the paving and get classed as a *contractor*, then find what the staff are tending in the east. *Teaches:* sites, lattice, foundations. *Clue:* a habitat, lights on, kept ready for ten thousand years.
 
@@ -145,7 +145,7 @@ A campaign of missions in three acts. Each mission teaches or twists one idea, a
 
 4. **Ah. Company.** *(Built.)* An Idiran scouting party lands, and its skimmers sweep the country around the crash. *Objectives:* run silent, plant a decoy beacon away from the base, lure a skimmer to it, then stay hidden until they give up. *Teaches:* stealth and detection: signatures (the Mind loudest, moving drones louder than idle ones), cover under the groves, running silent, decoys. Left alone, the Idirans narrow the search and triangulate on the Mind; a smashed decoy resets the search around itself. *Closing line:* *"Ah. Company: the kind that brings its own opinions about me."*
 5. **Trespassers.** *(Built.)* The Idirans dig in around a Tessilend seedbed, three camps with a skimmer guarding each, and start stripping it. The Mind can't fight them, but the camps stand in the Custody's territory, and the staff tidy away anything left unattended. They have even less patience with Idiran camps than with the Mind's buildings. *Objectives:* find the camps, then lure each guard away with chains of decoys while a warden is near, so the staff evict all three before the seedbed is stripped (ten minutes). *Teaches:* using a third party; the caretakers are as hostile to Idirans as to anyone.
-6. **Post.** *(Built.)* A Culture supply pod streaks in, fired from far away by the General Systems Vehicle *Quiet Word In Your Ear*. The GSV couldn't stop, and wouldn't have explained itself if it could. It lands far to the south-east, and the Idirans saw it too. *Objectives:* unload the pod with worker drones before the skimmers secure it (decoys slow them down), then bring the drones home unseen. *Reward:* iron, lattice, drone patterns, habitat seed stock the Mind has no use for, and a sealed key it can't open.
+6. **Post.** *(Built.)* A Culture supply pod streaks in, fired from far away by the General Systems Vehicle *Quiet Word In Your Ear*. The GSV couldn't stop, and wouldn't have explained itself if it could. It lands far to the south-east, and the Idirans saw it too. *Objectives:* unload the pod with worker drones before the skimmers secure it (decoys slow them down), then bring the drones home unseen. *Reward:* bloom, lattice, drone patterns, habitat seed stock the Mind has no use for, and a sealed key it can't open.
 7. **Relics.** *(Built.)* North-west of the base stands a Tessilend long-range transmitter. *Objectives:* study it, restore it with 60 lattice, then charge it for 45 seconds through an uplink the Mind wires in. The uplink is the loudest thing for miles while it charges, so skimmers converge on it and decoys have to keep them busy. *Twist:* the signal opens the sealed key from the pod.
 
 ### Act III: Arrivals (the secret)
@@ -169,8 +169,8 @@ In rough order of need, this is the feature roadmap:
 
 | Game thing | In the world | Notes |
 | --- | --- | --- |
-| Player | *Only Visiting* | The Mind; its core is the base. Stores iron and has a small emergency reactor. |
-| Worker drone | Worker drone | Mines iron and carries it home to the Mind |
+| Player | *Only Visiting* | The Mind; its core is the base. Stores bloom and has a small emergency reactor. |
+| Worker drone | Worker drone | Harvests bloom and carries it home to the Mind |
 | Scout drone | Scout drone | The Mind's replacement for its lost sensors; flies. Buildable once a fabrication bed has been studied. |
 | Solar array | Collector | Power for the drones |
 | Sensor spire | Sensor spire | Sees far, and counts as "attending" nearby buildings in the Custody's eyes |
@@ -178,7 +178,7 @@ In rough order of need, this is the feature roadmap:
 | Skimmer | Idiran skimmer | Armoured search craft; sweeps the ground with sensors |
 | Decoy beacon | Decoy beacon | Shouts "Mind here!" on every frequency. It isn't. |
 | Detection | Idiran suspicion | At 100%, the Idirans have found the Mind |
-| Iron | Iron (feedstock) | |
+| Iron (in the code) | Bloom | Grown iron, the base resource |
 | Lattice | Lattice | The Tessilend's grown crystal, mined around their sites |
 | Paving | Tessilend foundations | Built on, a building is "to plan" and the Custody leaves it alone |
 | Sites | Marker stones, archives, power taps, fabrication beds, seedbeds, habitats | Studied by worker drones |

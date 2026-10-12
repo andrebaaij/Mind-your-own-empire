@@ -85,7 +85,7 @@ const arrived: MissionDefinition = {
   title: "Arrived",
   briefing: [
     "The Contact ship Only Visiting was surveying a quiet system at the edge of the war when an Idiran patrol found it. The ship is gone. Its Mind ejected in its armoured core and came down hard on the planet below.",
-    "Most of its sensors are dead and it has three drones, built from the wreckage. The ground is rich in iron. That will have to do.",
+    "Most of its sensors are dead and it has three drones, built from the wreckage. The ground is rich in something like iron. That will have to do.",
   ],
   seed: "lessuin",
   layout: [
@@ -98,7 +98,7 @@ const arrived: MissionDefinition = {
   iron: 120,
   objectives: [
     {
-      text: "Mine iron and bring it home",
+      text: "Harvest bloom and bring it home",
       hint: "Drag a box around your drones, then right-click the orange crystals.",
       progress: (state) => `${Math.min(state.stats.ironDelivered, 60)} / 60`,
       done: (state) => state.stats.ironDelivered >= 60,
@@ -144,6 +144,14 @@ const arrived: MissionDefinition = {
         ),
     },
     {
+      when: (state) => seconds(state) > 22,
+      run: (state) =>
+        say(
+          state,
+          "Those orange crystals are iron, but nobody mined it: it grew. Bloom, the old smelters would have called it. Someone planted these. I'd like to meet the gardener.",
+        ),
+    },
+    {
       // Nudge a player who hasn't started mining.
       when: (state) => seconds(state) > 40 && state.stats.ironDelivered === 0,
       run: (state) =>
@@ -178,7 +186,7 @@ const theStaff: MissionDefinition = {
   act: "Act I · Landfall",
   title: "The Staff",
   briefing: [
-    "The base is coming along. Collectors, a handful of drones, iron in the store. Then something on the long-range edge of the sensors starts moving, slowly, with purpose.",
+    "The base is coming along. Collectors, a handful of drones, bloom in the store. Then something on the long-range edge of the sensors starts moving, slowly, with purpose.",
     "Whoever built this world left it in someone's care. The Mind would like to meet them before they meet its collectors.",
   ],
   seed: "lessuin",
@@ -336,7 +344,7 @@ const houseRules: MissionDefinition = {
     },
     {
       text: `Mine ${LATTICE_GOAL} lattice`,
-      hint: "The green crystals around Tessilend sites. Drones mine it at half the speed of iron.",
+      hint: "The green crystals around Tessilend sites. Drones mine it at half the speed of bloom.",
       progress: (state) =>
         `${Math.min(state.stats.latticeDelivered, LATTICE_GOAL)} / ${LATTICE_GOAL}`,
       done: (state) => state.stats.latticeDelivered >= LATTICE_GOAL,
@@ -775,7 +783,7 @@ const post: MissionDefinition = {
     return found(state);
   },
   victory:
-    "Post delivered. Iron, lattice, patterns, seed stock for habitats, and a sealed key with my name on it that I can't open. Yet.",
+    "Post delivered. Bloom, lattice, patterns, seed stock for habitats, and a sealed key with my name on it that I can't open. Yet.",
 };
 
 // --- Mission 7 ------------------------------------------------------------------------------
@@ -906,7 +914,7 @@ const sealedOrders: MissionDefinition = {
   objectives: [
     {
       text: `Build ${PADS_NEEDED} landing pads`,
-      hint: "Press 6 and place them on level open ground near the base. Each takes iron and a little lattice.",
+      hint: "Press 6 and place them on level open ground near the base. Each takes bloom and a little lattice.",
       progress: (state) => `${Math.min(padCount(state), PADS_NEEDED)} / ${PADS_NEEDED}`,
       done: (state) => padCount(state) >= PADS_NEEDED,
       completed:

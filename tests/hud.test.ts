@@ -15,7 +15,7 @@ describe("selection summary", () => {
     b.carrying.iron = 40;
 
     expect(summarizeSelection([a, b, scout])).toEqual([
-      { label: "Worker drone", count: 2, status: "1 moving, 1 idle · carrying 40 iron" },
+      { label: "Worker drone", count: 2, status: "1 moving, 1 idle · carrying 40 bloom" },
       { label: "Scout drone", count: 1, status: "Idle" },
     ]);
   });

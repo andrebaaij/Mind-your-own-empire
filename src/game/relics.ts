@@ -253,7 +253,7 @@ export function wake(state: GameState, site: Site): void {
         state.designs.add("scout");
         say(
           state,
-          "The fabrication bed had a pattern for a fast, light flier. I've adapted it. We can build scout drones now: iron and a little lattice.",
+          "The fabrication bed had a pattern for a fast, light flier. I've adapted it. We can build scout drones now: bloom and a little lattice.",
           "success",
         );
       } else {
@@ -288,7 +288,7 @@ export function wake(state: GameState, site: Site): void {
       state.flags.add("key");
       say(
         state,
-        "Unloaded: iron, lattice, drone patterns, habitat seed stock I can't imagine needing, and a sealed key I can't open. The GSV always did have a sense of humour.",
+        "Unloaded: bloom, lattice, drone patterns, habitat seed stock I can't imagine needing, and a sealed key I can't open. The GSV always did have a sense of humour.",
         "success",
       );
       break;

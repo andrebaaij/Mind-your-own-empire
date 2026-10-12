@@ -30,6 +30,15 @@ export interface ObjectDefinition {
   storage: { iron: number; energy: number; lattice?: number };
 }
 
+/**
+ * What the player calls each resource. "iron" in the code is bloom in the game: iron the
+ * Tessilend grew rather than mined, which the Custody still seeds.
+ */
+export const RESOURCE_LABEL: Record<ResourceKind, string> = {
+  iron: "bloom",
+  lattice: "lattice",
+};
+
 export interface ResourceDefinition {
   /** Thresholds for each visual level; an amount above `levels[n]` shows level `n`. */
   levels: number[];

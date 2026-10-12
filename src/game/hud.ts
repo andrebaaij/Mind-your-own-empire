@@ -1,4 +1,4 @@
-import { BUILDABLE, getObjectDefinition, type ObjectName } from "./definitions";
+import { BUILDABLE, getObjectDefinition, type ObjectName, RESOURCE_LABEL } from "./definitions";
 import type { MissionDefinition, MissionRuntime } from "./missions";
 import { SITE_INFO, siteStatusText } from "./relics";
 import { canBuild, type GameState, type Message, shortfall } from "./state";
@@ -61,7 +61,7 @@ export function summarizeSelection(units: readonly Unit[]): SelectionRow[] {
         : [...counts].map(([s, n]) => `${n} ${s.toLowerCase()}`).join(", ");
     for (const kind of ["iron", "lattice"] as const) {
       const carried = members.reduce((sum, unit) => sum + unit.carrying[kind], 0);
-      if (carried > 0) status += ` · carrying ${format(carried)} ${kind}`;
+      if (carried > 0) status += ` · carrying ${format(carried)} ${RESOURCE_LABEL[kind]}`;
     }
     return { label, count: members.length, status };
   });

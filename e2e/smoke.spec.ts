@@ -54,7 +54,7 @@ test("start the campaign: briefing, then the first objective", async ({ page }) 
   await expect(dialog).toBeHidden();
 
   const objectives = page.getByRole("region", { name: "Mission objectives" });
-  await expect(objectives).toContainText("Mine iron and bring it home");
+  await expect(objectives).toContainText("Harvest bloom and bring it home");
   await expect(objectives).toContainText("0 / 60");
   expect(errors).toEqual([]);
 });

@@ -8,7 +8,7 @@ The whole ten-mission campaign is playable, in three acts:
 
 **Act I · Landfall**
 
-1. **Arrived.** Learn the ropes: mine iron, carry it home, build drones, keep the power up, raise a sensor spire.
+1. **Arrived.** Learn the ropes: harvest bloom, carry it home, build drones, keep the power up, raise a sensor spire.
 2. **The Staff.** Meet the Custody, the caretaker machines that dismantle anything left unattended, read the marker stone that names the world, and keep your base standing.
 3. **House Rules.** Read a Tessilend archive, mine lattice, restore a power tap, build on the builders' foundations, and find what the staff are guarding.
 
@@ -36,7 +36,7 @@ It started in 2014 as a 2D isometric game ([2015 screenshot](docs/screenshot-201
 | Input | Action |
 | --- | --- |
 | Left click / drag | Select units, or place the chosen building on every free tile in the drag area (red tiles are blocked) |
-| Right click / drag | Order the selection: mine the iron or lattice in the area, study a Tessilend site, or walk to the pointer |
+| Right click / drag | Order the selection: mine the bloom or lattice in the area, study a Tessilend site, or walk to the pointer |
 | Shift + right click | Queue the order after the current ones instead of replacing them |
 | W A S D / arrow keys | Pan the camera (hold Shift to pan faster) |
 | Q / E, or middle-mouse drag | Rotate the camera |
@@ -54,12 +54,12 @@ In Survey mode, the seed on the start screen picks the map, so the same seed alw
 
 ### How it plays
 
-- **Iron** is mined by worker drones. Each drone carries 10 at a time back to the Mind, which stores up to 1,000.
+- **Bloom** is iron the Tessilend grew rather than mined: orange crystals the Custody still seeds. Worker drones harvest it, carrying 10 at a time back to the Mind, which stores up to 1,000. (The code calls it `iron`.)
 - **Power** comes from the Mind's reactor and from collectors, and every drone and spire uses some. If it drops below zero, every drone works at half speed.
 - **The Custody's wardens** patrol and dismantle any building that has no drone nearby and isn't covered by a sensor spire. A building they're eyeing gets an amber ring, which is your warning to send someone over. Anything built on Tessilend paving is "built to plan", and they leave it alone.
 - **Tessilend sites** are scattered across the map. Right-click one with worker drones to study it; more drones study faster, and clicking a site shows what it is and how the study is going. Archives tell the builders' story and chart other sites. Power taps give +8 power once restored. Fabrication beds teach new designs (the scout drone). Seedbeds make lattice grow back. Habitats stay sealed.
 - **The Idirans** (from mission 4) search with skimmers. Everything you own gives off a signature: the Mind most of all, moving drones more than idle ones. Whatever a skimmer picks up raises the detection meter, and at 100% you're found. Run silent, keep drones under the parasol groves, and plant **decoy beacons**: a skimmer that hears one goes to smash it, calms down, and searches around there instead. Left alone, the Idirans narrow the search and close in. From mission 5 they also dig in: an Idiran camp is attended by its guard skimmer, and the Custody evicts it (fast) whenever the guard is lured away.
-- **Lattice** is the builders' crystal, found in seams around their sites. Drones mine it at half the speed of iron; the Mind stores up to 200. It restores power taps and pays for designs learned from the Tessilend.
+- **Lattice** is the builders' crystal, found in seams around their sites. Drones mine it at half the speed of bloom; the Mind stores up to 200. It restores power taps and pays for designs learned from the Tessilend.
 
 ## Development
 
@@ -91,7 +91,7 @@ Run `npx playwright install chromium` once before the first `npm run test:e2e`.
 
 - **TypeScript** and **Vite**, built as two pages: `index.html` (start menu) and `game.html`.
 - **Three.js** renders the world in 3D with `WebGPURenderer`: WebGPU where the browser supports it, WebGL 2 otherwise. Shadows and bloom are included, and all models are built in code (`models.ts`), with no asset files.
-- **simplex-noise** with an **Alea** seeded random generator for terrain and iron.
+- **simplex-noise** with an **Alea** seeded random generator for terrain and bloom.
 - The interface is plain HTML and CSS overlaid on the 3D view: translucent glass panels with luminous edges, accented in the player's colour. Icons are inline SVG.
 - **Biome** for linting and formatting, **Vitest** for unit tests and **Playwright** for browser tests.
 
@@ -106,8 +106,8 @@ src/
     custody.ts      the caretaker machines and their rules
     units.ts        units and buildings: footprints, path following, unit avoidance, gathering
     pathfinding.ts  A* route planning, path smoothing, group destination spreading
-    world.ts        chunked world: ground, heights, cliffs, iron and fog of war
-    terrain.ts      noise-based terrain: ground types, heights and iron
+    world.ts        chunked world: ground, heights, cliffs, bloom and fog of war
+    terrain.ts      noise-based terrain: ground types, heights and bloom
     coords.ts       tile and ground-plane maths
     renderer.ts     Three.js scene: terrain meshes, units, previews, camera, picking
     scenery.ts      flora, rocks, ruins and crash debris: placement and instanced drawing
@@ -121,7 +121,7 @@ src/
     cover.ts        shared noise, and where the groves (cover) are
     ground.ts       the ground's shader detail
     audio.ts        the synthesised ambient soundscape
-    models.ts       procedural 3D models: the Mind, drones, towers, solar arrays, iron
+    models.ts       procedural 3D models: the Mind, drones, towers, solar arrays, bloom crystals
     input.ts        mouse and keyboard handling, picking through the 3D view
     hud.ts          resources, build bar, selection panel, messages, pause dialog
     definitions.ts  typed access to the JSON data below
@@ -152,7 +152,7 @@ Movement follows the approach classic RTS games such as Age of Empires use, spli
 
 - **Long-range planning** (`pathfinding.ts`): A* over the tile grid, using only what the player knows. Explored acid, explored cliffs and the tiles under buildings are impassable. Unexplored ground is assumed walkable, so routes don't give away what's hidden in the fog. When a unit uncovers acid or a cliff, or a new building cuts across its remaining route, it re-plans. Units never cut diagonally between two blocked tiles. The search stays within a box around where the order was given and the target, so an unreachable target can't send units roaming the map. They get as close as they can and stop. The route is then smoothed into straight legs. If the target can't be reached, the unit walks to the nearest tile it can reach. The search has a node budget, and at most a few new routes are planned per tick, so a large group order can't stall a frame.
 - **Short-range avoidance** (`units.ts`): units keep a little personal space. A unit that runs into another one first swerves, always to its own right so two units meeting head-on pass each other. If it can't swerve, it waits briefly for a moving unit to clear. After that it re-plans its route around the blocker, and it gives up after a few attempts. If the destination itself is taken by a unit that isn't moving, getting close counts as arriving.
-- **Groups**: every unit in a move order gets its own spot around the clicked point, and spots go to the nearest units first, so groups fan out instead of piling up. Gatherers each start on a different iron tile.
+- **Groups**: every unit in a move order gets its own spot around the clicked point, and spots go to the nearest units first, so groups fan out instead of piling up. Gatherers each start on a different bloom tile.
 - **Buildings**: buildings occupy the tiles under their base. They can't be placed on unexplored, blocked or acid tiles, and units standing on a new building's footprint are moved out of the way.
 
 The simulation in `state.ts`, `missions.ts`, `custody.ts`, `units.ts`, `pathfinding.ts`, `world.ts`, `terrain.ts` and `coords.ts` has no DOM or rendering dependencies, so it can be unit-tested in Node.

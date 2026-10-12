@@ -1,5 +1,5 @@
 import { gridFromWorld, type Point, rectFromPoints } from "./coords";
-import { BUILDABLE, getObjectDefinition } from "./definitions";
+import { BUILDABLE, getObjectDefinition, RESOURCE_LABEL } from "./definitions";
 import type { Hud } from "./hud";
 import type { Renderer } from "./renderer";
 import type { Site } from "./sites";
@@ -133,7 +133,7 @@ export function bindInput(
         const { label } = getObjectDefinition(state.building);
         if (shortOf)
           hud.showMessage(
-            `Not enough ${shortOf} for a ${label.toLowerCase()}. We appear to have built everything we can afford.`,
+            `Not enough ${RESOURCE_LABEL[shortOf]} for a ${label.toLowerCase()}. We appear to have built everything we can afford.`,
             5_000,
             "warning",
           );
