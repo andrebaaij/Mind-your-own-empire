@@ -11,7 +11,7 @@ const params = new URLSearchParams(window.location.search);
 const state = createGame({
   seed: params.get("seed") || "1500",
   player: {
-    name: params.get("name") || "Mind",
+    name: params.get("name") || "Only Visiting",
     color: playerColor(params.get("color")),
   },
 });
@@ -29,7 +29,10 @@ const hud = new Hud({
   onResume: () => setPaused(state, hud, false),
 });
 hud.update(state);
-hud.showMessage(`Welcome ${state.player.name}, good luck!`, 20_000);
+hud.showMessage(
+  `${state.player.name}: Arrived. Not, I'll concede, in the manner intended.`,
+  12_000,
+);
 
 const renderer = await Renderer.create(game, state.world);
 

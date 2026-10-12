@@ -2,7 +2,7 @@
 
 A single-player, procedurally generated 3D RTS for the browser, inspired by Iain M. Banks' Culture novels.
 
-You are a Mind, landed on a new planet, preparing it for the coming of humans. You command and upgrade your minions and buildings. They mine resources, fight off the original inhabitants and other interested races, and build for you.
+The Idiran war. A Culture Mind called *Only Visiting* comes down hard on a world whose builders Sublimed long ago, leaving their machines to keep the place tidy. The caretakers would like it to leave, the Idirans would like it destroyed, and the Mind would mostly like its sensors back. The setting and story are being worked out in [docs/World.md](docs/World.md) (contains spoilers).
 
 The game is an early prototype. You can explore, select units, send drones over hills and around cliffs, mine iron and place buildings.
 

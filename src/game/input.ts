@@ -123,9 +123,17 @@ export function bindInput(
         );
         const { label } = getObjectDefinition(state.building);
         if (outOfIron)
-          hud.showMessage(`Not enough iron for a ${label.toLowerCase()}`, 4_000, "warning");
+          hud.showMessage(
+            `Not enough iron for a ${label.toLowerCase()}. We appear to have built everything we can afford.`,
+            5_000,
+            "warning",
+          );
         else if (built === 0 && blocked > 0)
-          hud.showMessage("You can't build there", 3_000, "warning");
+          hud.showMessage(
+            "I could put it there. It would then fall over. Let's not.",
+            4_000,
+            "warning",
+          );
         // Hold Shift to keep placing; a click on blocked ground keeps the building selected.
         if (!event.shiftKey && !outOfIron && built > 0) state.building = null;
       } else if (click) {

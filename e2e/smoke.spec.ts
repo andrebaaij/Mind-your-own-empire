@@ -19,7 +19,9 @@ test("start a game from the menu and build a solar panel", async ({ page }) => {
   await page.getByRole("button", { name: "Play" }).click();
 
   await expect(page).toHaveURL(/game\.html\?name=Tester&color=green&seed=1500/);
-  await expect(page.locator("#message")).toHaveText("Welcome Tester, good luck!");
+  await expect(page.locator("#message")).toHaveText(
+    "Tester: Arrived. Not, I'll concede, in the manner intended.",
+  );
   await expect(page.locator("#iron")).toHaveText("100,000");
   await expect(page.locator("#energy")).toHaveText("0");
 
