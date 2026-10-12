@@ -56,7 +56,13 @@ A rust-red, iron-rich world, once landscaped by its builders and now going slowl
 - **Parasol spires**: thin trees with flat canopies that grow in groves.
 - **Lantern stalks**, whose bulbs pulse teal in the hollows and on the sand.
 
-Boulders gather where the old terraces broke into cliffs. Here and there a Tessilend column or arch is still standing, with nothing left to hold up. Around the Mind there is a ring of scorched ground and scattered hull plating, from its landing. The acid pools still shimmer.
+Boulders gather where the old terraces broke into cliffs. Here and there a Tessilend column or arch is still standing, with nothing left to hold up. Lessuin's animals took the gardens over along with the plants. The Mind names each one the first time it sees it:
+
+- **Trundlers:** slate-plated, six-legged grazers about the size of a drone, with amber eyes. They live in small herds with a youngster or two, and bolt from anything that hovers.
+- **Kites:** manta-winged gliders the colour of the sunset, with a glowing tail lure. They circle over the groves, apparently for fun.
+- **Longshanks:** a pale, banded body slung between four stilt legs, with a glowing lure on a tether. A longshank walks across the far country without hurrying and gives the base a wide berth. The Mind intends to be extremely polite to them.
+
+Around the Mind there is a ring of scorched ground and scattered hull plating, from its landing. The acid pools still shimmer.
 
 **Decided: Lessuin**, the builders' own name for it, which the Mind reads off a ten-thousand-year-old maintenance plaque in mission 2. On the Culture's charts it is *Survey object 31-Ledger-7*. The Mind uses the catalogue name exactly once, in mission 1, and never again: *"I refuse to be marooned somewhere with a hyphen in its name."*
 

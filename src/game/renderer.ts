@@ -4,7 +4,9 @@ import * as THREE from "three/webgpu";
 import { Atmosphere, MIST, SUN_DIRECTION } from "./atmosphere";
 import { CHUNK_SIZE, ZOOM_DEFAULT, ZOOM_MIN } from "./config";
 import { gridFromWorld, type Point, type Rect, rectContains, worldFromGrid } from "./coords";
+import { CreatureView, FIRST_SIGHTING } from "./creatures";
 import { getObjectDefinition, type ObjectName } from "./definitions";
+import { Fauna } from "./fauna";
 import {
   createCrystalGeometry,
   createGhost,
@@ -13,7 +15,7 @@ import {
   glowColor,
 } from "./models";
 import { Scenery, valueNoise } from "./scenery";
-import { buildTiles, canPlace, type GameState } from "./state";
+import { buildTiles, canPlace, type GameState, say } from "./state";
 import { START_CENTER, Terrain } from "./terrain";
 import type { Unit } from "./units";
 import type { Chunk, Resource, World } from "./world";
@@ -104,6 +106,9 @@ export class Renderer {
   private readonly sun = new THREE.DirectionalLight("#ffc890", 2.4);
   private readonly atmosphere = new Atmosphere();
   private readonly scenery: Scenery;
+  private readonly fauna: Fauna;
+  private readonly creatures: CreatureView;
+  private lastFrame: number | null = null;
   private readonly pipeline: THREE.RenderPipeline;
   private readonly raycaster = new THREE.Raycaster();
 
@@ -155,7 +160,9 @@ export class Renderer {
     this.scene.fog = new THREE.Fog(MIST, 40, 120);
     this.scene.add(new THREE.HemisphereLight("#a8b4e0", "#6a3a2c", 1.4));
     this.scenery = new Scenery(world);
-    this.scene.add(this.atmosphere.group, this.scenery.group);
+    this.fauna = new Fauna(world);
+    this.creatures = new CreatureView(world);
+    this.scene.add(this.atmosphere.group, this.scenery.group, this.creatures.group);
 
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -301,6 +308,7 @@ export class Renderer {
     this.placeCamera(state);
     this.renderChunks(state);
     this.renderUnits(state, time);
+    this.renderFauna(state, time);
     this.renderMarkers(state);
     this.renderGhosts(state);
     this.pipeline.render();
@@ -635,6 +643,16 @@ export class Renderer {
         this.world.heightAt(position.x, position.y) + 0.04,
         position.y,
       );
+    }
+  }
+
+  /** Wildlife lives on its own clock: it stops when the game is paused. */
+  private renderFauna(state: GameState, time: number): void {
+    const dt = this.lastFrame === null || state.paused ? 0 : Math.min(0.1, time - this.lastFrame);
+    this.lastFrame = time;
+    this.fauna.update(state.units, state.camera.target, dt);
+    for (const kind of this.creatures.update(this.fauna, time)) {
+      say(state, FIRST_SIGHTING[kind], "info", { once: `sighted-${kind}` });
     }
   }
 

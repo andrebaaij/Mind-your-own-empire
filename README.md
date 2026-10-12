@@ -90,6 +90,8 @@ src/
     renderer.ts     Three.js scene: terrain meshes, units, previews, camera, picking
     scenery.ts      flora, rocks, ruins and crash debris: placement and instanced drawing
     atmosphere.ts   sky, sun, the gas giant and drifting spores
+    fauna.ts        wildlife behaviour: grazing herds, circling flocks, the longshank
+    creatures.ts    wildlife models and animation
     audio.ts        the synthesised ambient soundscape
     models.ts       procedural 3D models: the Mind, drones, towers, solar arrays, iron
     input.ts        mouse and keyboard handling, picking through the 3D view
@@ -113,6 +115,7 @@ docs/               design notes
 - **Drones and flying:** worker drones hover close to the ground and follow paths. The scout flies higher and goes straight over acid, cliffs and buildings. Flying and ground units don't block each other.
 - **Fog:** unexplored ground isn't drawn (it fades into the haze), and explored ground nobody can currently see is dimmed.
 - **Scenery:** rust-grass, copperleaf shrubs, lantern stalks, parasol trees, boulders, Tessilend ruins and the wreckage of the Mind's landing. It's placed per tile from a hash of the tile's position, so a world always looks the same. It's purely visual: it never blocks anything, and it disappears under buildings. Each kind is one instanced mesh, and plants sway in the wind in the vertex shader.
+- **Wildlife:** herds of six-legged trundlers graze and bolt from drones, flocks of kites circle over the groves, and now and then a longshank, an animal the size of a house, strides across the far country. Like the scenery, it has no effect on the game. Small animals are only seen where the player has eyes, but a longshank is tall enough to be seen over any explored ground. Only animals near the camera are simulated, and any that wander off are moved back somewhere out of sight.
 - **Atmosphere:** late-afternoon light, with a low sun for long shadows and haze in the distance. The sky has a ringed gas giant on the horizon, glowing spores drift past, and acid pools shimmer. Zooming in lowers the camera towards the horizon.
 
 ### Pathfinding
