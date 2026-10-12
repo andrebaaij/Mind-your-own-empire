@@ -1,16 +1,22 @@
+import alea from "alea";
 import {
+  BROWNOUT_FACTOR,
+  DELIVERY_RANGE,
   MAX_BUILD_SLOPE,
   PATHS_PER_TICK,
   ROTATE_SPEED,
   SCROLL_SHIFT_MULTIPLIER,
   SCROLL_SPEED,
   STARTING_IRON,
+  TICK_RATE,
   ZOOM_DEFAULT,
   ZOOM_MAX,
   ZOOM_MIN,
 } from "./config";
-import { type GridRef, gridFromWorld, gridRange, type Point } from "./coords";
-import { getObjectDefinition, type ObjectName } from "./definitions";
+import { distance, type GridRef, gridFromWorld, gridRange, type Point } from "./coords";
+import { custodyThink, tidyTick } from "./custody";
+import { type Faction, getObjectDefinition, type ObjectName } from "./definitions";
+import type { MissionRuntime } from "./missions";
 import { assignSpots, findFreeSpots, tileKey } from "./pathfinding";
 import { createNoise, noiseTerrain } from "./terrain";
 import {
@@ -18,6 +24,7 @@ import {
   cancelAllActions,
   cancelNextAction,
   createUnit,
+  destroyUnit,
   finalPosition,
   footprintTiles,
   hasSkill,
@@ -25,6 +32,7 @@ import {
   queueGather,
   queueWalk,
   type Unit,
+  type UnitContext,
   updateUnit,
 } from "./units";
 import { type Resource, World } from "./world";
@@ -36,9 +44,9 @@ export interface Player {
 
 export interface Economy {
   iron: number;
-  /** Net energy production per hour across all objects. */
-  energyPerHour: number;
-  storage: { iron: number; energy: number };
+  /** Net power: what everything produces minus what it uses. Below zero, drones slow down. */
+  power: number;
+  storage: { iron: number };
 }
 
 export interface Pointer {
@@ -66,6 +74,19 @@ export interface CameraKeys {
   fast: boolean;
 }
 
+/** Something the Mind says, shown to the player. */
+export interface Message {
+  text: string;
+  tone: "info" | "warning" | "success";
+}
+
+export interface Stats {
+  ironDelivered: number;
+  built: Partial<Record<ObjectName, number>>;
+  /** Player buildings the Custody dismantled. */
+  tidied: number;
+}
+
 export interface GameState {
   world: World;
   player: Player;
@@ -79,37 +100,63 @@ export interface GameState {
   /** Currently held camera keys. */
   keys: CameraKeys;
   paused: boolean;
+  /** Simulation ticks so far. */
+  ticks: number;
+  /** Seeded randomness for the simulation, so a seed always plays out the same way. */
+  random: () => number;
+  /** Lines waiting to be shown; the HUD takes them from here. */
+  messages: Message[];
+  /** Keys of one-off messages already said. */
+  said: Set<string>;
+  stats: Stats;
+  /** Whether wardens dismantle unattended buildings yet, or only look around. */
+  custodyTidying: boolean;
+  mission: MissionRuntime | null;
 }
 
-export function createGame(options: { seed: string; player: Player }): GameState {
+export type StartLayout = [ObjectName, number, number][];
+
+/** Free play: the old 2014 starting base, with power to spare. */
+export const SANDBOX_LAYOUT: StartLayout = [
+  ["block", 0, 1],
+  ["block", 1, 1],
+  ["block", 2, 1],
+  ["mind", 5, 5],
+  ["tower", 10, 10],
+  ["solar", 11, 4],
+  ["solar", 11, 5],
+  ["solar", 10, 4],
+  ["solar", 10, 5],
+  ["scout", 0, 0],
+];
+
+export function createGame(options: {
+  seed: string;
+  player: Player;
+  layout?: StartLayout;
+  iron?: number;
+}): GameState {
   const state: GameState = {
     world: new World(noiseTerrain(createNoise(options.seed))),
     player: options.player,
     units: [],
-    economy: { iron: STARTING_IRON, energyPerHour: 0, storage: { iron: 0, energy: 0 } },
+    economy: { iron: options.iron ?? STARTING_IRON, power: 0, storage: { iron: 0 } },
     camera: { target: { x: 0, y: 0 }, yaw: Math.PI / 4, distance: ZOOM_DEFAULT },
     building: null,
     selection: [],
     pointer: { world: null, dragStart: null },
     keys: noKeys(),
     paused: false,
+    ticks: 0,
+    random: alea(`${options.seed}:sim`),
+    messages: [],
+    said: new Set(),
+    stats: { ironDelivered: 0, built: {}, tidied: 0 },
+    custodyTidying: true,
+    mission: null,
   };
 
-  const start: [ObjectName, number, number][] = [
-    ["block", 0, 1],
-    ["block", 1, 1],
-    ["block", 2, 1],
-    ["mind", 5, 5],
-    ["tower", 10, 10],
-    ["solar", 11, 4],
-    ["solar", 11, 5],
-    ["solar", 11, 6],
-    ["solar", 10, 4],
-    ["solar", 10, 5],
-    ["solar", 10, 6],
-    ["scout", 0, 0],
-  ];
-  for (const [name, x, y] of start) spawn(state, name, x, y);
+  for (const [name, x, y] of options.layout ?? SANDBOX_LAYOUT) spawn(state, name, x, y);
 
   const mind = state.units.find((unit) => unit.name === "mind");
   if (mind) state.camera.target = { ...mind.position };
@@ -128,24 +175,128 @@ export function noKeys(): CameraKeys {
   };
 }
 
-export function spawn(state: GameState, name: ObjectName, gx: number, gy: number): Unit {
-  const unit = createUnit(state.world, name, gx, gy, state.player.color);
-  const { energy, storage } = unit.definition;
-  state.economy.energyPerHour += energy;
-  state.economy.storage.energy += storage.energy;
-  state.economy.storage.iron += storage.iron;
+/** Queue a line from the Mind. With `once`, a line with that key is only ever said once. */
+export function say(
+  state: GameState,
+  text: string,
+  tone: Message["tone"] = "info",
+  options: { once?: string } = {},
+): void {
+  if (options.once) {
+    if (state.said.has(options.once)) return;
+    state.said.add(options.once);
+  }
+  state.messages.push({ text, tone });
+}
+
+export function spawn(
+  state: GameState,
+  name: ObjectName,
+  gx: number,
+  gy: number,
+  faction: Faction = "player",
+): Unit {
+  const unit = createUnit(state.world, name, gx, gy, state.player.color, faction);
+  if (faction === "player") {
+    state.economy.power += unit.definition.energy;
+    state.economy.storage.iron += unit.definition.storage.iron;
+  }
   state.units.push(unit);
   return unit;
+}
+
+/** Remove a unit from the game, undoing what it added to the economy. */
+export function removeUnit(state: GameState, unit: Unit): void {
+  const index = state.units.indexOf(unit);
+  if (index === -1) return;
+  state.units.splice(index, 1);
+  destroyUnit(state.world, unit);
+  if (unit.faction === "player") {
+    state.economy.power -= unit.definition.energy;
+    state.economy.storage.iron -= unit.definition.storage.iron;
+    state.economy.iron = Math.min(state.economy.iron, state.economy.storage.iron);
+  }
+  if (unit.selected)
+    setSelection(
+      state,
+      state.selection.filter((u) => u !== unit),
+    );
+}
+
+/** The nearest building that takes iron (the Mind). */
+function nearestStore(state: GameState, from: Point): Unit | undefined {
+  let best: Unit | undefined;
+  for (const unit of state.units) {
+    if (unit.faction !== "player" || unit.definition.storage.iron <= 0) continue;
+    if (!best || distance(unit.position, from) < distance(best.position, from)) best = unit;
+  }
+  return best;
+}
+
+function unitContext(state: GameState): UnitContext {
+  return {
+    budget: { remaining: PATHS_PER_TICK },
+    power: (unit) => (unit.faction === "player" && state.economy.power < 0 ? BROWNOUT_FACTOR : 1),
+    dropOff: (unit) => {
+      const store = nearestStore(state, unit.position);
+      return store ? { ...store.position } : null;
+    },
+    deposit: (unit, amount) => {
+      const store = nearestStore(state, unit.position);
+      if (!store) return 0;
+      const reach = (store.definition.footprint ?? 1) / 2 + DELIVERY_RANGE;
+      if (distance(store.position, unit.position) > reach) return 0;
+      const accepted = Math.max(
+        0,
+        Math.min(amount, state.economy.storage.iron - state.economy.iron),
+      );
+      state.economy.iron += accepted;
+      state.stats.ironDelivered += accepted;
+      if (accepted < amount) {
+        say(
+          state,
+          "The store is full. Build nothing, or build something; just not more iron.",
+          "warning",
+          {
+            once: `store-full-${Math.floor(state.ticks / (TICK_RATE * 30))}`,
+          },
+        );
+      }
+      return accepted;
+    },
+    tidy: (unit, action) => tidyTick(state, unit, action),
+  };
 }
 
 /** Advance the simulation by one tick. */
 export function tick(state: GameState): void {
   if (state.paused) return;
+  state.ticks++;
 
   moveCamera(state.camera, state.keys);
 
-  const budget = { remaining: PATHS_PER_TICK };
-  for (const unit of state.units) updateUnit(state.world, unit, state.units, budget);
+  const ctx = unitContext(state);
+  for (const unit of [...state.units]) {
+    if (state.units.includes(unit)) updateUnit(state.world, unit, state.units, ctx);
+  }
+  if (state.ticks % 10 === 0) custodyThink(state);
+  watchPower(state);
+}
+
+/** Tell the player when power runs short, and when it's back. */
+function watchPower(state: GameState): void {
+  const short = state.economy.power < 0;
+  if (short && !state.said.has("brownout")) {
+    state.said.add("brownout");
+    say(
+      state,
+      "Power's short, so everything runs at half speed. A collector or two would help.",
+      "warning",
+    );
+  } else if (!short && state.said.has("brownout")) {
+    state.said.delete("brownout");
+    say(state, "Power restored. Everyone back to full speed.", "success");
+  }
 }
 
 /** Pan and rotate the camera for one tick of held keys. Panning is relative to the view. */
@@ -223,6 +374,7 @@ export function build(state: GameState, name: ObjectName, tiles: readonly GridRe
     }
     state.economy.iron -= cost;
     const placed = spawn(state, name, tile.x, tile.y);
+    state.stats.built[name] = (state.stats.built[name] ?? 0) + 1;
     clearFootprint(state, placed.footprint);
     result.built++;
   }

@@ -48,7 +48,22 @@ export const CLIMB_COST = 2;
 /** Largest height difference allowed across a building's footprint. */
 export const MAX_BUILD_SLOPE = 0.6;
 
-/** Iron gathered per tick while a unit is mining. */
-export const GATHER_RATE = 1;
+/** Iron a drone mines per second. */
+export const GATHER_PER_SECOND = 2;
+/** Iron the Mind starts with in free play. */
+export const STARTING_IRON = 150;
+/** How far a drone may be from the Mind and still hand over its load. */
+export const DELIVERY_RANGE = 3.5;
+/** Drone speed and mining rate while power runs short. */
+export const BROWNOUT_FACTOR = 0.5;
 
-export const STARTING_IRON = 100_000;
+/** A building with one of the player's mobile units this close counts as attended. */
+export const ATTEND_RADIUS = 3.5;
+/** Sensor spires keep buildings within this many tiles attended. */
+export const SPIRE_ATTEND_RADIUS = 5;
+/** Seconds a building must sit unattended under a warden's eye before it gets dismantled. */
+export const INSPECT_SECONDS = 12;
+/** Seconds a warden spends dismantling an unattended building. */
+export const TIDY_SECONDS = 8;
+/** How far a warden notices unattended buildings. */
+export const WARDEN_SIGHT = 9;

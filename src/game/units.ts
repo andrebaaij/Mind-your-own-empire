@@ -2,13 +2,14 @@ import {
   ARRIVAL_RADIUS,
   BLOCKED_WAIT_TICKS,
   DEFAULT_SPEED,
-  GATHER_RATE,
+  GATHER_PER_SECOND,
   MAX_REPATHS,
   TICK_RATE,
   UNIT_RADIUS,
 } from "./config";
 import { type GridRef, gridFromWorld, gridRef, type Point, worldFromGrid } from "./coords";
 import {
+  type Faction,
   getObjectDefinition,
   type ObjectDefinition,
   type ObjectName,
@@ -45,12 +46,28 @@ export interface GatherAction {
   resource: Resource;
 }
 
-export type Action = WalkAction | GatherAction;
+/** Hand the iron a unit is carrying over to the Mind. */
+export interface DeliverAction {
+  kind: "deliver";
+  target: Point;
+}
+
+/** A warden dismantling a building it considers unattended. */
+export interface TidyAction {
+  kind: "tidy";
+  target: Point;
+  building: Unit;
+  /** Seconds spent so far. */
+  progress: number;
+}
+
+export type Action = WalkAction | GatherAction | DeliverAction | TidyAction;
 
 export interface Unit {
   id: number;
   name: ObjectName;
   definition: ObjectDefinition;
+  faction: Faction;
   /** Ground position (tiles). */
   position: Point;
   grid: GridRef;
@@ -64,6 +81,12 @@ export interface Unit {
   selected: boolean;
   color: Color;
   carrying: { iron: number };
+  /** Fraction of the next unit of work (e.g. iron mined) done so far. */
+  workProgress: number;
+  /** How far a warden has got dismantling this building, from 0 to 1. */
+  dismantling?: number;
+  /** Whether a warden has noticed this building standing unattended. */
+  inspected?: boolean;
 }
 
 let nextId = 1;
@@ -74,6 +97,7 @@ export function createUnit(
   gx: number,
   gy: number,
   color: Color,
+  faction: Faction = "player",
 ): Unit {
   const definition = getObjectDefinition(name);
   const position = worldFromGrid(gx, gy);
@@ -84,6 +108,7 @@ export function createUnit(
     id: nextId++,
     name,
     definition,
+    faction,
     position,
     grid,
     heading: Math.PI / 4,
@@ -93,11 +118,20 @@ export function createUnit(
     selected: false,
     color,
     carrying: { iron: 0 },
+    workProgress: 0,
   };
 
-  world.watch(grid, definition.communicationRadius);
+  // Only the player's units reveal the map to the player.
+  if (faction === "player") world.watch(grid, definition.communicationRadius);
   world.occupy(footprint, 1);
   return unit;
+}
+
+/** Take a unit off the map: its sight and the ground it stood on are released. */
+export function destroyUnit(world: World, unit: Unit): void {
+  if (unit.faction === "player") world.unwatch(unit.grid, unit.definition.communicationRadius);
+  world.occupy(unit.footprint, -1);
+  unit.actions = [];
 }
 
 /** The square of tiles a building centred on tile (gx, gy) stands on. */
@@ -134,13 +168,15 @@ export function moveBy(world: World, unit: Unit, dx: number, dy: number): void {
 
   const grid = gridFromWorld(unit.position);
   if (grid.x !== unit.grid.x || grid.y !== unit.grid.y) {
-    world.unwatch(unit.grid, unit.definition.communicationRadius);
-    world.watch(grid, unit.definition.communicationRadius);
+    if (unit.faction === "player") {
+      world.unwatch(unit.grid, unit.definition.communicationRadius);
+      world.watch(grid, unit.definition.communicationRadius);
+    }
     unit.grid = grid;
   }
 }
 
-function newWalk(target: Point): WalkAction {
+export function newWalk(target: Point): WalkAction {
   return {
     kind: "walk",
     target: { ...target },
@@ -283,13 +319,40 @@ export interface PathBudget {
   remaining: number;
 }
 
+/** What units need from the rest of the game while they work. */
+export interface UnitContext {
+  budget: PathBudget;
+  /** Speed and work-rate multiplier, e.g. less than 1 during a power shortage. */
+  power(unit: Unit): number;
+  /** Where a unit should take the iron it carries, or null if there's nowhere. */
+  dropOff(unit: Unit): Point | null;
+  /** Hand over iron; returns how much was accepted. */
+  deposit(unit: Unit, amount: number): number;
+  /** Advance a warden's tidying. */
+  tidy(unit: Unit, action: TidyAction): void;
+}
+
+/** A context for units working on their own: no power limits and nowhere to deliver. */
+export function standaloneContext(): UnitContext {
+  return {
+    budget: { remaining: Number.POSITIVE_INFINITY },
+    power: () => 1,
+    dropOff: () => null,
+    deposit: () => 0,
+    tidy: (unit) => {
+      unit.actions.shift();
+    },
+  };
+}
+
 function walkTick(
   world: World,
   unit: Unit,
   action: WalkAction,
   others: readonly Unit[],
-  budget: PathBudget,
+  ctx: UnitContext,
 ): void {
+  const { budget } = ctx;
   if (!action.path) {
     if (budget.remaining <= 0) return; // wait for a planning slot next tick
     budget.remaining--;
@@ -319,7 +382,7 @@ function walkTick(
   const dx = waypoint.x - unit.position.x;
   const dy = waypoint.y - unit.position.y;
   const distance = Math.hypot(dx, dy);
-  const speed = speedPerTick(unit);
+  const speed = speedPerTick(unit) * ctx.power(unit);
   const step = Math.min(speed, distance);
   const next =
     distance === 0
@@ -373,12 +436,39 @@ function walkTick(
   }
 }
 
-function gatherTick(world: World, unit: Unit, action: GatherAction): void {
-  if (!action.resource.exists) {
-    unit.actions.shift();
+/**
+ * Mine until full, then fly the load home and come back, AoE-villager style. Without a home to
+ * deliver to, the unit simply stops when full.
+ */
+function gatherTick(world: World, unit: Unit, action: GatherAction, ctx: UnitContext): void {
+  const capacity = unit.definition.capacity?.iron ?? Number.POSITIVE_INFINITY;
+  const exhausted = !action.resource.exists;
+
+  if (exhausted || unit.carrying.iron >= capacity) {
+    if (exhausted) unit.actions.shift();
+    const home = unit.carrying.iron > 0 ? ctx.dropOff(unit) : null;
+    if (home) {
+      const back = exhausted ? [] : [newWalk(action.resource.position)];
+      unit.actions.unshift(newWalk(home), { kind: "deliver", target: { ...home } }, ...back);
+    } else if (!exhausted) {
+      unit.actions.shift();
+    }
     return;
   }
-  unit.carrying.iron += world.gather(action.resource, GATHER_RATE);
+
+  unit.workProgress += (GATHER_PER_SECOND / TICK_RATE) * ctx.power(unit);
+  while (unit.workProgress >= 1 && unit.carrying.iron < capacity && action.resource.exists) {
+    unit.workProgress -= 1;
+    unit.carrying.iron += world.gather(action.resource, 1);
+  }
+}
+
+function deliverTick(unit: Unit, ctx: UnitContext): void {
+  unit.actions.shift();
+  const accepted = ctx.deposit(unit, unit.carrying.iron);
+  unit.carrying.iron -= accepted;
+  // The store is full: stop rather than shuttle the same load back and forth.
+  if (unit.carrying.iron > 0) unit.actions = [];
 }
 
 /** Advance one unit by one simulation tick. */
@@ -386,11 +476,23 @@ export function updateUnit(
   world: World,
   unit: Unit,
   others: readonly Unit[],
-  budget: PathBudget = { remaining: Number.POSITIVE_INFINITY },
+  ctx: UnitContext = standaloneContext(),
 ): void {
   unit.moving = false;
   const action = unit.actions[0];
   if (!action) return;
-  if (action.kind === "walk") walkTick(world, unit, action, others, budget);
-  else gatherTick(world, unit, action);
+  switch (action.kind) {
+    case "walk":
+      walkTick(world, unit, action, others, ctx);
+      break;
+    case "gather":
+      gatherTick(world, unit, action, ctx);
+      break;
+    case "deliver":
+      deliverTick(unit, ctx);
+      break;
+    case "tidy":
+      ctx.tidy(unit, action);
+      break;
+  }
 }

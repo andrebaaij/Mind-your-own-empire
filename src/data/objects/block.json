@@ -1,6 +1,6 @@
 {
   "label": "Worker drone",
-  "description": "Hovers low and mines iron.",
+  "description": "Mines iron and carries it home.",
   "skills": {
     "walk": true,
     "gather": true
@@ -12,11 +12,10 @@
   "communicationRadius": 1,
   "energy": -1,
   "cost": {
-    "iron": 1000
+    "iron": 50
   },
   "capacity": {
-    "energy": 100,
-    "iron": 50
+    "iron": 10
   },
   "storage": {
     "iron": 0,

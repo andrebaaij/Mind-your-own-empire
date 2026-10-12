@@ -55,9 +55,15 @@ export function terrainHeight(noise: Noise2D, x: number, y: number): number {
   return (hills + ridges - lake) * flat;
 }
 
-/** Amount of iron in the ground at (x, y). Zero or negative means none. */
+/**
+ * Amount of iron in the tile at (x, y); zero or negative means none. Iron forms scattered
+ * clusters a few tiles across. The ground around the starting base is kept clear, apart from
+ * the starter deposits.
+ */
 export function ironAmount(noise: Noise2D, x: number, y: number): number {
-  return Math.round((Math.sin(noise(x / 50, y / 250)) - 0.4) * 15000);
+  const n = noise(x / 14 + 77.7, y / 14 - 33.3);
+  const clear = smoothstep(10, 14, Math.hypot(x + 0.5 - START_CENTER.x, y + 0.5 - START_CENTER.y));
+  return Math.round((n - 0.55) * 10000 * clear);
 }
 
 /** Where terrain comes from. The game uses seeded noise; tests can supply simple layouts. */
@@ -69,10 +75,27 @@ export interface TerrainGenerator {
   iron(x: number, y: number): number;
 }
 
+/** Deposits placed a short drone trip from the start, so there's always something to mine. */
+export const STARTER_DEPOSITS = [
+  { x: -3.5, y: 9.5 },
+  { x: 13.5, y: -1.5 },
+  { x: 6.5, y: 16.5 },
+];
+
+/** Iron in the starter deposits at (x, y): a rich centre fading out over about three tiles. */
+export function starterIron(x: number, y: number): number {
+  let best = 0;
+  for (const deposit of STARTER_DEPOSITS) {
+    const d2 = (x + 0.5 - deposit.x) ** 2 + (y + 0.5 - deposit.y) ** 2;
+    best = Math.max(best, Math.round(2600 * Math.exp(-d2 / 4) - 400));
+  }
+  return best;
+}
+
 export function noiseTerrain(noise: Noise2D): TerrainGenerator {
   return {
     ground: (x, y) => baseTerrain(noise, x, y),
     height: (x, y) => terrainHeight(noise, x, y),
-    iron: (x, y) => ironAmount(noise, x, y),
+    iron: (x, y) => Math.max(ironAmount(noise, x, y), starterIron(x, y)),
   };
 }

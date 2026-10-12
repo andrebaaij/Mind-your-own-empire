@@ -1,0 +1,17 @@
+{
+  "label": "Warden",
+  "description": "A caretaker of the Custody. Dismantles anything left unattended.",
+  "skills": {
+    "walk": true
+  },
+  "movement": "ground",
+  "speed": 1.6,
+  "radius": 0.45,
+  "altitude": 1.0,
+  "communicationRadius": 0,
+  "energy": 0,
+  "storage": {
+    "iron": 0,
+    "energy": 0
+  }
+}

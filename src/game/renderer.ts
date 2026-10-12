@@ -42,6 +42,8 @@ interface ChunkView {
 interface UnitView {
   model: THREE.Group;
   ring: THREE.Mesh;
+  /** Pulses amber while a warden is eyeing the building. */
+  alert: THREE.Mesh;
   hover: THREE.Object3D | undefined;
   spinners: THREE.Object3D[];
   heading: number;
@@ -81,6 +83,12 @@ export class Renderer {
   private readonly markerMaterial = new THREE.MeshBasicMaterial({
     transparent: true,
     opacity: 0.85,
+    depthWrite: false,
+  });
+  private readonly alertMaterial = new THREE.MeshBasicMaterial({
+    color: "#ffb347",
+    transparent: true,
+    opacity: 0.9,
     depthWrite: false,
   });
   private readonly ghosts = new Map<ObjectName, THREE.Group[]>();
@@ -451,12 +459,24 @@ export class Renderer {
       }),
     );
     ring.visible = false;
+    const alert = new THREE.Mesh(
+      new THREE.RingGeometry(radius * 1.5, radius * 1.75, 40).rotateX(-Math.PI / 2),
+      this.alertMaterial,
+    );
+    alert.visible = false;
     const spinners: THREE.Object3D[] = [];
     model.traverse((child) => {
       if (child.name === "spin") spinners.push(child);
     });
-    this.scene.add(model, ring);
-    view = { model, ring, hover: model.getObjectByName("hover"), spinners, heading: unit.heading };
+    this.scene.add(model, ring, alert);
+    view = {
+      model,
+      ring,
+      alert,
+      hover: model.getObjectByName("hover"),
+      spinners,
+      heading: unit.heading,
+    };
     this.unitViews.set(unit, view);
     return view;
   }
@@ -468,15 +488,39 @@ export class Renderer {
   }
 
   private renderUnits(state: GameState, time: number): void {
+    // Units that left the game (dismantled buildings) take their models with them.
+    for (const [unit, view] of this.unitViews) {
+      if (!state.units.includes(unit)) {
+        this.scene.remove(view.model, view.ring, view.alert);
+        this.unitViews.delete(unit);
+      }
+    }
+
     for (const unit of state.units) {
       const view = this.unitView(unit);
       const { position, definition } = unit;
       const ground = this.baseHeight(unit);
       const mobile = definition.skills.walk === true;
 
+      // Other factions are only seen where the player has eyes.
+      const seen = unit.faction === "player" || this.world.isVisible(unit.grid);
+      view.model.visible = seen;
+      if (!seen) {
+        view.ring.visible = false;
+        continue;
+      }
+
       // Drones hover with a gentle bob; each one is out of phase with the others.
       const bob = mobile ? Math.sin(time * 2.2 + unit.id * 1.7) * 0.05 : 0;
       view.model.position.set(position.x, ground + (definition.altitude ?? 0) + bob, position.y);
+
+      // A building being dismantled shudders and sinks.
+      const dismantling = unit.dismantling ?? 0;
+      view.model.scale.setScalar(1);
+      if (dismantling > 0) {
+        view.model.scale.y = 1 - dismantling * 0.7;
+        view.model.position.x += Math.sin(time * 40) * 0.03 * dismantling;
+      }
 
       view.heading = angleLerp(view.heading, unit.heading, 0.2);
       view.model.rotation.y = -view.heading;
@@ -485,6 +529,16 @@ export class Renderer {
 
       if (view.hover) view.hover.position.y = 1.2 + Math.sin(time * 0.8) * 0.06;
       for (const spinner of view.spinners) spinner.rotation.z = time * 0.4;
+
+      view.alert.visible = unit.inspected === true;
+      if (view.alert.visible) {
+        view.alert.position.set(
+          position.x,
+          this.world.heightAt(position.x, position.y) + 0.05,
+          position.y,
+        );
+        view.alert.scale.setScalar(1 + Math.sin(time * 5) * 0.08);
+      }
 
       view.ring.visible = unit.selected;
       view.ring.position.set(

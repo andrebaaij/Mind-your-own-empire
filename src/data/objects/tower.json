@@ -1,13 +1,13 @@
 {
   "label": "Sensor spire",
-  "description": "Watches over the land around it.",
+  "description": "Sees far, and keeps nearby buildings attended.",
   "skills": {},
   "footprint": 1,
   "radius": 0.4,
-  "communicationRadius": 3,
+  "communicationRadius": 6,
   "energy": -2,
   "cost": {
-    "iron": 30000
+    "iron": 150
   },
   "storage": {
     "iron": 0,

@@ -21,7 +21,7 @@
 
       <div class="panels">
         <section class="panel glass" aria-labelledby="new-game">
-          <h2 id="new-game" class="label">New game</h2>
+          <h2 id="new-game" class="label">Play</h2>
           <form class="play-form" action="./game.html" method="get">
             <label class="field">
               <span class="label">Mind's name</span>
@@ -33,15 +33,19 @@
               <div id="colors" class="swatches"></div>
             </fieldset>
 
-            <div class="field">
-              <label class="label" for="seed">World seed</label>
+            <fieldset class="field">
+              <legend class="label">Campaign · Act I: Landfall</legend>
+              <div id="missions" class="missions"></div>
+            </fieldset>
+
+            <div class="field survey">
+              <label class="label" for="seed">Survey · free play on any world</label>
               <div class="seed-row">
-                <input id="seed" name="seed" type="number" value="1500" />
+                <input id="seed" name="seed" type="number" value="1500" aria-label="World seed" />
                 <button type="button" id="random-seed" class="button">Random</button>
+                <button type="submit" name="mission" value="survey" class="button">Explore</button>
               </div>
             </div>
-
-            <button type="submit" class="button primary play">Play</button>
           </form>
         </section>
 
@@ -69,7 +73,7 @@
             <dd>Move, or mine iron</dd>
             <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <kbd>Q</kbd><kbd>E</kbd> · wheel</dt>
             <dd>Pan · rotate · zoom</dd>
-            <dt><kbd>1</kbd><kbd>2</kbd></dt>
+            <dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></dt>
             <dd>Pick a building</dd>
             <dt><kbd>P</kbd></dt>
             <dd>Pause</dd>

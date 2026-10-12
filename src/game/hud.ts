@@ -1,5 +1,6 @@
 import { BUILDABLE, getObjectDefinition, type ObjectName } from "./definitions";
-import type { GameState } from "./state";
+import type { MissionDefinition, MissionRuntime } from "./missions";
+import type { GameState, Message } from "./state";
 import type { Unit } from "./units";
 
 function byId<T extends HTMLElement = HTMLElement>(id: string): T {
@@ -59,20 +60,40 @@ export function summarizeSelection(units: readonly Unit[]): SelectionRow[] {
   });
 }
 
-/** The DOM overlay: resources, build bar, selection, toasts and the pause screen. */
+/** How long a message stays up: long enough to read, scaled by length. */
+function readingTime(text: string): number {
+  return Math.min(9000, Math.max(3500, text.length * 60));
+}
+
+export interface DialogAction {
+  label: string;
+  primary?: boolean;
+  href?: string;
+  onClick?: () => void;
+}
+
+/** The DOM overlay: resources, build bar, selection, objectives, the Mind's lines, dialogs. */
 export class Hud {
   private readonly iron = byId("iron");
   private readonly ironStorage = byId("iron-storage");
-  private readonly energy = byId("energy");
-  private readonly energyStorage = byId("energy-storage");
+  private readonly power = byId("energy");
+  private readonly powerStatus = byId("power-status");
   private readonly message = byId<HTMLOutputElement>("message");
+  private readonly messageSpeaker = byId("message-speaker");
+  private readonly messageText = byId("message-text");
   private readonly pause = byId<HTMLDialogElement>("pause");
   private readonly selection = byId("selection");
   private readonly selectionList = byId("selection-list");
+  private readonly objectives = byId("objectives");
+  private readonly objectiveList = byId("objective-list");
+  private readonly dialog = byId<HTMLDialogElement>("mission-dialog");
   private readonly buildButtons = new Map<ObjectName, HTMLButtonElement>();
-  private messageTimer: number | undefined;
+  private readonly queue: Message[] = [];
+  private messageUntil = 0;
+  private speaker = "Only Visiting";
   private shownEconomy = "";
   private shownSelection = "";
+  private shownObjectives = "";
 
   constructor(handlers: { onBuild: (name: ObjectName) => void; onResume: () => void }) {
     const items = byId("build-items");
@@ -84,13 +105,12 @@ export class Hud {
       button.dataset.build = name;
       button.title = definition.description;
       button.setAttribute("aria-pressed", "false");
-      const energy = definition.energy;
       button.innerHTML = `
         <kbd>${index + 1}</kbd>
         <span class="build-name">${definition.label}</span>
         <span class="build-meta">
           <span>${icon("iron")}${format(definition.cost?.iron ?? 0)}</span>
-          <span>${icon("energy")}${signed(energy)}/h</span>
+          <span>${icon("energy")}${signed(definition.energy)}</span>
         </span>`;
       button.addEventListener("click", () => handlers.onBuild(name));
       items.append(button);
@@ -107,23 +127,28 @@ export class Hud {
       event.preventDefault();
       handlers.onResume();
     });
+    // Mission dialogs must be answered with their buttons.
+    this.dialog.addEventListener("cancel", (event) => event.preventDefault());
   }
 
   update(state: GameState): void {
+    this.speaker = state.player.name;
     this.updateEconomy(state);
     this.updateSelection(state);
+    if (state.mission) this.updateObjectives(state, state.mission);
+    this.updateMessages(state);
   }
 
   private updateEconomy({ economy, building }: GameState): void {
-    const key = `${economy.iron}|${economy.storage.iron}|${economy.energyPerHour}|${economy.storage.energy}|${building}`;
+    const key = `${economy.iron}|${economy.storage.iron}|${economy.power}|${building}`;
     if (key === this.shownEconomy) return;
     this.shownEconomy = key;
 
     this.iron.textContent = format(economy.iron);
     this.ironStorage.textContent = format(economy.storage.iron);
-    this.energy.textContent = signed(economy.energyPerHour);
-    this.energy.classList.toggle("negative", economy.energyPerHour < 0);
-    this.energyStorage.textContent = format(economy.storage.energy);
+    this.power.textContent = signed(economy.power);
+    this.power.classList.toggle("negative", economy.power < 0);
+    this.powerStatus.textContent = economy.power < 0 ? "· brownout" : "";
 
     for (const [name, button] of this.buildButtons) {
       button.setAttribute("aria-pressed", String(name === building));
@@ -157,21 +182,136 @@ export class Hud {
     );
   }
 
-  showMessage(text: string, durationMs: number, tone: "info" | "warning" = "info"): void {
-    this.message.textContent = text;
-    this.message.classList.toggle("warning", tone === "warning");
+  /** Completed objectives ticked off, the current one with its hint and progress. */
+  private updateObjectives(state: GameState, runtime: MissionRuntime): void {
+    const { definition } = runtime;
+    const shown = definition.objectives.slice(0, runtime.current + 1);
+    const rows = shown.map((objective, index) => ({
+      text: objective.text,
+      done: index < runtime.current,
+      hint: index === runtime.current ? (objective.hint ?? "") : "",
+      progress: index === runtime.current ? (objective.progress?.(state, runtime) ?? "") : "",
+    }));
+    const key = JSON.stringify(rows);
+    if (key === this.shownObjectives) return;
+    this.shownObjectives = key;
+
+    this.objectives.hidden = false;
+    byId("mission-act").textContent = `${definition.act} · Mission ${definition.number}`;
+    byId("mission-title").textContent = definition.title;
+    this.objectiveList.replaceChildren(
+      ...rows.map((row) => {
+        const item = document.createElement("li");
+        item.className = row.done ? "done" : "active";
+        const text = document.createElement("span");
+        text.className = "objective-text";
+        text.textContent = row.text;
+        item.append(text);
+        if (row.progress) {
+          const progress = document.createElement("span");
+          progress.className = "objective-progress";
+          progress.textContent = row.progress;
+          item.append(progress);
+        }
+        if (row.hint) {
+          const hint = document.createElement("span");
+          hint.className = "objective-hint";
+          hint.textContent = row.hint;
+          item.append(hint);
+        }
+        return item;
+      }),
+    );
+  }
+
+  /** Take the Mind's new lines from the game and show them one after another. */
+  private updateMessages(state: GameState): void {
+    this.queue.push(...state.messages.splice(0));
+    const now = performance.now();
+    if (now < this.messageUntil) return;
+    const next = this.queue.shift();
+    if (next) this.display(next);
+    else if (!this.message.hidden && now >= this.messageUntil) this.message.hidden = true;
+  }
+
+  private display(message: Message): void {
+    this.messageSpeaker.textContent = this.speaker;
+    this.messageText.textContent = message.text;
+    this.message.classList.toggle("warning", message.tone === "warning");
+    this.message.classList.toggle("success", message.tone === "success");
     // Re-trigger the entrance animation for back-to-back messages.
     this.message.hidden = true;
     void this.message.offsetWidth;
     this.message.hidden = false;
-    window.clearTimeout(this.messageTimer);
-    this.messageTimer = window.setTimeout(() => {
-      this.message.hidden = true;
-    }, durationMs);
+    this.messageUntil = performance.now() + readingTime(message.text);
+  }
+
+  /** Show a message straight away, ahead of anything queued (for responses to the player). */
+  showMessage(text: string, _durationMs?: number, tone: Message["tone"] = "info"): void {
+    this.display({ text, tone });
   }
 
   setPaused(paused: boolean): void {
     if (paused && !this.pause.open) this.pause.showModal();
     if (!paused && this.pause.open) this.pause.close();
+  }
+
+  /** A mission dialog: briefing, victory or defeat. */
+  showDialog(options: {
+    kicker: string;
+    title: string;
+    paragraphs: string[];
+    quote?: string;
+    actions: DialogAction[];
+  }): void {
+    byId("mission-dialog-kicker").textContent = options.kicker;
+    byId("mission-dialog-title").textContent = options.title;
+    const body = byId("mission-dialog-body");
+    body.replaceChildren(
+      ...options.paragraphs.map((text) => {
+        const p = document.createElement("p");
+        p.textContent = text;
+        return p;
+      }),
+    );
+    if (options.quote) {
+      const quote = document.createElement("blockquote");
+      quote.textContent = options.quote;
+      const cite = document.createElement("cite");
+      cite.textContent = this.speaker;
+      quote.append(cite);
+      body.append(quote);
+    }
+    const actions = byId("mission-dialog-actions");
+    actions.replaceChildren(
+      ...options.actions.map((action) => {
+        const element = document.createElement(action.href ? "a" : "button");
+        element.className = `button${action.primary ? " primary" : ""}`;
+        element.textContent = action.label;
+        if (element instanceof HTMLAnchorElement && action.href) element.href = action.href;
+        if (element instanceof HTMLButtonElement) element.type = "button";
+        element.addEventListener("click", () => {
+          if (action.onClick) {
+            this.dialog.close();
+            action.onClick();
+          }
+        });
+        return element;
+      }),
+    );
+    if (!this.dialog.open) this.dialog.showModal();
+    (actions.querySelector(".primary") as HTMLElement | null)?.focus();
+  }
+
+  showBriefing(definition: MissionDefinition, onBegin: () => void): void {
+    this.showDialog({
+      kicker: `${definition.act} · Mission ${definition.number}`,
+      title: definition.title,
+      paragraphs: definition.briefing,
+      actions: [
+        { label: "Begin", primary: true, onClick: onBegin },
+        { label: "Main menu", href: "./index.html" },
+      ],
+    });
   }
 }

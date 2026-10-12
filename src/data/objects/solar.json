@@ -1,13 +1,13 @@
 {
-  "label": "Solar array",
-  "description": "Generates energy.",
+  "label": "Collector",
+  "description": "Solar power for your drones.",
   "skills": {},
   "footprint": 1,
   "radius": 0.5,
   "communicationRadius": 0,
-  "energy": 2,
+  "energy": 3,
   "cost": {
-    "iron": 10000
+    "iron": 100
   },
   "storage": {
     "iron": 0,

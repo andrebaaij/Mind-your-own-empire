@@ -61,6 +61,8 @@ export function bindInput(
   game.append(box);
 
   const at = (event: PointerEvent | MouseEvent): Point => ({ x: event.clientX, y: event.clientY });
+  // Only the player's own units can be selected.
+  const ownUnits = () => state.units.filter((unit) => unit.faction === "player");
   const isClick = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y) < CLICK_PIXELS;
 
   canvas.addEventListener("contextmenu", (event) => event.preventDefault());
@@ -137,10 +139,10 @@ export function bindInput(
         // Hold Shift to keep placing; a click on blocked ground keeps the building selected.
         if (!event.shiftKey && !outOfIron && built > 0) state.building = null;
       } else if (click) {
-        const unit = renderer.unitAt(end, state.units);
+        const unit = renderer.unitAt(end, ownUnits());
         setSelection(state, unit ? [unit] : []);
       } else {
-        setSelection(state, renderer.unitsInScreenRect(rect, state.units));
+        setSelection(state, renderer.unitsInScreenRect(rect, ownUnits()));
       }
     } else if (button === 2 && state.pointer.world) {
       const ground = state.pointer.world;
@@ -166,6 +168,8 @@ export function bindInput(
   );
 
   document.addEventListener("keydown", (event) => {
+    // Keys belong to the dialog while a briefing or result is showing.
+    if (document.querySelector("#mission-dialog[open]")) return;
     const key = CAMERA_KEYS[event.code];
     if (key) {
       state.keys[key] = true;
@@ -182,6 +186,18 @@ export function bindInput(
       const name = BUILDABLE[Number(event.code.slice(5)) - 1];
       if (!name) return;
       state.building = state.building === name ? null : name;
+    } else if (event.code === "Period") {
+      // Like AoE's idle-villager key: select idle worker drones and look at them.
+      const idle = state.units.filter(
+        (u) => u.faction === "player" && u.name === "block" && u.actions.length === 0,
+      );
+      if (idle.length === 0) {
+        hud.showMessage("Nobody's idle. A first, I think.");
+      } else {
+        setSelection(state, idle);
+        const first = idle[0];
+        if (first) state.camera.target = { ...first.position };
+      }
     } else if (event.code === "KeyP") {
       setPaused(state, hud, !state.paused);
     } else {
@@ -198,6 +214,7 @@ export function bindInput(
 
   // Losing focus pauses the game and releases any held keys or buttons.
   window.addEventListener("blur", () => {
+    if (document.querySelector("#mission-dialog[open]")) return;
     state.keys = noKeys();
     state.pointer.dragStart = null;
     screen.dragStart = null;

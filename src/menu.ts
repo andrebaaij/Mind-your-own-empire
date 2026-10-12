@@ -1,5 +1,6 @@
 import "./styles/menu.css";
 import { glowCss, PLAYER_COLORS, type PlayerColorName } from "./game/colors";
+import { completedMissions, isUnlocked, MISSIONS } from "./game/missions";
 
 const swatches = document.getElementById("colors");
 const seed = document.querySelector<HTMLInputElement>("#seed");
@@ -40,3 +41,28 @@ if (swatches) {
 randomSeed?.addEventListener("click", () => {
   if (seed) seed.value = String(Math.floor(Math.random() * 1_000_000));
 });
+
+// The campaign: one submit button per mission, locked until the one before is done.
+const missions = document.getElementById("missions");
+if (missions) {
+  const completed = completedMissions();
+  for (const mission of MISSIONS) {
+    const unlocked = isUnlocked(mission, completed);
+    const done = completed.has(mission.id);
+    const button = document.createElement("button");
+    button.type = "submit";
+    button.name = "mission";
+    button.value = mission.id;
+    button.className = `mission${done ? " done" : ""}`;
+    button.disabled = !unlocked;
+    button.innerHTML = `
+      <span class="mission-number">${mission.number}</span>
+      <span class="mission-name">${mission.title}</span>
+      <span class="mission-state">${done ? "Completed" : unlocked ? "Play" : "Locked"}</span>`;
+    missions.append(button);
+  }
+  const more = document.createElement("p");
+  more.className = "mission-more";
+  more.textContent = "More missions are on their way. So, the Mind suspects, is something else.";
+  missions.append(more);
+}

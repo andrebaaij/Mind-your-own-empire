@@ -8,7 +8,9 @@ import {
   footprintTiles,
   queueGather,
   queueWalk,
+  standaloneContext,
   type Unit,
+  type UnitContext,
   updateUnit,
 } from "../src/game/units";
 import { World } from "../src/game/world";
@@ -71,8 +73,8 @@ describe("createUnit", () => {
     const world = openWorld();
     const unit = createUnit(world, "tower", 4, 2, WHITE);
     expect(unit.position).toEqual(worldFromGrid(4, 2));
-    expect(world.isVisible(gridRef(4 + 3, 2 + 3))).toBe(true);
-    expect(world.isVisible(gridRef(4 + 4, 2))).toBe(false);
+    expect(world.isVisible(gridRef(4 + 6, 2 + 6))).toBe(true);
+    expect(world.isVisible(gridRef(4 + 7, 2))).toBe(false);
   });
 
   it("blocks the ground under buildings but not under mobile units", () => {
@@ -292,19 +294,65 @@ describe("flying", () => {
 });
 
 describe("gathering", () => {
-  it("walks to the resource and mines it until it is gone", () => {
+  /** A context with a drop-off at `home` that accepts everything. */
+  function homeContext(home: { x: number; y: number }) {
+    const delivered: number[] = [];
+    const ctx: UnitContext = {
+      ...standaloneContext(),
+      dropOff: () => home,
+      deposit: (_unit, amount) => {
+        delivered.push(amount);
+        return amount;
+      },
+    };
+    return { ctx, delivered };
+  }
+
+  it("mines a load, carries it home, and goes back until the iron is gone", () => {
+    const world = ironWorld();
+    const unit = createUnit(world, "block", 0, 0, WHITE);
+    explore(world, [4, 0], 0);
+    const resource = world.resourceAt(gridRef(4, 0));
+    if (!resource) throw new Error("expected iron");
+    resource.amount = 25;
+    const { ctx, delivered } = homeContext(worldFromGrid(0, 0));
+
+    queueGather(unit, resource);
+    let ticks = 0;
+    while (unit.actions.length > 0 && ticks++ < 20_000) updateUnit(world, unit, [unit], ctx);
+
+    expect(resource.exists).toBe(false);
+    expect(delivered).toEqual([10, 10, 5]); // two full loads and the rest
+    expect(unit.carrying.iron).toBe(0);
+  });
+
+  it("stops when full if there is nowhere to take the iron", () => {
     const world = ironWorld();
     const unit = createUnit(world, "block", 0, 0, WHITE);
     const resource = world.resourceAt(gridRef(1, 0));
-    if (!resource) throw new Error("expected iron next to the unit");
-    resource.amount = 30;
+    if (!resource) throw new Error("expected iron");
 
     queueGather(unit, resource);
     runUntilIdle(world, unit);
 
-    expect(unit.position).toEqual(resource.position);
-    expect(unit.carrying.iron).toBe(30);
-    expect(resource.exists).toBe(false);
+    expect(unit.carrying.iron).toBe(10);
+    expect(resource.exists).toBe(true);
+  });
+
+  it("works at half speed during a brownout", () => {
+    const run = (power: number) => {
+      const world = ironWorld();
+      const unit = createUnit(world, "block", 0, 0, WHITE);
+      explore(world, [3, 0], 0);
+      const resource = world.resourceAt(gridRef(3, 0));
+      if (!resource) throw new Error("expected iron");
+      queueGather(unit, resource);
+      const ctx = { ...standaloneContext(), power: () => power };
+      let ticks = 0;
+      while (unit.actions.length > 0 && ticks++ < 20_000) updateUnit(world, unit, [unit], ctx);
+      return ticks;
+    };
+    expect(run(0.5)).toBeGreaterThan(run(1) * 1.8);
   });
 });
 

@@ -4,7 +4,12 @@ A single-player, procedurally generated 3D RTS for the browser, inspired by Iain
 
 The Idiran war. A Culture Mind called *Only Visiting* comes down hard on a world whose builders Sublimed long ago, leaving their machines to keep the place tidy. The caretakers would like it to leave, the Idirans would like it destroyed, and the Mind would mostly like its sensors back. The setting and story are being worked out in [docs/World.md](docs/World.md) (contains spoilers).
 
-The game is an early prototype. You can explore, select units, send drones over hills and around cliffs, mine iron and place buildings.
+The game is an early prototype with the first two campaign missions playable:
+
+1. **Arrived.** Learn the ropes: mine iron, carry it home, build drones, keep the power up, raise a sensor spire.
+2. **The Staff.** Meet the Custody, the caretaker machines that dismantle anything left unattended, and keep your base standing while they patrol it.
+
+There's also **Survey** mode: free play on any seed, with no objectives.
 
 ![The Mind and its drones](docs/screenshot-3d.png)
 
@@ -20,13 +25,20 @@ It started in 2014 as a 2D isometric game ([2015 screenshot](docs/screenshot-201
 | W A S D / arrow keys | Pan the camera (hold Shift to pan faster) |
 | Q / E, or middle-mouse drag | Rotate the camera |
 | Mouse wheel | Zoom |
-| 1 / 2 | Pick a building from the build bar (press again to put it away) |
+| 1 / 2 / 3 | Pick a worker drone, collector or sensor spire to place (press again to put it away) |
 | Shift while placing | Keep the building selected to place more |
+| . (full stop) | Select idle worker drones and centre on them |
 | C / Shift + C | Cancel the next order / all orders of the selection |
 | Esc | Leave build mode and clear the selection |
 | P | Pause |
 
-The seed on the start screen picks the map, so the same seed always gives the same world.
+In Survey mode, the seed on the start screen picks the map, so the same seed always gives the same world.
+
+### How it plays
+
+- **Iron** is mined by worker drones. Each drone carries 10 at a time back to the Mind, which stores up to 1,000.
+- **Power** comes from the Mind's reactor and from collectors, and every drone and spire uses some. If it drops below zero, every drone works at half speed.
+- **The Custody's wardens** patrol and dismantle any building that has no drone nearby and isn't covered by a sensor spire. A building they're eyeing gets an amber ring, which is your warning to send someone over.
 
 ## Development
 
@@ -38,6 +50,8 @@ npm run dev        # dev server with hot reload at http://localhost:5173
 npm run build      # type-check and build to dist/
 npm run preview    # serve the production build
 ```
+
+Add `?debug` to the game URL to expose the running game as `window.mindGame` in the console.
 
 Checks, all of which run in CI:
 
@@ -64,7 +78,9 @@ Run `npx playwright install chromium` once before the first `npm run test:e2e`.
 src/
   game/
     main.ts         entry point: wires state, renderer, input and HUD; fixed 60 Hz simulation loop
-    state.ts        game state and player commands (select, build, order, scroll)
+    state.ts        game state, economy and player commands (select, build, order, camera)
+    missions.ts     the campaign: briefings, objectives, scripted events, the Mind's lines
+    custody.ts      the caretaker machines and their rules
     units.ts        units and buildings: footprints, path following, unit avoidance, gathering
     pathfinding.ts  A* route planning, path smoothing, group destination spreading
     world.ts        chunked world: ground, heights, cliffs, iron and fog of war
@@ -102,7 +118,7 @@ Movement follows the approach classic RTS games such as Age of Empires use, spli
 - **Groups**: every unit in a move order gets its own spot around the clicked point, and spots go to the nearest units first, so groups fan out instead of piling up. Gatherers each start on a different iron tile.
 - **Buildings**: buildings occupy the tiles under their base. They can't be placed on unexplored, blocked or acid tiles, and units standing on a new building's footprint are moved out of the way.
 
-The simulation in `state.ts`, `units.ts`, `pathfinding.ts`, `world.ts`, `terrain.ts` and `coords.ts` has no DOM or rendering dependencies, so it can be unit-tested in Node.
+The simulation in `state.ts`, `missions.ts`, `custody.ts`, `units.ts`, `pathfinding.ts`, `world.ts`, `terrain.ts` and `coords.ts` has no DOM or rendering dependencies, so it can be unit-tested in Node.
 
 ## Deployment
 

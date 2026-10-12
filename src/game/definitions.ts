@@ -54,10 +54,13 @@ export const resourceDefinitions = byBasename(
   }),
 );
 
-export type ObjectName = "block" | "mind" | "scout" | "solar" | "tower";
+export type ObjectName = "block" | "mind" | "scout" | "solar" | "tower" | "warden";
+
+/** Who controls an object. */
+export type Faction = "player" | "custody";
 
 /** Objects the player can build from the HUD. */
-export const BUILDABLE: readonly ObjectName[] = ["solar", "block"];
+export const BUILDABLE: readonly ObjectName[] = ["block", "solar", "tower"];
 
 export function getObjectDefinition(name: ObjectName): ObjectDefinition {
   const definition = objectDefinitions[name];

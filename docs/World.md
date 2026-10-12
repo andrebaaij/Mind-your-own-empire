@@ -1,6 +1,6 @@
 # The world of *Mind your own Empire*
 
-A living lore document. Settled decisions are marked **Agreed**; everything marked **Proposal** is a draft to argue with. Open questions are collected at the end.
+A living lore document. Settled decisions are marked **Agreed**; anything marked **Proposal** is still a draft to argue with. Where you handed a decision to me, it's marked **Decided** and the reasoning is given, so it's easy to overrule.
 
 > **On the source material.** This is fan work set in Iain M. Banks' Culture universe. The Culture, the Idirans and the Minds belong to the Banks estate. Everything specific to this game (the planet, its vanished owners, their caretakers, our Mind) is our own invention. That keeps a clean line if the project ever goes beyond a hobby.
 
@@ -37,7 +37,7 @@ Its name was a joke when the ship was commissioned. It is less funny now, and th
 - First Idiran contact: *"Ah. Company. The kind that brings its own opinions about me."*
 - Unit idle: *"Awaiting instruction, or failing that, inspiration."*
 
-## The planet — Proposal
+## The planet: Lessuin — Decided
 
 A rust-red, iron-rich world, once landscaped by its builders and now going slowly wild. The game's existing terrain maps onto it:
 
@@ -49,20 +49,20 @@ A rust-red, iron-rich world, once landscaped by its builders and now going slowl
 | Ridges and cliffs | Eroded embankments and terraces of old works, half-returned to geology |
 | Unexplored darkness | The Mind's ruined sensors; it can only see what its drones see |
 
-**Name: open.** Candidates: *Tarrow's Reach*, *Hollin*, *Seventh Ledger*, *Quietus*, *Lessuin*. The builders' own name for it can differ from what the Culture's charts call it. The Culture's chart name could be a dry catalogue entry the Mind refuses to use.
+**Decided: Lessuin**, the builders' own name for it, which the Mind reads off a ten-thousand-year-old maintenance plaque in mission 2. On the Culture's charts it is *Survey object 31-Ledger-7*. The Mind uses the catalogue name exactly once, in mission 1, and never again: *"I refuse to be marooned somewhere with a hyphen in its name."*
 
-## The Sublimed builders — Proposal
+## The Sublimed builders: the Tessilend — Decided
 
 A civilization that reached the point where the material universe stopped being interesting and **Sublimed**: left it entirely, all at once, thousands of years ago. They did not take their machines, and did not switch them off.
 
-**Name: open.** Candidates: *the Aumerai*, *the Tessilend*, *the Quiet Owners*. The Mind might simply call them *the Landlords*.
+**Decided: the Tessilend.** Fastidious, patient and long gone. They built for permanence and wrote everything down. The Mind calls them *the Landlords*, mostly when the caretakers are being difficult.
 
 What they left behind:
 - **Infrastructure** still half-working: power taps, fabrication beds, transit lines.
 - **Relics** that are hard to interpret. These are the natural tech tree and the source of the game's mysteries.
 - **Their caretakers.**
 
-## The caretakers (the "natives") — Agreed in outline
+## The caretakers: the Custody — Agreed in outline; name Decided
 
 Machines the builders left to keep the world as they liked it. They are not hostile so much as house-proud. They mend, tidy, prune and remove anything that doesn't belong, and as far as they are concerned that includes the Mind.
 
@@ -73,7 +73,9 @@ Machines the builders left to keep the world as they liked it. They are not host
 
 This gives the player two ways to deal with them: force, which is expensive and makes them escalate, or understanding, which is slower and unlocks relics. That choice is the most "Culture" part of the design.
 
-**Name: open.** Candidates: *Wardens*, *Groundskeepers*, *the Custody*, *Stewards*. The Mind's private name for them: *"the staff"*.
+**Decided: the Custody**, the Tessilend's word for the whole caretaking system. Its individual machines are **wardens**: slow, elegant, verdigris-bronze, each a floating ring trailing fine manipulators, with an amber working light. The Mind's private name for them is *"the staff"*.
+
+**Decided: the first rule players learn.** Wardens dismantle buildings that are *unattended*: no drone close by and no sensor spire covering them. The Mind and the spires themselves are never touched; the Custody respects anything that is keeping watch. Mission 2 is built around that one rule. Later protocols (layout rules, tenancy) come in mission 3 and mission 9.
 
 ## The Idirans — Agreed
 
@@ -94,7 +96,7 @@ The original 2014 premise, a Mind "preparing the world for the coming of humans"
 **Agreed: refugees.** Culture people displaced by the Idiran advance, with nowhere safe left to go.
 
 **Proposal: the details.**
-- **Who:** the population of an Orbital in the Idirans' path, evacuated early in the war. They travel in a slow, overloaded flotilla, too many people and too few fast ships. Name of their Orbital: **open** (candidates: *Kessenthal*, *Ardry Reach*, *Sulenne*).
+- **Who:** the population of an Orbital in the Idirans' path, evacuated early in the war. They travel in a slow, overloaded flotilla, too many people and too few fast ships. **Decided: Kessenthal Orbital**, eleven billion people in the Idirans' path, who chose to run rather than be fought over.
 - **Why here:** a world nobody else wants, far from the front, with a full planetary infrastructure that still works and machines that keep it habitable. The builders' caretakers have spent thousands of years maintaining a home for tenants who never came back.
 - **Why the Mind wasn't told:** *Only Visiting* was sent to confirm the world was suitable, under sealed orders. If the Idirans caught a Mind that knew where the refugees were heading, the flotilla would be lost. So it was told it was only visiting. It was not.
 - **How it's revealed:** the supply pod carries a key that unlocks the Mind's sealed orders. Before that, the player can pick up clues: caretakers preparing empty habitats, the Mind noticing memory it can't access, the pod's oddly specific cargo.
@@ -113,14 +115,14 @@ A campaign of missions in three acts. Each mission teaches or twists one idea, a
 
 4. **Ah. Company.** An Idiran scouting party lands, searching for the Mind. *Objectives:* stay hidden; keep emissions low by powering down and avoiding open ground; mislead the search. *Teaches:* stealth and detection. *Closing line:* *"Ah. Company. The kind that brings its own opinions about me."*
 5. **Trespassers.** The Idirans dig in near a builders' site. *Objectives:* lure them into caretaker territory and let the staff evict them. *Teaches:* using a third party; the caretakers are as hostile to Idirans as to anyone.
-6. **Post.** A Culture supply pod streaks in. It was fired from far away by a ship that couldn't stop. It lands on the far side of the map, and the Idirans saw it too. *Objectives:* race them to it and recover it. *Reward:* a one-off delivery of materials and designs. *Clue:* the cargo is oddly specific, including habitat seed stock the Mind has no use for. The pod also carries something the Mind can't open yet.
+6. **Post.** A Culture supply pod streaks in, fired from far away by the General Systems Vehicle *Quiet Word In Your Ear*. The GSV couldn't stop, and wouldn't have explained itself if it could. It lands on the far side of the map, and the Idirans saw it too. *Objectives:* race them to it and recover it. *Reward:* a one-off delivery of materials and designs. *Clue:* the cargo is oddly specific, including habitat seed stock the Mind has no use for. The pod also carries something the Mind can't open yet.
 7. **Relics.** Deep in a builders' facility the Mind finds a working long-range transmitter. *Objectives:* restore it under Idiran pressure. *Twist:* powering it opens the sealed key from the pod.
 
 ### Act III: Arrivals (the secret)
 
 8. **Sealed Orders.** The key unlocks the Mind's own sealed memory: a refugee flotilla is coming, and this world is where it is going. The Mind takes it about as well as a Mind can: *"I was told I was only visiting. In fairness, I was told a great many things."* *Objectives:* prepare landing zones; claim and wake the empty habitats.
 9. **Tenancy.** The caretakers will only let the newcomers in if they qualify as rightful tenants under the builders' rules. *Objectives:* the Contact climax. Satisfy the caretakers' protocols on the refugees' behalf, by finding the builders' records and proving the habitats were meant for guests. *Teaches:* winning without fighting.
-10. **Only Visiting.** The Idirans land in force just as the flotilla arrives. *Objectives:* hold the landing zones until every ship is down, with the caretakers fighting beside you if you earned it in mission 9. *Ending:* the Mind stays, and the world gets new tenants. Last line: open (the Mind should get the final dry word).
+10. **Only Visiting.** The Idirans land in force just as the flotilla arrives. *Objectives:* hold the landing zones until every ship is down, with the caretakers fighting beside you if you earned it in mission 9. *Ending:* the Mind stays, and the world gets new tenants. **Decided, last line:** *"I did say I was only visiting. I never said for how long."*
 
 ### What the campaign needs from the game
 
@@ -133,24 +135,29 @@ In rough order of need, this is the feature roadmap:
 - **Combat:** health, damage and repair for all three sides.
 - **Story objects:** builders' facilities and relics, the supply pod, landing zones and habitats.
 
-## The game, mapped to the world — Proposal
+## The game, mapped to the world — Decided
 
-| Game thing | Lore name (proposal) | Notes |
+| Game thing | In the world | Notes |
 | --- | --- | --- |
-| Player | *Only Visiting* | The Mind; its core is the base building |
-| Worker drone | Builder drone / "hands" | Made from wreck material at first |
-| Scout drone | Survey drone / "eyes" | The Mind's replacement for its lost sensors |
-| Solar array | Collector | |
-| Sensor spire | Sensor spire | Restores some of the Mind's sight |
+| Player | *Only Visiting* | The Mind; its core is the base. Stores iron and has a small emergency reactor. |
+| Worker drone | Worker drone | Mines iron and carries it home to the Mind |
+| Scout drone | Scout drone | The Mind's replacement for its lost sensors; flies |
+| Solar array | Collector | Power for the drones |
+| Sensor spire | Sensor spire | Sees far, and counts as "attending" nearby buildings in the Custody's eyes |
+| Warden | Warden (the Custody) | Dismantles unattended buildings |
 | Iron | Iron (feedstock) | |
-| Energy | Energy | |
+| Power | Power | A shortfall slows every drone ("brownout") |
 | Acid | Spill | |
 | Fog of war | Sensor blindness | In-world reason the map is dark |
 
+## Decisions you handed to me
+
+- **Names:** Lessuin (planet), the Tessilend (builders), the Custody and its wardens (caretakers), Kessenthal Orbital (refugees). See the sections above.
+- **Who fired the supply pod:** the GSV *Quiet Word In Your Ear*. A Mind back home that planned the refuge and knows more than it says. That leaves room for a sequel, and gives *Only Visiting* someone to be politely furious with.
+- **Campaign size:** ten missions, built and released in acts, **plus a sandbox mode** ("Survey") for free play on any seed. Act I comes first.
+- **Losing:** losing the Mind's core fails the mission, and you retry from its start. The campaign only remembers which missions you've completed.
+- **Last line:** *"I did say I was only visiting. I never said for how long."*
+
 ## Open questions
 
-1. **Names:** the planet, the vanished builders, the caretakers and the refugees' Orbital. There are candidates in each section above, or suggest your own.
-2. **The Mind's last line** in mission 10.
-3. **The Act II supply pod:** who fired it? A passing warship, the flotilla's escort, or a Mind back home that knows more than it lets on?
-4. **Act structure:** are ten missions the right size, or should the campaign be shorter, with a sandbox mode alongside it?
-5. **Losing:** what happens if the Mind's core is destroyed? Mission failure only, or does the campaign remember it?
+None right now. Overrule any decision above whenever you like.

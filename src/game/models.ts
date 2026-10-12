@@ -150,12 +150,45 @@ function solar(glow: THREE.Color): THREE.Group {
   return group;
 }
 
+const bronze = new THREE.MeshStandardMaterial({
+  color: "#6f8f7a",
+  metalness: 0.6,
+  roughness: 0.45,
+});
+
+/**
+ * Warden of the Custody: an old, verdigris-bronze ring hanging in the air, trailing fine
+ * manipulators, with an amber working light. Ten thousand years of polite maintenance.
+ */
+function warden(): THREE.Group {
+  const group = new THREE.Group();
+  const ring = mesh(new THREE.TorusGeometry(0.36, 0.07, 10, 32), bronze);
+  ring.rotation.x = Math.PI / 2;
+  group.add(ring);
+  const lamp = mesh(
+    new THREE.SphereGeometry(0.12, 16, 12),
+    glowMaterial(new THREE.Color("#ffb347"), 3),
+  );
+  lamp.name = "lamp";
+  group.add(lamp);
+  for (let i = 0; i < 3; i++) {
+    const angle = (i / 3) * Math.PI * 2;
+    const arm = mesh(new THREE.CylinderGeometry(0.015, 0.01, 0.75, 6), bronze);
+    arm.position.set(Math.cos(angle) * 0.3, -0.4, Math.sin(angle) * 0.3);
+    arm.rotation.z = Math.cos(angle) * 0.25;
+    arm.rotation.x = -Math.sin(angle) * 0.25;
+    group.add(arm);
+  }
+  return group;
+}
+
 const builders: Record<ObjectName, (glow: THREE.Color) => THREE.Group> = {
   mind,
   block: workerDrone,
   scout: scoutDrone,
   tower,
   solar,
+  warden,
 };
 
 export function createModel(name: ObjectName, color: Color): THREE.Group {

@@ -26,6 +26,7 @@ body {
 /* Overlay panels sit above the canvas, clear of the screen edges. */
 .resources,
 .toast,
+.objectives,
 .selection,
 .build,
 .help {
@@ -102,6 +103,20 @@ body {
   animation: toast-in 0.25s ease-out;
 }
 
+.toast {
+  display: grid;
+  gap: 2px;
+}
+
+.toast-speaker {
+  font-size: 0.65rem;
+  color: var(--accent);
+}
+
+.toast.success {
+  border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
 .toast.warning {
   border-color: color-mix(in oklab, var(--danger) 60%, transparent);
   color: color-mix(in oklab, var(--danger) 40%, white);
@@ -112,6 +127,73 @@ body {
     opacity: 0;
     translate: -50% -8px;
   }
+}
+
+/* --- Objectives (top right) --- */
+
+.objectives {
+  top: 14px;
+  right: 14px;
+  width: 300px;
+  padding: 12px 16px 14px;
+}
+
+.mission-title {
+  margin: 2px 0 8px;
+  font-size: 1.35rem;
+  letter-spacing: 0.08em;
+}
+
+.objective-list {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.objective-list li {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  column-gap: 8px;
+  font-size: 0.9rem;
+}
+
+.objective-list li::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border: 1.5px solid var(--accent);
+  border-radius: 3px;
+  grid-row: span 3;
+}
+
+.objective-list li.done {
+  color: var(--muted);
+}
+
+.objective-list li.done::before {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.objective-list li.done .objective-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+}
+
+.objective-list li.active .objective-text {
+  color: var(--text);
+}
+
+.objective-progress {
+  font-family: var(--font-display);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.objective-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
 }
 
 /* --- Selection (bottom left) --- */
@@ -345,15 +427,88 @@ body {
   text-decoration: none;
 }
 
+.mission-dialog {
+  width: min(560px, 92vw);
+  text-align: left;
+}
+
+.mission-dialog h1 {
+  margin: 4px 0 14px;
+  font-size: 2.2rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mission-dialog-body {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 22px;
+  line-height: 1.6;
+  color: color-mix(in oklab, var(--text) 85%, var(--muted));
+}
+
+.mission-dialog-body blockquote {
+  padding: 4px 0 4px 16px;
+  border-left: 2px solid var(--accent);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.mission-dialog-body cite {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-style: normal;
+  color: var(--accent);
+}
+
+.mission-dialog .pause-actions {
+  grid-auto-flow: column;
+  justify-content: start;
+}
+
+.mission-dialog .pause-actions a {
+  text-decoration: none;
+}
+
 .pause::backdrop {
   background: rgb(3 4 8 / 0.55);
   backdrop-filter: blur(4px);
 }
 
 /* Small screens: stack the panels so nothing overlaps. */
+/* Make room for the objectives panel beside the toast on mid-size screens. */
+@media (max-width: 1100px) {
+  .toast {
+    left: 14px;
+    right: 330px;
+    translate: none;
+    max-width: none;
+    top: 96px;
+  }
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
 @media (max-width: 760px) {
   .toast {
     top: 90px;
+    right: 14px;
+  }
+
+  .objectives {
+    top: auto;
+    bottom: 176px;
+    left: 14px;
+    right: 14px;
+    width: auto;
   }
 
   .resources {

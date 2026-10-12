@@ -12,7 +12,7 @@
   "communicationRadius": 3,
   "energy": -1,
   "cost": {
-    "iron": 5000
+    "iron": 150
   },
   "capacity": {
     "energy": 100

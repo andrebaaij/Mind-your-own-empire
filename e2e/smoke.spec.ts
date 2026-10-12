@@ -9,46 +9,59 @@ function collectErrors(page: Page): string[] {
   return errors;
 }
 
-test("start a game from the menu and build a solar panel", async ({ page }) => {
+test("explore a world from the menu and build a collector", async ({ page }) => {
   const errors = collectErrors(page);
 
   await page.goto("/");
   await page.getByLabel("Mind's name").fill("Tester");
   await page.locator('label.swatch[title="Green"]').click();
   await expect(page.getByRole("radio", { name: "Green" })).toBeChecked();
-  await page.getByRole("button", { name: "Play" }).click();
+  await page.getByRole("button", { name: "Explore" }).click();
 
-  await expect(page).toHaveURL(/game\.html\?name=Tester&color=green&seed=1500/);
-  await expect(page.locator("#message")).toHaveText(
-    "Tester: Arrived. Not, I'll concede, in the manner intended.",
-  );
-  await expect(page.locator("#iron")).toHaveText("100,000");
-  await expect(page.locator("#energy")).toHaveText("0");
+  await expect(page).toHaveURL(/game\.html\?name=Tester&color=green&seed=1500&mission=survey/);
+  await expect(page.locator("#message-text")).toHaveText(/Survey mode/);
+  await expect(page.locator("#message-speaker")).toHaveText("Tester");
+  await expect(page.locator("#iron")).toHaveText("150");
+  await expect(page.locator("#energy")).toHaveText("+10");
 
   const canvas = page.locator("#game canvas");
   await expect(canvas).toBeVisible();
-
   const box = await canvas.boundingBox();
   if (!box) throw new Error("canvas has no size");
 
-  // Build a solar panel just below the Mind.
-  await page.getByRole("button", { name: "Solar" }).click();
-  await expect(page.getByRole("button", { name: "Solar" })).toHaveAttribute("aria-pressed", "true");
+  // Place a collector just below the Mind.
+  const collector = page.getByRole("button", { name: /Collector/ });
+  await collector.click();
+  await expect(collector).toHaveAttribute("aria-pressed", "true");
   await page.mouse.click(box.width / 2 - 150, box.height / 2 + 150);
 
-  await expect(page.locator("#iron")).toHaveText("90,000");
-  await expect(page.locator("#energy")).toHaveText("+2");
-  await expect(page.getByRole("button", { name: "Solar" })).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  );
+  await expect(page.locator("#iron")).toHaveText("50");
+  await expect(page.locator("#energy")).toHaveText("+13");
+  await expect(collector).toHaveAttribute("aria-pressed", "false");
 
+  expect(errors).toEqual([]);
+});
+
+test("start the campaign: briefing, then the first objective", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: /Arrived/ }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Arrived" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Begin" }).click();
+  await expect(dialog).toBeHidden();
+
+  const objectives = page.getByRole("region", { name: "Mission objectives" });
+  await expect(objectives).toContainText("Mine iron and bring it home");
+  await expect(objectives).toContainText("0 / 60");
   expect(errors).toEqual([]);
 });
 
 test("pause and resume with the keyboard", async ({ page }) => {
   await page.goto("/game.html");
-  await expect(page.locator("#iron")).toHaveText("100,000");
+  await expect(page.locator("#iron")).toHaveText("150");
 
   await page.keyboard.press("p");
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -59,7 +72,7 @@ test("pause and resume with the keyboard", async ({ page }) => {
 
 test("the game canvas renders the world", async ({ page }) => {
   await page.goto("/game.html");
-  await expect(page.locator("#iron")).toHaveText("100,000");
+  await expect(page.locator("#iron")).toHaveText("150");
 
   // Sample a pixel left of centre: explored terrain, not the black void. A WebGL canvas can't be
   // read back directly, so decode a screenshot in the page instead.
@@ -83,15 +96,15 @@ test("the game canvas renders the world", async ({ page }) => {
 
 test("number keys pick buildings from the build bar", async ({ page }) => {
   await page.goto("/game.html");
-  await expect(page.locator("#iron")).toHaveText("100,000");
-  const solar = page.getByRole("button", { name: /Solar array/ });
+  await expect(page.locator("#iron")).toHaveText("150");
   const drone = page.getByRole("button", { name: /Worker drone/ });
+  const collector = page.getByRole("button", { name: /Collector/ });
 
   await page.keyboard.press("1");
-  await expect(solar).toHaveAttribute("aria-pressed", "true");
-  await page.keyboard.press("2");
-  await expect(solar).toHaveAttribute("aria-pressed", "false");
   await expect(drone).toHaveAttribute("aria-pressed", "true");
-  await page.keyboard.press("Escape");
+  await page.keyboard.press("2");
   await expect(drone).toHaveAttribute("aria-pressed", "false");
+  await expect(collector).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+  await expect(collector).toHaveAttribute("aria-pressed", "false");
 });

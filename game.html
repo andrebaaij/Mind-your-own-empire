@@ -29,19 +29,25 @@
             </div>
           </div>
         </div>
-        <div class="stat" title="Net energy production per hour, and storage capacity">
+        <div class="stat" title="Power produced minus power used. Below zero, drones slow to half speed.">
           <svg class="icon stat-icon energy" aria-hidden="true"><use href="#icon-energy" /></svg>
           <div>
-            <div class="label">Energy</div>
-            <div class="value">
-              <span id="energy"></span><span class="unit">/h</span>
-              <span class="cap">· store <span id="energy-storage"></span></span>
-            </div>
+            <div class="label">Power</div>
+            <div class="value"><span id="energy"></span> <span id="power-status" class="cap"></span></div>
           </div>
         </div>
       </section>
 
-      <output id="message" class="toast glass" hidden></output>
+      <output id="message" class="toast glass" hidden>
+        <span id="message-speaker" class="label toast-speaker"></span>
+        <span id="message-text"></span>
+      </output>
+
+      <section id="objectives" class="objectives glass" aria-label="Mission objectives" hidden>
+        <div id="mission-act" class="label"></div>
+        <h2 id="mission-title" class="mission-title">Mission</h2>
+        <ol id="objective-list" class="objective-list"></ol>
+      </section>
 
       <section id="selection" class="selection glass" aria-label="Selection" hidden>
         <div class="label">Selected</div>
@@ -68,8 +74,10 @@
           <dd>Rotate</dd>
           <dt>Wheel</dt>
           <dd>Zoom</dd>
-          <dt><kbd>1</kbd><kbd>2</kbd></dt>
+          <dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></dt>
           <dd>Pick a building</dd>
+          <dt><kbd>.</kbd></dt>
+          <dd>Select idle worker drones</dd>
           <dt><kbd>C</kbd> / <kbd>Shift</kbd>+<kbd>C</kbd></dt>
           <dd>Cancel next / all orders</dd>
           <dt><kbd>Esc</kbd></dt>
@@ -78,6 +86,13 @@
           <dd>Pause</dd>
         </dl>
       </details>
+
+      <dialog id="mission-dialog" class="pause mission-dialog glass">
+        <div id="mission-dialog-kicker" class="label"></div>
+        <h1 id="mission-dialog-title">Briefing</h1>
+        <div id="mission-dialog-body" class="mission-dialog-body"></div>
+        <div id="mission-dialog-actions" class="pause-actions"></div>
+      </dialog>
 
       <dialog id="pause" class="pause glass">
         <h1>Paused</h1>

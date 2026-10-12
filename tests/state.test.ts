@@ -19,15 +19,16 @@ import {
 const newGame = () => createGame({ seed: "1500", player: { name: "Test", color: WHITE } });
 
 describe("createGame", () => {
-  it("starts with the Mind, its helpers and a balanced energy budget", () => {
+  it("starts free play with the Mind, its helpers and power to spare", () => {
     const state = newGame();
     const counts = Object.groupBy(state.units, (u) => u.name);
     expect(counts.mind).toHaveLength(1);
     expect(counts.block).toHaveLength(3);
-    expect(counts.solar).toHaveLength(6);
+    expect(counts.solar).toHaveLength(4);
     expect(state.economy.iron).toBe(STARTING_IRON);
-    expect(state.economy.energyPerHour).toBe(0);
-    expect(state.economy.storage).toEqual({ iron: 20_000, energy: 2_000 });
+    // Mind +4, three drones and a scout -4, spire -2, four collectors +12.
+    expect(state.economy.power).toBe(10);
+    expect(state.economy.storage).toEqual({ iron: 1000 });
   });
 });
 
@@ -44,7 +45,7 @@ describe("build", () => {
     expect(result).toEqual({ built: 2, blocked: 0, outOfIron: true });
     expect(state.units.length).toBe(before + 2);
     expect(state.economy.iron).toBe(1);
-    expect(state.economy.energyPerHour).toBe(4);
+    expect(state.economy.power).toBe(10 + 6);
   });
 
   it("skips tiles that are unexplored or already built on", () => {
