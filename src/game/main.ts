@@ -1,4 +1,5 @@
 import "../styles/game.css";
+import { loadModels } from "./assets";
 import { Ambience } from "./audio";
 import { Cinematic } from "./cinematic";
 import { addToCodex, renderCodex } from "./codexStore";
@@ -120,6 +121,8 @@ function checkOutcome(): void {
 
 const settings = loadSettings();
 const renderer = await Renderer.create(game, state.world, chooseQuality(params, settings.quality));
+// Authored models replace the built ones as they're loaded.
+await loadModels((fraction) => loading.progress("Unpacking the drones", 0.3 + fraction * 0.05));
 // Compile the shaders and draw the first frames behind the loading screen, so the game starts
 // smoothly instead of stuttering through its first seconds.
 await renderer.warmUp(state, (fraction) =>

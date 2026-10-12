@@ -23,6 +23,7 @@ const TIPS = [
 const STEPS = [
   "Charting Lessuin",
   "Waking the renderer",
+  "Unpacking the drones",
   "Compiling shaders",
   "Growing the grass",
   "Briefing the drones",

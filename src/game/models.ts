@@ -1,10 +1,12 @@
 /**
- * Procedural 3D models: clean geometric shapes with glowing accents in the owner's colour,
- * in the spirit of the Culture's Minds, drones and orbital hardware. No asset files needed.
+ * 3D models: clean geometric shapes with glowing accents in the owner's colour, in the spirit
+ * of the Culture's Minds, drones and orbital hardware. Where an authored model has been loaded
+ * (assets.ts), it takes the place of the built one; the glow and aura stay.
  */
 
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import * as THREE from "three/webgpu";
+import { authoredModel } from "./assets";
 import { glowCss } from "./colors";
 import type { ObjectName } from "./definitions";
 import type { Color } from "./units";
@@ -91,6 +93,12 @@ function mind(glow: THREE.Color): THREE.Group {
 /** Worker drone: a small rounded casing with a sensor band, inside a faint aura. */
 function workerDrone(glow: THREE.Color): THREE.Group {
   const group = new THREE.Group();
+  const authored = authoredModel("block");
+  if (authored) {
+    group.add(authored);
+    group.add(aura(glow, 0.34, 0.12));
+    return group;
+  }
   group.add(mesh(new RoundedBoxGeometry(0.36, 0.26, 0.3, 3, 0.07), hull));
   const band = mesh(new THREE.BoxGeometry(0.05, 0.06, 0.24), glowMaterial(glow));
   band.position.x = 0.18; // facing +x, the unit's heading

@@ -81,3 +81,17 @@ then the object. Keep "no text, no labels" in every prompt: the model likes to c
 To make more: `cd art && python3 batch.py <name> ...` generates the named jobs from
 `prompts.py` (all of them if none are named) through OpenRouter, as PNGs in `reference/`;
 convert them to WebP before committing. It needs OpenRouter access from the environment.
+
+## From reference to game
+
+1. Generate the model from its reference plate with Tripo's low-poly P series and the
+   delighting texture model (no baked light):
+   `tripo make plate.png --model tripo-p1 -p face_limit=3000 -p texture_version=v3.5-20260815`
+   (50 credits with texture). Animals: add `--then rig-check,rig,retarget:...` with
+   `--animate-in-place`; floating machines get no rig, the game animates them.
+2. Shrink it: `npx @gltf-transform/cli optimize model.glb public/models/<name>.glb
+   --texture-compress webp --texture-size 512 --compress false --simplify false`
+   (the worker drone went from 1.9 MB to 121 KB).
+3. Add `<name>` with its size in tiles to `SPECS` in `src/game/assets.ts`. The game loads it
+   behind the loading screen and uses it in place of the model built in code; the glow and
+   aura stay.
