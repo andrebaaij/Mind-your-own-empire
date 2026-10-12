@@ -66,13 +66,22 @@ export type ObjectName =
   | "warden"
   | "skimmer"
   | "decoy"
-  | "camp";
+  | "camp"
+  | "pad"
+  | "uplink";
 
 /** Who controls an object. */
 export type Faction = "player" | "custody" | "idiran";
 
 /** Objects the player can build from the HUD. */
-export const BUILDABLE: readonly ObjectName[] = ["block", "solar", "tower", "scout", "decoy"];
+export const BUILDABLE: readonly ObjectName[] = [
+  "block",
+  "solar",
+  "tower",
+  "scout",
+  "decoy",
+  "pad",
+];
 
 export function getObjectDefinition(name: ObjectName): ObjectDefinition {
   const definition = objectDefinitions[name];

@@ -5,6 +5,7 @@
 import { TICK_RATE } from "./config";
 import { distance, gridRef } from "./coords";
 import { isBuiltToPlan, setWardenHome } from "./custody";
+import type { ObjectName } from "./definitions";
 import type { SiteSpec } from "./sites";
 import {
   createGame,
@@ -15,7 +16,8 @@ import {
   say,
   spawn,
 } from "./state";
-import { arriveSkimmer, guardCamp } from "./stealth";
+import { arriveSkimmer, guardCamp, holdPost, raid, skimmersAt } from "./stealth";
+import { isMobile } from "./units";
 
 export interface Objective {
   text: string;
@@ -47,6 +49,8 @@ export interface MissionDefinition {
   sites?: SiteSpec[];
   /** Extra setup after the starting units are placed. */
   setup?: (state: GameState) => void;
+  /** Mission logic run every tick, `seconds` long. */
+  update?: (state: GameState, runtime: MissionRuntime, seconds: number) => void;
   objectives: Objective[];
   events?: MissionEvent[];
   /** A reason the mission is lost, or null while it's still on. */
@@ -652,12 +656,515 @@ const trespassers: MissionDefinition = {
     "The staff have evicted them: politely, thoroughly, and with what I can only describe as a receipt. I could get used to having landlords.",
 };
 
+// --- Shared for Acts II and III ---------------------------------------------------------------
+
+/** The base the Mind has built up by the middle of the campaign. */
+const ESTABLISHED: StartLayout = [
+  ["mind", 5, 5],
+  ["block", 3, 8],
+  ["block", 4, 9],
+  ["block", 8, 8],
+  ["block", 2, 3],
+  ["block", 9, 2],
+  ["block", 7, 10],
+  ["scout", 7, 1],
+  ["solar", 10, 9],
+  ["solar", 1, 11],
+  ["solar", 12, 3],
+  ["solar", -1, 4],
+  ["tower", 9, 12],
+];
+
+const centerOf = (spot: { x: number; y: number }) => ({ x: spot.x + 0.5, y: spot.y + 0.5 });
+
+/** Mark ground as explored without anyone watching it: charted, as on a map. */
+function chart(state: GameState, x: number, y: number, radius: number): void {
+  state.world.watch(gridRef(x, y), radius);
+  state.world.unwatch(gridRef(x, y), radius);
+}
+
+const near = (state: GameState, point: { x: number; y: number }, radius: number) =>
+  state.units.some(
+    (u) => u.faction === "player" && isMobile(u) && distance(u.position, point) <= radius,
+  );
+
+const found = (state: GameState) =>
+  state.suspicion >= 100 ? "Found. I can hear them calling it in." : null;
+
+// --- Mission 6 ------------------------------------------------------------------------------
+
+const POD = { x: 43, y: 34 };
+/** Seconds it takes one skimmer, circling the pod, to secure it; more skimmers are faster. */
+const SECURE_SECONDS = 40;
+
+const post: MissionDefinition = {
+  id: "post",
+  number: 6,
+  act: "Act II · Company",
+  title: "Post",
+  briefing: [
+    "A light streaks across the sky and comes down hard on the far side of the ridge: a Culture supply pod, fired from the General Systems Vehicle Quiet Word In Your Ear as it passed. The GSV couldn't stop, and wouldn't have explained itself if it could.",
+    "The Idirans saw it too. Whatever's in that pod, the Mind would like it more than they would.",
+  ],
+  seed: "lessuin",
+  layout: ESTABLISHED,
+  iron: 350,
+  sites: [{ kind: "pod", ...POD }],
+  setup: (state) => {
+    state.designs.add("decoy");
+    state.search = { center: centerOf(POD), radius: 10, closing: false };
+  },
+  update: (_state, runtime, seconds) => {
+    runtime.counters.secured =
+      (runtime.counters.secured ?? 0) +
+      (skimmersAt(_state, centerOf(POD), 3.5) * seconds) / SECURE_SECONDS;
+  },
+  objectives: [
+    {
+      text: "Unload the supply pod",
+      hint: "It's far to the south-east. Send worker drones; more drones unload faster. Decoys will slow the Idirans down.",
+      progress: (_state, runtime) =>
+        `Idirans securing it: ${Math.min(100, Math.round((runtime.counters.secured ?? 0) * 100))}%`,
+      done: (state) => (state.stats.studied.pod ?? 0) >= 1,
+    },
+    {
+      text: "Bring the drones home",
+      hint: "Every worker drone back within 10 tiles of the Mind, unseen.",
+      progress: (state) => `suspicion ${Math.round(state.suspicion)}%`,
+      done: (state) =>
+        state.units
+          .filter((u) => u.faction === "player" && u.name === "block")
+          .every((u) => distance(u.position, MIND) <= 10),
+    },
+  ],
+  events: [
+    {
+      when: (state) => seconds(state) > 2,
+      run: (state) => {
+        chart(state, POD.x, POD.y, 4);
+        say(
+          state,
+          "Something's coming in from orbit, fast: a supply pod. Ours! It's come down south-east, well past the ridge. I've marked it.",
+          "success",
+        );
+      },
+    },
+    {
+      when: (state) => seconds(state) > 25,
+      run: (state) => {
+        for (const [x, y] of [
+          [80, 30],
+          [78, 40],
+        ] as const) {
+          holdPost(state, spawn(state, "skimmer", x, y, "idiran"), centerOf(POD));
+        }
+        say(state, "Two skimmers, heading straight for the pod. They saw it too.", "warning");
+      },
+    },
+    {
+      when: (state) => seconds(state) > 80,
+      run: (state) => {
+        holdPost(state, spawn(state, "skimmer", 60, 70, "idiran"), centerOf(POD));
+        say(state, "A third. They want it badly. So do I.", "warning");
+      },
+    },
+  ],
+  failure: (state, runtime) => {
+    if ((runtime.counters.secured ?? 0) >= 1 && (state.stats.studied.pod ?? 0) === 0)
+      return "The Idirans have taken the pod. Whatever the GSV sent, it's theirs now.";
+    return found(state);
+  },
+  victory:
+    "Post delivered. Iron, lattice, patterns, seed stock for habitats, and a sealed key with my name on it that I can't open. Yet.",
+};
+
+// --- Mission 7 ------------------------------------------------------------------------------
+
+const TRANSMITTER = { x: -21, y: -22 };
+const CHARGE_SECONDS = 45;
+
+const relics: MissionDefinition = {
+  id: "relics",
+  number: 7,
+  act: "Act II · Company",
+  title: "Relics",
+  briefing: [
+    "An archive mentioned it in passing: a Tessilend transmitter, north-west of the base, still aimed at somewhere very far away. If it works, the Mind can talk to home.",
+    "It will need lattice to restore, and power to charge, and while it charges it will sing on every band. The Idirans will hear it. They'll come and look.",
+  ],
+  seed: "lessuin",
+  layout: ESTABLISHED,
+  iron: 400,
+  sites: [{ kind: "transmitter", ...TRANSMITTER }],
+  setup: (state) => {
+    state.designs.add("decoy");
+    state.custodyTidying = false;
+    state.discovered.add("idirans");
+  },
+  update: (state, runtime, seconds) => {
+    const uplink = state.units.find((u) => u.name === "uplink");
+    if (state.flags.has("charging") && uplink && state.economy.power >= 0) {
+      runtime.counters.charge = (runtime.counters.charge ?? 0) + seconds;
+      if (runtime.counters.charge >= CHARGE_SECONDS) {
+        state.flags.delete("charging");
+        state.flags.add("key-open");
+      }
+    }
+  },
+  objectives: [
+    {
+      text: "Study the transmitter",
+      hint: "North-west of the base. Select worker drones and right-click it.",
+      done: (state) => {
+        const status = state.world.siteAt(gridRef(TRANSMITTER.x, TRANSMITTER.y))?.status;
+        return status === "awaiting" || status === "awake";
+      },
+    },
+    {
+      text: "Restore it with 60 lattice",
+      hint: "Mine the seams around it, then send drones back to the transmitter.",
+      progress: (state) => `lattice ${state.economy.lattice} / 60`,
+      done: (state) => state.flags.has("transmitter"),
+    },
+    {
+      text: "Charge the transmitter",
+      hint: "Keep the power positive and the uplink standing. It's loud: use decoys to keep the skimmers busy elsewhere.",
+      progress: (state, runtime) =>
+        `${Math.floor(runtime.counters.charge ?? 0)} / ${CHARGE_SECONDS} s · suspicion ${Math.round(state.suspicion)}%`,
+      done: (state) => state.flags.has("key-open"),
+    },
+  ],
+  events: [
+    {
+      when: (state) => seconds(state) > 2,
+      run: (state) => {
+        chart(state, TRANSMITTER.x, TRANSMITTER.y, 5);
+        say(state, "The transmitter's north-west of here. I've marked it from the archive's map.");
+      },
+    },
+    {
+      when: (state) => state.flags.has("transmitter"),
+      run: (state, runtime) => {
+        // The Mind wires in an uplink, and the transmitter starts to sing.
+        spawn(state, "uplink", TRANSMITTER.x + 3, TRANSMITTER.y + 3);
+        state.flags.add("charging");
+        runtime.counters.charge = 0;
+        state.search = { center: centerOf(TRANSMITTER), radius: 14, closing: false };
+        for (const [x, y] of [
+          [-60, -40],
+          [-50, 10],
+          [10, -60],
+        ] as const) {
+          arriveSkimmer(state, spawn(state, "skimmer", x, y, "idiran"));
+        }
+        say(
+          state,
+          "Charging. It's singing on every band, and three skimmers have already turned this way.",
+          "warning",
+        );
+      },
+    },
+  ],
+  failure: found,
+  victory:
+    "The transmitter's charged, and something else just woke up: the sealed key from the pod. It's been waiting for that signal. I'm almost afraid to open it. Almost.",
+};
+
+// --- Mission 8 ------------------------------------------------------------------------------
+
+const HABITAT_EAST = { x: 40, y: -11 };
+const HABITAT_NORTH = { x: -18, y: -26 };
+const PADS_NEEDED = 3;
+
+const padCount = (state: GameState) =>
+  state.units.filter((u) => u.faction === "player" && u.name === "pad").length;
+
+const sealedOrders: MissionDefinition = {
+  id: "sealed-orders",
+  number: 8,
+  act: "Act III · Arrivals",
+  title: "Sealed Orders",
+  briefing: [
+    "The key opened the Mind's own sealed memory. The Only Visiting was never just surveying. A refugee flotilla is coming from Kessenthal Orbital, a habitat lost to the war: eleven thousand people, and nowhere else to go. Lessuin is where they're going.",
+    "The Mind takes this about as well as a Mind can: 'I was told I was only visiting. In fairness, I was told a great many things.' There are landing zones to prepare, and empty homes to look at.",
+  ],
+  seed: "lessuin",
+  layout: ESTABLISHED,
+  iron: 650,
+  sites: [
+    { kind: "habitat", ...HABITAT_EAST },
+    { kind: "habitat", ...HABITAT_NORTH },
+  ],
+  setup: (state) => {
+    state.designs.add("decoy");
+    state.designs.add("pad");
+    state.designs.add("scout");
+    state.economy.lattice = 80;
+    state.discovered.add("lattice");
+    state.custodyTidying = false;
+  },
+  objectives: [
+    {
+      text: `Build ${PADS_NEEDED} landing pads`,
+      hint: "Press 6 and place them on level open ground near the base. Each takes iron and a little lattice.",
+      progress: (state) => `${Math.min(padCount(state), PADS_NEEDED)} / ${PADS_NEEDED}`,
+      done: (state) => padCount(state) >= PADS_NEEDED,
+      completed:
+        "Landing zones. Lit, level, and the right way up. I've never prepared for guests before.",
+    },
+    {
+      text: "Keep the pads lit: power above zero",
+      hint: "Each pad uses 2 power. Build collectors.",
+      progress: (state) => `power ${state.economy.power}`,
+      done: (state) => padCount(state) >= PADS_NEEDED && state.economy.power >= 0,
+    },
+    {
+      text: "Survey both habitats",
+      hint: "Send the scout east and north. They're sealed; we just need a look.",
+      progress: (_state, runtime) =>
+        `${(runtime.counters.east ?? 0) + (runtime.counters.north ?? 0)} / 2`,
+      done: (_state, runtime) => (runtime.counters.east ?? 0) + (runtime.counters.north ?? 0) >= 2,
+    },
+  ],
+  update: (state, runtime) => {
+    if (near(state, centerOf(HABITAT_EAST), 9)) runtime.counters.east = 1;
+    if (near(state, centerOf(HABITAT_NORTH), 9)) runtime.counters.north = 1;
+  },
+  events: [
+    {
+      when: (state) => seconds(state) > 2,
+      run: (state) =>
+        say(
+          state,
+          "Eleven thousand people. I'm going to need more than three drones and a positive attitude.",
+        ),
+    },
+    {
+      when: (state) => seconds(state) > 40,
+      run: (state) => {
+        state.search = { center: { x: 30, y: 20 }, radius: 20 };
+        arriveSkimmer(state, spawn(state, "skimmer", 60, 40, "idiran"));
+        say(
+          state,
+          "A skimmer, sweeping. Lit landing pads are not subtle. Keep an eye on it.",
+          "warning",
+        );
+      },
+    },
+  ],
+  failure: found,
+  victory:
+    "Three pads lit and waiting, and two homes the staff have kept ready for ten thousand years. Now I need to persuade the staff the homes are for us.",
+};
+
+// --- Mission 9 ------------------------------------------------------------------------------
+
+const RECORDS = [
+  { x: 16, y: -21 },
+  { x: -24, y: -5 },
+  { x: 35, y: 17 },
+];
+
+const tenancy: MissionDefinition = {
+  id: "tenancy",
+  number: 9,
+  act: "Act III · Arrivals",
+  title: "Tenancy",
+  briefing: [
+    "The Custody will only open the habitats to their rightful tenants, as defined by the Tessilend, who are not available for comment. The refugees don't qualify. Yet.",
+    "Somewhere in the builders' records is the reason they built twice as many homes as they lived in. Find it, and take it to the staff.",
+  ],
+  seed: "lessuin",
+  layout: ESTABLISHED,
+  iron: 400,
+  sites: [
+    ...RECORDS.map((spot) => ({ kind: "archive" as const, ...spot })),
+    { kind: "habitat", ...HABITAT_EAST },
+  ],
+  setup: (state) => {
+    for (const spot of RECORDS) chart(state, spot.x, spot.y, 4);
+    for (const [x, y] of [
+      [HABITAT_EAST.x - 4, HABITAT_EAST.y + 5],
+      [HABITAT_EAST.x + 5, HABITAT_EAST.y - 4],
+    ] as const) {
+      arriveWarden(state, x, y, centerOf(HABITAT_EAST), 8);
+    }
+    for (const spot of RECORDS) arriveWarden(state, spot.x + 3, spot.y + 3, centerOf(spot), 7);
+  },
+  objectives: [
+    {
+      text: "Read the builders' records",
+      hint: "Three archives, marked on the map. Study each with worker drones. Mind the staff around them: keep buildings attended.",
+      progress: (state) =>
+        `${Math.min(state.stats.studied.archive ?? 0, RECORDS.length)} / ${RECORDS.length}`,
+      done: (state) => (state.stats.studied.archive ?? 0) >= RECORDS.length,
+      completed:
+        "There it is, in their planning records: 'For guests.' They built the habitats for whoever came after them. I'd like to show the staff.",
+    },
+    {
+      text: "Present the proof at the habitat",
+      hint: "Send worker drones to the habitat in the east and right-click it.",
+      done: (state) => state.flags.has("habitat-open"),
+    },
+  ],
+  events: [
+    {
+      when: (_state, runtime) => runtime.current >= 1,
+      run: (state) => state.flags.add("tenancy"),
+    },
+  ],
+  failure: (state) =>
+    state.stats.tidied > 3 ? "The staff have tidied away our case, and most of our base." : null,
+  victory:
+    "Guests. That's the word the staff used, as the doors opened: 'At last.' They've been waiting longer than anyone. Now all we have to do is get the guests here.",
+};
+
+// --- Mission 10 -----------------------------------------------------------------------------
+
+const SHIPS = 8;
+const SHIP_INTERVAL = 25;
+const PADS: [number, number][] = [
+  [13, 11],
+  [-1, 14],
+  [14, -1],
+];
+
+/** Waves of Idiran raiders: when they arrive, and where from. */
+const RAIDS: { at: number; from: [number, number][] }[] = [
+  {
+    at: 20,
+    from: [
+      [60, -30],
+      [62, -24],
+      [58, -36],
+    ],
+  },
+  {
+    at: 60,
+    from: [
+      [-40, 40],
+      [-46, 34],
+      [-34, 46],
+    ],
+  },
+  {
+    at: 95,
+    from: [
+      [55, 45],
+      [60, 40],
+      [50, 50],
+      [64, 34],
+    ],
+  },
+  {
+    at: 135,
+    from: [
+      [-45, -30],
+      [-40, -36],
+      [-50, -24],
+      [-36, -42],
+    ],
+  },
+  {
+    at: 175,
+    from: [
+      [60, 0],
+      [62, 8],
+      [58, -8],
+      [64, 14],
+      [56, -14],
+    ],
+  },
+];
+
+const onlyVisiting: MissionDefinition = {
+  id: "only-visiting",
+  number: 10,
+  act: "Act III · Arrivals",
+  title: "Only Visiting",
+  briefing: [
+    "The flotilla is here: a ragged line of ships from Kessenthal Orbital, coming down one at a time on the landing pads. And the Idirans have been waiting for them.",
+    "Raiders are heading for the pads. The Mind still can't fight. But the habitats are open, the refugees are guests, and the staff look after their guests.",
+  ],
+  seed: "lessuin",
+  layout: [...ESTABLISHED, ...PADS.map(([x, y]) => ["pad", x, y] as [ObjectName, number, number])],
+  iron: 900,
+  sites: [{ kind: "habitat", ...HABITAT_EAST }],
+  setup: (state) => {
+    state.designs.add("decoy");
+    state.designs.add("pad");
+    state.economy.lattice = 140;
+    state.discovered.add("lattice");
+    state.discovered.add("idirans");
+    state.flags.add("tenancy");
+    state.custodyTidying = false;
+    state.custodyAllied = true;
+    state.search = { center: { x: 5.5, y: 5.5 }, radius: 16, closing: false };
+    // The staff stand by the pads.
+    for (const [x, y] of PADS.slice(0, 2)) arriveWarden(state, x + 2, y + 2, centerOf({ x, y }), 6);
+  },
+  update: (state, runtime, seconds) => {
+    if (runtime.elapsed < 30) return;
+    runtime.counters.nextShip = (runtime.counters.nextShip ?? 0) - seconds;
+    if (runtime.counters.nextShip <= 0 && padCount(state) > 0 && state.stats.landed < SHIPS) {
+      runtime.counters.nextShip = SHIP_INTERVAL;
+      state.stats.landed++;
+      say(
+        state,
+        state.stats.landed === 1
+          ? "First ship down! Two hundred people stepping onto Lessuin, and the staff are already showing them the way."
+          : state.stats.landed === SHIPS
+            ? "The last ship is down."
+            : `Ship ${state.stats.landed} of ${SHIPS} down.`,
+        "success",
+      );
+    }
+  },
+  objectives: [
+    {
+      text: `Land all ${SHIPS} refugee ships`,
+      hint: "Ships need a landing pad. Lure raiders with decoys towards the wardens; rebuild wrecked pads (6).",
+      progress: (state) => `${state.stats.landed} / ${SHIPS} · pads ${padCount(state)}`,
+      done: (state) => state.stats.landed >= SHIPS,
+    },
+  ],
+  events: [
+    ...RAIDS.map(
+      ({ at, from }): MissionEvent => ({
+        when: (state) => seconds(state) > at,
+        run: (state) => {
+          for (const [x, y] of from) raid(state, spawn(state, "skimmer", x, y, "idiran"));
+          say(state, "Raiders inbound, making for the pads.", "warning");
+        },
+      }),
+    ),
+    {
+      when: (state) => seconds(state) > 5,
+      run: (state) =>
+        say(
+          state,
+          "Here they come: the first ships, and the first raiders. The staff are with us. Let's give them something to do.",
+        ),
+    },
+  ],
+  failure: (state, runtime) =>
+    runtime.elapsed > 30 && padCount(state) === 0 && state.stats.landed < SHIPS
+      ? "Every pad is wrecked, and the ships have nowhere to land."
+      : null,
+  victory: "I did say I was only visiting. I never said for how long.",
+};
+
 export const MISSIONS: readonly MissionDefinition[] = [
   arrived,
   theStaff,
   houseRules,
   ahCompany,
   trespassers,
+  post,
+  relics,
+  sealedOrders,
+  tenancy,
+  onlyVisiting,
 ];
 
 export function getMission(id: string): MissionDefinition | undefined {
@@ -692,8 +1199,9 @@ export function updateMission(state: GameState): void {
   const { definition } = runtime;
   runtime.elapsed = seconds(state);
 
-  // Mission-specific counters.
+  // Mission-specific counters and logic.
   if (definition.id === "the-staff") watchWardens(state, runtime);
+  definition.update?.(state, runtime, 1 / TICK_RATE);
 
   definition.events?.forEach((event, index) => {
     if (!runtime.fired.has(index) && event.when(state, runtime)) {

@@ -307,7 +307,88 @@ function habitat(): SiteModel {
   return { root, glow, animate: () => {} };
 }
 
+const podHull = new THREE.MeshStandardMaterial({
+  color: "#e9edf3",
+  metalness: 0.3,
+  roughness: 0.25,
+});
+const scorch = new THREE.MeshStandardMaterial({ color: "#241a18", roughness: 1 });
+
+/** The Culture supply pod: a smooth white capsule, half buried in its own crater. */
+function pod(): SiteModel {
+  const root = new THREE.Group();
+  const glow = glowMaterial();
+  glow.emissive.set("#7fe8ff");
+  const crater = mesh(new THREE.CylinderGeometry(1.6, 1.2, 0.12, 20), scorch);
+  crater.position.y = 0.02;
+  const body = mesh(new THREE.CapsuleGeometry(0.62, 1.3, 8, 20), podHull);
+  body.rotation.z = Math.PI / 2 - 0.35;
+  body.position.y = 0.45;
+  const seam = mesh(new THREE.TorusGeometry(0.63, 0.03, 8, 32), glow);
+  seam.rotation.y = Math.PI / 2;
+  seam.rotation.x = 0.35;
+  seam.position.y = 0.45;
+  const hatch = new THREE.Group();
+  const lid = mesh(new THREE.SphereGeometry(0.6, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), podHull);
+  hatch.add(lid);
+  hatch.position.set(0.85, 0.75, 0);
+  hatch.rotation.z = -1.2;
+  root.add(crater, body, seam, hatch);
+  return {
+    root,
+    glow,
+    animate: (time, life) => {
+      // Once unloaded, the hatch swings open.
+      hatch.rotation.z = -1.2 + life * 1.1;
+      seam.scale.setScalar(1 + Math.sin(time * 2) * 0.02);
+    },
+  };
+}
+
+/** The Tessilend transmitter: a tall mast of stacked rings under a dish that turns once woken. */
+function transmitter(): SiteModel {
+  const root = new THREE.Group();
+  const glow = glowMaterial();
+  const base = mesh(new THREE.CylinderGeometry(1.2, 1.4, 0.4, 8), darkStone);
+  base.position.y = 0.2;
+  const mast = mesh(new THREE.CylinderGeometry(0.16, 0.3, 4.2, 8), stone);
+  mast.position.y = 2.4;
+  root.add(base, mast);
+  const rings = [0, 1, 2, 3].map((i) => {
+    const ring = mesh(new THREE.TorusGeometry(0.5 - i * 0.07, 0.05, 6, 24), glow);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 1.2 + i * 0.85;
+    root.add(ring);
+    return ring;
+  });
+  const dish = new THREE.Group();
+  const bowl = mesh(
+    new THREE.SphereGeometry(0.9, 18, 8, 0, Math.PI * 2, 0, Math.PI / 3),
+    verdigris,
+  );
+  bowl.rotation.x = Math.PI;
+  bowl.position.y = 0.45;
+  const feed = mesh(new THREE.ConeGeometry(0.08, 0.6, 8), glow);
+  feed.position.y = 0.2;
+  dish.add(bowl, feed);
+  dish.position.y = 4.6;
+  dish.rotation.z = 0.5;
+  root.add(dish);
+  return {
+    root,
+    glow,
+    animate: (time, life) => {
+      dish.rotation.y = time * 0.3 * life;
+      rings.forEach((ring, i) => {
+        ring.scale.setScalar(1 + life * Math.sin(time * 3 - i) * 0.12);
+      });
+    },
+  };
+}
+
 const BUILDERS: Record<SiteKind, () => SiteModel> = {
+  pod,
+  transmitter,
   marker,
   archive,
   tap,
@@ -405,7 +486,12 @@ export class RuinView {
     const hit = new THREE.Vector3();
     for (const site of this.shown) {
       const ground = this.world.heightAt(site.center.x, site.center.y);
-      const height = site.kind === "habitat" ? 3 : site.kind === "marker" ? 0.7 : 0.9;
+      const height =
+        site.kind === "habitat" || site.kind === "transmitter"
+          ? 2.5
+          : site.kind === "marker"
+            ? 0.7
+            : 0.9;
       const sphere = new THREE.Sphere(
         new THREE.Vector3(site.center.x, ground + height, site.center.y),
         Math.max(0.6, site.size * 0.62),

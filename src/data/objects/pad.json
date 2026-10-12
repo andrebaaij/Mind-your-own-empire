@@ -1,0 +1,17 @@
+{
+  "label": "Landing pad",
+  "description": "A lit, level place for a refugee ship to come down.",
+  "skills": {},
+  "footprint": 3,
+  "radius": 1.3,
+  "communicationRadius": 3,
+  "energy": -2,
+  "cost": {
+    "iron": 150,
+    "lattice": 20
+  },
+  "storage": {
+    "iron": 0,
+    "energy": 0
+  }
+}

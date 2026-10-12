@@ -4,10 +4,26 @@ A single-player, procedurally generated 3D RTS for the browser, inspired by Iain
 
 The Idiran war. A Culture Mind called *Only Visiting* comes down hard on a world whose builders Sublimed long ago, leaving their machines to keep the place tidy. The caretakers would like it to leave, the Idirans would like it destroyed, and the Mind would mostly like its sensors back. The setting and story are being worked out in [docs/World.md](docs/World.md) (contains spoilers).
 
-The game is an early prototype with the first two campaign missions playable:
+The whole ten-mission campaign is playable, in three acts:
+
+**Act I · Landfall**
 
 1. **Arrived.** Learn the ropes: mine iron, carry it home, build drones, keep the power up, raise a sensor spire.
-2. **The Staff.** Meet the Custody, the caretaker machines that dismantle anything left unattended, and keep your base standing while they patrol it.
+2. **The Staff.** Meet the Custody, the caretaker machines that dismantle anything left unattended, read the marker stone that names the world, and keep your base standing.
+3. **House Rules.** Read a Tessilend archive, mine lattice, restore a power tap, build on the builders' foundations, and find what the staff are guarding.
+
+**Act II · Company**
+
+4. **Ah. Company.** The Idirans arrive. Run silent, hide under the groves, and lead their skimmers off with decoys.
+5. **Trespassers.** Lure the guards away from three Idiran camps so the staff evict them.
+6. **Post.** Race the Idirans to a Culture supply pod.
+7. **Relics.** Restore a Tessilend transmitter and keep it charging while the Idirans close in.
+
+**Act III · Arrivals**
+
+8. **Sealed Orders.** The Mind's sealed memory opens: refugees are coming. Build landing pads and survey the empty habitats.
+9. **Tenancy.** Find the builders' records that prove the habitats were built for guests, and present them to the staff.
+10. **Only Visiting.** The flotilla lands under Idiran attack, with the staff on your side.
 
 There's also **Survey** mode: free play on any seed, with no objectives.
 

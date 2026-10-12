@@ -125,11 +125,56 @@ function neglectedLongEnough(state: GameState, unit: Unit): boolean {
   return since !== undefined && state.ticks - since >= inspectSeconds(unit) * TICK_RATE;
 }
 
-/** Decide what each warden does next. Called a few times a second, not every tick. */
-export function custodyThink(state: GameState): void {
-  updateNeglect(state);
+/** How close an allied warden must get to an Idiran skimmer, and for how long, to see it off. */
+const ESCORT_REACH = 2.2;
+const ESCORT_SECONDS = 4;
+const escorting = new WeakMap<Unit, number>();
+
+/** Allied wardens hunt down Idiran skimmers and see them off the planet, politely and firmly. */
+function escortIdirans(state: GameState): Set<Unit> {
+  const busy = new Set<Unit>();
+  const skimmers = state.units.filter((u) => u.faction === "idiran" && isMobile(u));
   for (const warden of state.units) {
     if (!isWarden(warden)) continue;
+    const memory = memoryOf(warden);
+    const prey = skimmers
+      .filter((s) => distance(s.position, memory.home) <= memory.patrol + 6)
+      .sort(
+        (a, b) => distance(a.position, warden.position) - distance(b.position, warden.position),
+      )[0];
+    if (!prey) continue;
+    busy.add(warden);
+    if (distance(prey.position, warden.position) <= ESCORT_REACH) {
+      warden.actions = [];
+      const held = (escorting.get(prey) ?? 0) + 10 / TICK_RATE;
+      escorting.set(prey, held);
+      if (held >= ESCORT_SECONDS) {
+        removeUnit(state, prey);
+        state.stats.escorted++;
+        say(
+          state,
+          state.stats.escorted === 1
+            ? "A warden has taken hold of a skimmer and is escorting it, very firmly, off the planet. They're on our side now."
+            : "Another skimmer seen off by the staff.",
+          "success",
+          { once: `escorted-${state.stats.escorted}` },
+        );
+      }
+    } else {
+      const target = warden.actions[0]?.target;
+      if (!target || distance(target, prey.position) > 1.5)
+        warden.actions = [newWalk(prey.position)];
+    }
+  }
+  return busy;
+}
+
+/** Decide what each warden does next. Called a few times a second, not every tick. */
+export function custodyThink(state: GameState): void {
+  const busy = state.custodyAllied ? escortIdirans(state) : new Set<Unit>();
+  updateNeglect(state);
+  for (const warden of state.units) {
+    if (!isWarden(warden) || busy.has(warden)) continue;
     const memory = memoryOf(warden);
 
     // Drop a target that is gone, or that somebody has come back to.

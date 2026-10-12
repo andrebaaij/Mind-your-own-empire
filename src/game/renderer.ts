@@ -662,6 +662,7 @@ export class Renderer {
     let lattices = 0;
     chunk.resources.forEach((resource, i) => {
       if (!resource?.exists || resource.level < 0 || chunk.explored[i] !== 1) return;
+      if ((chunk.occupied[i] ?? 0) > 0) return; // built over
       const { x, y } = resource.position;
       const jitter = tileNoise(x, y);
       position.set(x, this.world.heightAt(x, y), y);

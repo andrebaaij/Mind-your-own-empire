@@ -63,6 +63,12 @@ interface SkimmerMemory {
   guarding: Unit | null;
   /** Where it's flying off to, having lost its camp. */
   leaving: Point | null;
+  /** A place it has been sent to hold (e.g. a crashed supply pod), instead of searching. */
+  post: Point | null;
+  /** A raider goes for the Mind's landing pads, and wrecks them. */
+  raiding: boolean;
+  /** Seconds spent wrecking the current pad. */
+  wrecking: number;
   /** Seconds left hovering at a waypoint, scanning. */
   pause: number;
 }
@@ -81,6 +87,9 @@ function memoryOf(skimmer: Unit): SkimmerMemory {
       ignoring: new Map(),
       guarding: null,
       leaving: null,
+      post: null,
+      raiding: false,
+      wrecking: 0,
     };
     memories.set(skimmer, memory);
   }
@@ -94,6 +103,8 @@ export function isSkimmer(unit: Unit): boolean {
 /** How loudly one of the player's units shows up on Idiran sensors. */
 export function signature(state: GameState, unit: Unit): number {
   if (unit.name === "decoy") return 6;
+  // The uplink is quiet until the transmitter charges, and then it's the loudest thing for miles.
+  if (unit.name === "uplink") return state.flags.has("charging") ? 3 : 0.4;
   let loudness: number;
   if (unit.name === "mind") loudness = 2.5;
   else if (unit.name === "tower") loudness = 1.5;
@@ -134,6 +145,23 @@ export function setSilent(state: GameState, silent: boolean): void {
 export function arriveSkimmer(state: GameState, skimmer: Unit): void {
   memoryOf(skimmer);
   state.discovered.add("idirans");
+}
+
+/** Send a skimmer to hold a place: it flies there and circles it, unless something lures it off. */
+export function holdPost(state: GameState, skimmer: Unit, post: Point): void {
+  arriveSkimmer(state, skimmer);
+  memoryOf(skimmer).post = { ...post };
+}
+
+/** Send a skimmer raiding: it goes for the nearest landing pad and wrecks it. */
+export function raid(state: GameState, skimmer: Unit): void {
+  arriveSkimmer(state, skimmer);
+  memoryOf(skimmer).raiding = true;
+}
+
+/** Whether a skimmer is circling a given point (for missions racing the Idirans to it). */
+export function skimmersAt(state: GameState, point: Point, radius: number): number {
+  return state.units.filter((u) => isSkimmer(u) && distance(u.position, point) <= radius).length;
 }
 
 /** Post a skimmer to guard a camp: it circles close by, unless something lures it off. */
@@ -186,6 +214,21 @@ export function idiranThink(state: GameState, seconds: number): void {
         if (skimmer.actions.length === 0) skimmer.actions = [newWalk(decoy.position)];
         continue;
       }
+    }
+
+    // A raider ignores everything but decoys (checked here) and the Mind's landing pads.
+    if (memory.raiding) {
+      const heard = ours.find(
+        (u) => u.name === "decoy" && signal(state, u, skimmer.position) > NOTICE,
+      );
+      if (heard) {
+        memory.decoy = heard;
+        memory.inspecting = 0;
+        skimmer.actions = [newWalk(heard.position)];
+        continue;
+      }
+      raidTick(state, skimmer, memory, seconds);
+      continue;
     }
 
     // What can it pick up from here? (Not what it has just looked at and dismissed.)
@@ -243,9 +286,10 @@ export function idiranThink(state: GameState, seconds: number): void {
       if (memory.pause <= 0) {
         const camp =
           memory.guarding && state.units.includes(memory.guarding) ? memory.guarding : null;
-        const center = camp ? camp.position : search.center;
+        const held = camp?.position ?? memory.post;
+        const center = held ?? search.center;
         const angle = state.random() * Math.PI * 2;
-        const reach = camp ? GUARD_RADIUS : Math.sqrt(state.random()) * search.radius;
+        const reach = held ? GUARD_RADIUS : Math.sqrt(state.random()) * search.radius;
         skimmer.actions = [
           newWalk({ x: center.x + Math.cos(angle) * reach, y: center.y + Math.sin(angle) * reach }),
         ];
@@ -268,6 +312,36 @@ export function idiranThink(state: GameState, seconds: number): void {
     }
   }
   warn(state);
+}
+
+/** Seconds a raider needs to wreck a landing pad. */
+const WRECK_SECONDS = 7;
+
+function raidTick(state: GameState, skimmer: Unit, memory: SkimmerMemory, seconds: number): void {
+  const pads = state.units.filter((u) => u.faction === "player" && u.name === "pad");
+  const target = pads.sort(
+    (a, b) => distance(a.position, skimmer.position) - distance(b.position, skimmer.position),
+  )[0];
+  if (!target) {
+    memory.wrecking = 0;
+    return;
+  }
+  if (distance(target.position, skimmer.position) > 1.8) {
+    memory.wrecking = 0;
+    const heading = skimmer.actions[0]?.target;
+    if (!heading || distance(heading, target.position) > 1)
+      skimmer.actions = [newWalk(target.position)];
+    return;
+  }
+  skimmer.actions = [];
+  memory.wrecking += seconds;
+  target.dismantling = Math.min(1, memory.wrecking / WRECK_SECONDS);
+  if (memory.wrecking >= WRECK_SECONDS) {
+    removeUnit(state, target);
+    state.stats.padsLost++;
+    memory.wrecking = 0;
+    say(state, "They've wrecked a landing pad. Build another, and keep them off it.", "warning");
+  }
 }
 
 function smashDecoy(state: GameState, decoy: Unit): void {

@@ -9,7 +9,16 @@
 
 import { START_CENTER } from "./terrain";
 
-export type SiteKind = "marker" | "archive" | "tap" | "fabricator" | "seedbed" | "habitat";
+export type SiteKind =
+  | "marker"
+  | "archive"
+  | "tap"
+  | "fabricator"
+  | "seedbed"
+  | "habitat"
+  /** Placed only by missions: the Culture's supply pod, and the Tessilend transmitter. */
+  | "pod"
+  | "transmitter";
 
 /** dormant → being studied → (waiting for lattice →) awake. Habitats stay sealed. */
 export type SiteStatus = "dormant" | "studying" | "awaiting" | "awake" | "sealed";
@@ -64,6 +73,8 @@ export const SITE_SIZE: Record<SiteKind, number> = {
   fabricator: 3,
   seedbed: 3,
   habitat: 5,
+  pod: 3,
+  transmitter: 3,
 };
 
 /** Width of the paved apron around each kind. */
@@ -74,6 +85,8 @@ const APRON: Record<SiteKind, number> = {
   fabricator: 2,
   seedbed: 1,
   habitat: 3,
+  pod: 0,
+  transmitter: 2,
 };
 
 /** How many lattice seams ring each kind, and how rich they are. */
@@ -84,6 +97,8 @@ const SEAMS: Record<SiteKind, [count: number, min: number, max: number]> = {
   fabricator: [4, 60, 120],
   seedbed: [11, 70, 150],
   habitat: [3, 60, 120],
+  pod: [0, 0, 0],
+  transmitter: [7, 70, 130],
 };
 
 /** How often each kind turns up in a region that has a site. */

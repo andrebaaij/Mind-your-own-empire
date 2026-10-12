@@ -283,7 +283,43 @@ function camp(): THREE.Group {
   return group;
 }
 
+/** A landing pad: a broad hexagon ringed with guide lights, its centre ring turning slowly. */
+function pad(glow: THREE.Color): THREE.Group {
+  const group = new THREE.Group();
+  const deck = mesh(new THREE.CylinderGeometry(1.45, 1.5, 0.18, 6), hull);
+  deck.position.y = 0.09;
+  const inset = mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.02, 6), darkHull);
+  inset.position.y = 0.19;
+  group.add(plinth(2.6, 2.6), deck, inset);
+  const ring = new THREE.Group();
+  ring.name = "spin";
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.21;
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2;
+    const light = mesh(new THREE.BoxGeometry(0.22, 0.06, 0.06), glowMaterial(glow, 3));
+    light.position.set(Math.cos(angle) * 0.75, Math.sin(angle) * 0.75, 0);
+    light.rotation.z = angle + Math.PI / 2;
+    ring.add(light);
+  }
+  group.add(ring);
+  return group;
+}
+
+/** The uplink: a short mast of the Mind's own make, cabled into the Tessilend transmitter. */
+function uplink(glow: THREE.Color): THREE.Group {
+  const group = new THREE.Group();
+  const post = mesh(new THREE.CylinderGeometry(0.06, 0.12, 1.1, 8), hull);
+  post.position.y = 0.55;
+  const head = mesh(new THREE.OctahedronGeometry(0.16, 0), glowMaterial(glow, 3));
+  head.position.y = 1.2;
+  group.add(plinth(0.6, 0.6), post, head, aura(glow, 0.45, 0.12));
+  return group;
+}
+
 const builders: Record<ObjectName, (glow: THREE.Color) => THREE.Group> = {
+  pad,
+  uplink,
   camp,
   skimmer,
   decoy,

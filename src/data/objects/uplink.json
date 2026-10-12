@@ -1,0 +1,13 @@
+{
+  "label": "Uplink",
+  "description": "The Mind's wiring into the Tessilend transmitter. Very loud while it charges.",
+  "skills": {},
+  "footprint": 1,
+  "radius": 0.4,
+  "communicationRadius": 3,
+  "energy": -3,
+  "storage": {
+    "iron": 0,
+    "energy": 0
+  }
+}

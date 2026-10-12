@@ -32,6 +32,26 @@ export interface SiteInfo {
 }
 
 export const SITE_INFO: Record<SiteKind, SiteInfo> = {
+  pod: {
+    label: "Supply pod",
+    dormant:
+      "A Culture supply pod from the GSV Quiet Word In Your Ear. Unload it with worker drones.",
+    awake: "Unloaded.",
+    study: 60,
+    lattice: 0,
+    sighted:
+      "There it is: a Culture supply pod, half buried and still ticking as it cools. Let's unload it before anyone else does.",
+  },
+  transmitter: {
+    label: "Long-range transmitter",
+    dormant:
+      "A Tessilend transmitter, still aimed at something very far away. Study it with drones.",
+    awake: "Restored. Charging it will be loud.",
+    study: 24,
+    lattice: 60,
+    sighted:
+      "A transmitter. Tessilend, long-range, and still aimed at somewhere a very long way off. If I can wake it, I can talk to home.",
+  },
   marker: {
     label: "Marker stone",
     dormant: "An inscribed Tessilend stone. Send a worker drone to read it.",
@@ -78,8 +98,8 @@ export const SITE_INFO: Record<SiteKind, SiteInfo> = {
   habitat: {
     label: "Habitat",
     dormant: "Sealed. Lit, aired and spotless, and the Custody won't let anyone in.",
-    awake: "Sealed.",
-    study: Number.POSITIVE_INFINITY,
+    awake: "Open, and ready for its tenants.",
+    study: 15,
     lattice: 0,
     sighted:
       "A habitat. Lights on, air fresh, floors swept. Nobody has lived here for ten thousand years. The staff are keeping house for someone.",
@@ -120,9 +140,13 @@ export function orderStudy(
   site: Site,
   queue: boolean,
 ): void {
-  if (site.kind === "habitat") {
-    say(state, SITE_INFO.habitat.dormant, "info");
-    return;
+  if (site.kind === "habitat" && site.status === "sealed") {
+    // With proof that the habitats were built for guests, the staff will hear the Mind out.
+    if (!state.flags.has("tenancy")) {
+      say(state, SITE_INFO.habitat.dormant, "info");
+      return;
+    }
+    site.status = "dormant";
   }
   if (site.status === "awake") {
     say(state, `${SITE_INFO[site.kind].label}: ${SITE_INFO[site.kind].awake}`);
@@ -247,6 +271,35 @@ export function wake(state: GameState, site: Site): void {
       say(state, "The seedbed's awake. Mined lattice here will grow back, slowly.", "success");
       break;
     case "habitat":
+      state.flags.add("habitat-open");
+      say(
+        state,
+        "The staff have read the records, checked them twice, and opened the doors. 'Guests,' they say. 'At last.'",
+        "success",
+      );
+      break;
+    case "pod": {
+      const iron = Math.min(300, state.economy.storage.iron - state.economy.iron);
+      const lattice = Math.min(100, state.economy.storage.lattice - state.economy.lattice);
+      state.economy.iron += Math.max(0, iron);
+      state.economy.lattice += Math.max(0, lattice);
+      state.designs.add("scout");
+      state.designs.add("decoy");
+      state.flags.add("key");
+      say(
+        state,
+        "Unloaded: iron, lattice, drone patterns, habitat seed stock I can't imagine needing, and a sealed key I can't open. The GSV always did have a sense of humour.",
+        "success",
+      );
+      break;
+    }
+    case "transmitter":
+      state.flags.add("transmitter");
+      say(
+        state,
+        "The transmitter's restored. Charging it will take a minute, and every Idiran on the planet will hear it humming. I'll wire in an uplink.",
+        "success",
+      );
       break;
   }
 }

@@ -97,6 +97,12 @@ export interface Stats {
   decoysFound: number;
   /** Idiran camps the Custody dismantled. */
   evicted: number;
+  /** Landing pads the Idirans wrecked. */
+  padsLost: number;
+  /** Idiran skimmers the wardens saw off the planet. */
+  escorted: number;
+  /** Refugee ships safely down. */
+  landed: number;
 }
 
 export interface GameState {
@@ -140,6 +146,10 @@ export interface GameState {
   lastContact: Point | null;
   /** The Idiran search, once they're here. */
   search: Search | null;
+  /** Story flags: "key" (the pod's sealed key), "tenancy" (proof the habitats are for guests)… */
+  flags: Set<string>;
+  /** Whether the Custody has sided with the Mind: wardens see Idirans off instead of tidying. */
+  custodyAllied: boolean;
 }
 
 export type StartLayout = [ObjectName, number, number][];
@@ -194,6 +204,9 @@ export function createGame(options: {
       tidied: 0,
       decoysFound: 0,
       evicted: 0,
+      padsLost: 0,
+      escorted: 0,
+      landed: 0,
     },
     custodyTidying: true,
     mission: null,
@@ -205,6 +218,8 @@ export function createGame(options: {
     suspicion: 0,
     lastContact: null,
     search: null,
+    flags: new Set(),
+    custodyAllied: false,
   };
 
   for (const [name, x, y] of options.layout ?? SANDBOX_LAYOUT) spawn(state, name, x, y);
