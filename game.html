@@ -3,36 +3,90 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="/src/assets/icons/electricity.png" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <title>Mind your own Empire</title>
     <script type="module" src="/src/game/main.ts"></script>
   </head>
   <body>
-    <main id="game">
-      <header class="hud">
-        <span class="hud-label">Resources</span>
-        <span class="hud-stat" title="Iron / storage">
-          <img src="/src/assets/icons/iron.png" alt="Iron" />
-          <span id="iron"></span>/<span id="iron-storage"></span>
-        </span>
-        <span class="hud-stat" title="Net energy per hour, storage">
-          <img src="/src/assets/icons/electricity.png" alt="Energy" />
-          <span id="energy"></span>/hr
-          <span class="hud-muted">(storage <span id="energy-storage"></span>)</span>
-        </span>
-        <span class="hud-divider" aria-hidden="true">|</span>
-        <span class="hud-label">Build:</span>
-        <button type="button" class="hud-button" data-build="solar" aria-pressed="false">Solar</button>
-        <button type="button" class="hud-button" data-build="block" aria-pressed="false">Block</button>
-        <span class="hud-hint">Q/E rotate · wheel zoom · P pause · Esc cancel</span>
-      </header>
+    <main id="game" class="game">
+      <svg class="symbols" aria-hidden="true">
+        <symbol id="icon-iron" viewBox="0 0 24 24">
+          <path d="M12 2 17 9 12 22 7 9Z" fill="currentColor" opacity="0.9" />
+          <path d="M5 8 8 12 6 18 2 12Z M19 8 22 12 18 18 16 12Z" fill="currentColor" opacity="0.55" />
+        </symbol>
+        <symbol id="icon-energy" viewBox="0 0 24 24">
+          <path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6Z" fill="currentColor" />
+        </symbol>
+      </svg>
 
-      <output id="message" class="message" hidden></output>
+      <section class="resources glass" aria-label="Resources">
+        <div class="stat" title="Iron in store / storage capacity">
+          <svg class="icon stat-icon iron" aria-hidden="true"><use href="#icon-iron" /></svg>
+          <div>
+            <div class="label">Iron</div>
+            <div class="value">
+              <span id="iron"></span><span class="cap"> / <span id="iron-storage"></span></span>
+            </div>
+          </div>
+        </div>
+        <div class="stat" title="Net energy production per hour, and storage capacity">
+          <svg class="icon stat-icon energy" aria-hidden="true"><use href="#icon-energy" /></svg>
+          <div>
+            <div class="label">Energy</div>
+            <div class="value">
+              <span id="energy"></span><span class="unit">/h</span>
+              <span class="cap">· store <span id="energy-storage"></span></span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <dialog id="pause" class="pause">
+      <output id="message" class="toast glass" hidden></output>
+
+      <section id="selection" class="selection glass" aria-label="Selection" hidden>
+        <div class="label">Selected</div>
+        <ul id="selection-list" class="selection-list"></ul>
+      </section>
+
+      <nav class="build glass" aria-label="Build">
+        <div class="label build-title">Build</div>
+        <div id="build-items" class="build-items"></div>
+      </nav>
+
+      <details class="help glass">
+        <summary title="Controls">?</summary>
+        <dl class="controls">
+          <dt>Left click / drag</dt>
+          <dd>Select, or place a building</dd>
+          <dt>Right click / drag</dt>
+          <dd>Move, or mine iron</dd>
+          <dt><kbd>Shift</kbd> + right click</dt>
+          <dd>Queue the order</dd>
+          <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt>
+          <dd>Pan the camera</dd>
+          <dt><kbd>Q</kbd><kbd>E</kbd> / middle drag</dt>
+          <dd>Rotate</dd>
+          <dt>Wheel</dt>
+          <dd>Zoom</dd>
+          <dt><kbd>1</kbd><kbd>2</kbd></dt>
+          <dd>Pick a building</dd>
+          <dt><kbd>C</kbd> / <kbd>Shift</kbd>+<kbd>C</kbd></dt>
+          <dd>Cancel next / all orders</dd>
+          <dt><kbd>Esc</kbd></dt>
+          <dd>Cancel placing, deselect</dd>
+          <dt><kbd>P</kbd></dt>
+          <dd>Pause</dd>
+        </dl>
+      </details>
+
+      <dialog id="pause" class="pause glass">
         <h1>Paused</h1>
-        <button type="button" id="pause-continue" class="button" autofocus>Continue</button>
-        <button type="button" id="pause-fullscreen" class="button">Fullscreen on/off</button>
+        <p class="pause-note">The game stops whenever the window loses focus.</p>
+        <div class="pause-actions">
+          <button type="button" id="pause-continue" class="button primary" autofocus>Continue</button>
+          <button type="button" id="pause-fullscreen" class="button">Fullscreen</button>
+          <a class="button" href="./index.html">Main menu</a>
+        </div>
       </dialog>
     </main>
   </body>

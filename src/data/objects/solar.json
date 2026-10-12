@@ -1,9 +1,16 @@
 {
+  "label": "Solar array",
+  "description": "Generates energy.",
   "skills": {},
   "footprint": 1,
   "radius": 0.5,
   "communicationRadius": 0,
   "energy": 2,
-  "cost": { "iron": 10000 },
-  "storage": { "iron": 0, "energy": 0 }
+  "cost": {
+    "iron": 10000
+  },
+  "storage": {
+    "iron": 0,
+    "energy": 0
+  }
 }

@@ -79,7 +79,6 @@ export class Renderer {
   private readonly markers: THREE.Mesh[] = [];
   private readonly markerGeometry = new THREE.RingGeometry(0.16, 0.24, 24).rotateX(-Math.PI / 2);
   private readonly markerMaterial = new THREE.MeshBasicMaterial({
-    color: "#ffe26a",
     transparent: true,
     opacity: 0.85,
     depthWrite: false,
@@ -497,6 +496,7 @@ export class Renderer {
   }
 
   private renderMarkers(state: GameState): void {
+    this.markerMaterial.color.copy(glowColor(state.player.color));
     let used = 0;
     for (const unit of state.selection) {
       for (const action of unit.actions) {

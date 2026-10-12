@@ -1,8 +1,13 @@
 {
+  "label": "Mind",
+  "description": "You. Stores iron and energy.",
   "skills": {},
   "footprint": 3,
   "radius": 1.5,
   "communicationRadius": 10,
   "energy": -6,
-  "storage": { "iron": 20000, "energy": 2000 }
+  "storage": {
+    "iron": 20000,
+    "energy": 2000
+  }
 }

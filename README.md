@@ -20,6 +20,7 @@ It started in 2014 as a 2D isometric game ([2015 screenshot](docs/screenshot-201
 | W A S D / arrow keys | Pan the camera (hold Shift to pan faster) |
 | Q / E, or middle-mouse drag | Rotate the camera |
 | Mouse wheel | Zoom |
+| 1 / 2 | Pick a building from the build bar (press again to put it away) |
 | Shift while placing | Keep the building selected to place more |
 | C / Shift + C | Cancel the next order / all orders of the selection |
 | Esc | Leave build mode and clear the selection |
@@ -54,6 +55,7 @@ Run `npx playwright install chromium` once before the first `npm run test:e2e`.
 - **TypeScript** and **Vite**, built as two pages: `index.html` (start menu) and `game.html`.
 - **Three.js** renders the world in 3D with `WebGPURenderer`: WebGPU where the browser supports it, WebGL 2 otherwise. Shadows and bloom are included, and all models are built in code (`models.ts`), with no asset files.
 - **simplex-noise** with an **Alea** seeded random generator for terrain and iron.
+- The interface is plain HTML and CSS overlaid on the 3D view: translucent glass panels with luminous edges, accented in the player's colour. Icons are inline SVG.
 - **Biome** for linting and formatting, **Vitest** for unit tests and **Playwright** for browser tests.
 
 ### Layout
@@ -71,11 +73,11 @@ src/
     renderer.ts     Three.js scene: terrain meshes, units, previews, camera, picking
     models.ts       procedural 3D models: the Mind, drones, towers, solar arrays, iron
     input.ts        mouse and keyboard handling, picking through the 3D view
-    hud.ts          resource bar, build buttons, messages, pause dialog
+    hud.ts          resources, build bar, selection panel, messages, pause dialog
     definitions.ts  typed access to the JSON data below
   data/             object and resource definitions (JSON)
-  assets/           HUD icons, fonts
-  styles/           CSS
+  assets/           fonts
+  styles/           CSS: shared design tokens and glass panels, menu and in-game HUD
 tests/              unit tests
 e2e/                browser tests
 art/                source artwork (GIMP .xcf), the old 2D sprites and unused images, not shipped

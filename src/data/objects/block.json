@@ -1,12 +1,25 @@
 {
-  "skills": { "walk": true, "gather": true },
+  "label": "Worker drone",
+  "description": "Hovers low and mines iron.",
+  "skills": {
+    "walk": true,
+    "gather": true
+  },
   "movement": "ground",
   "speed": 3,
   "radius": 0.25,
   "altitude": 0.45,
   "communicationRadius": 1,
   "energy": -1,
-  "cost": { "iron": 1000 },
-  "capacity": { "energy": 100, "iron": 50 },
-  "storage": { "iron": 0, "energy": 0 }
+  "cost": {
+    "iron": 1000
+  },
+  "capacity": {
+    "energy": 100,
+    "iron": 50
+  },
+  "storage": {
+    "iron": 0,
+    "energy": 0
+  }
 }

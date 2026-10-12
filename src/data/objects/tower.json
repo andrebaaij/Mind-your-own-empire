@@ -1,9 +1,16 @@
 {
+  "label": "Sensor spire",
+  "description": "Watches over the land around it.",
   "skills": {},
   "footprint": 1,
   "radius": 0.4,
   "communicationRadius": 3,
   "energy": -2,
-  "cost": { "iron": 30000 },
-  "storage": { "iron": 0, "energy": 0 }
+  "cost": {
+    "iron": 30000
+  },
+  "storage": {
+    "iron": 0,
+    "energy": 0
+  }
 }

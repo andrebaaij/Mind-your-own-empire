@@ -4,94 +4,384 @@ html,
 body {
   height: 100%;
   overflow: hidden;
-  background: #000;
 }
 
-#game {
+.game {
   position: fixed;
   inset: 0;
   user-select: none;
+  -webkit-user-select: none;
 }
 
-#game canvas {
+.game canvas {
   display: block;
 }
 
-.hud {
+.symbols {
   position: absolute;
-  inset: 0 0 auto;
-  height: 25px;
+  width: 0;
+  height: 0;
+}
+
+/* Overlay panels sit above the canvas, clear of the screen edges. */
+.resources,
+.toast,
+.selection,
+.build,
+.help {
+  position: absolute;
+  z-index: 1;
+}
+
+/* --- Resources (top left) --- */
+
+.resources {
+  top: 14px;
+  left: 14px;
+  display: flex;
+  gap: 22px;
+  padding: 10px 16px;
+}
+
+.stat {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-inline: 6px;
-  background: var(--bg);
-  color: var(--fg-strong);
-  line-height: 25px;
+  gap: 10px;
+}
+
+.stat-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.stat-icon.iron {
+  color: var(--iron);
+  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--iron) 60%, transparent));
+}
+
+.stat-icon.energy {
+  color: var(--energy);
+  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--energy) 60%, transparent));
+}
+
+.stat .label {
+  font-size: 0.65rem;
+}
+
+.value {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.hud img {
-  vertical-align: middle;
-  image-rendering: pixelated;
+.value .cap,
+.value .unit {
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
-.hud-stat {
+.value .negative {
+  color: var(--danger);
+}
+
+/* --- Toast (top centre) --- */
+
+.toast {
+  top: 14px;
+  left: 50%;
+  translate: -50% 0;
+  max-width: min(520px, calc(100vw - 28px));
+  padding: 10px 18px;
+  border-color: var(--edge-strong);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.05em;
+  text-align: center;
+  animation: toast-in 0.25s ease-out;
+}
+
+.toast.warning {
+  border-color: color-mix(in oklab, var(--danger) 60%, transparent);
+  color: color-mix(in oklab, var(--danger) 40%, white);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    translate: -50% -8px;
+  }
+}
+
+/* --- Selection (bottom left) --- */
+
+.selection {
+  left: 14px;
+  bottom: 14px;
+  min-width: 220px;
+  max-width: 300px;
+  padding: 10px 14px 12px;
+}
+
+.selection-list {
+  list-style: none;
+  margin-top: 6px;
+  display: grid;
+  gap: 6px;
+}
+
+.selection-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: baseline;
+}
+
+.selection-count {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.selection-name {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+}
+
+.selection-status {
+  grid-column: 2;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* --- Build bar (bottom centre) --- */
+
+.build {
+  left: 50%;
+  bottom: 14px;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+}
+
+.build-title {
+  writing-mode: vertical-rl;
+  rotate: 180deg;
+  padding: 4px 2px;
+}
+
+.build-items {
+  display: flex;
+  gap: 8px;
+}
+
+.build-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  align-items: center;
+  width: 190px;
+  padding: 8px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.03);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.build-item:hover,
+.build-item:focus-visible {
+  border-color: var(--edge-strong);
+  background: rgb(255 255 255 / 0.06);
+  outline: none;
+}
+
+.build-item[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 18px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.build-item kbd {
+  grid-row: span 2;
+}
+
+.build-name {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+}
+
+.build-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.build-meta span {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
-.hud-muted,
-.hud-hint {
-  color: var(--fg);
+.build-meta .icon {
+  width: 0.95em;
+  height: 0.95em;
 }
 
-.hud-hint {
-  margin-inline-start: auto;
+.build-meta .iron {
+  color: var(--iron);
 }
 
-.hud-button {
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
+.build-meta .energy {
+  color: var(--energy);
+}
+
+.build-item.unaffordable .build-name,
+.build-item.unaffordable .build-meta {
+  opacity: 0.45;
+}
+
+.build-item.unaffordable .iron {
+  color: var(--danger);
+}
+
+/* --- Help (bottom right) --- */
+
+.help {
+  right: 14px;
+  bottom: 14px;
+  max-width: 340px;
+}
+
+.help summary {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--muted);
   cursor: pointer;
-  padding-inline: 4px;
+  list-style: none;
 }
 
-.hud-button:hover,
-.hud-button[aria-pressed="true"] {
-  background: var(--fg-strong);
-  color: var(--bg);
+.help summary::-webkit-details-marker {
+  display: none;
 }
 
-.message {
+.help[open] summary {
+  color: var(--accent);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  padding: 0 16px 14px;
+  font-size: 0.85rem;
+}
+
+.controls dt {
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.controls dd {
+  color: var(--muted);
+}
+
+/* --- Selection box and pause --- */
+
+.selection-box {
   position: absolute;
-  top: 30px;
-  left: 5px;
-  padding: 2px 5px;
-  background: yellow;
-  color: red;
+  border: 1px solid var(--accent);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--accent) 30%, transparent);
+  pointer-events: none;
 }
 
 .pause {
   margin: auto;
-  width: min(400px, 90vw);
+  width: min(420px, 90vw);
   padding: 30px;
-  border: 2px solid var(--border);
-  background: var(--bg);
-  color: var(--fg);
+  color: var(--text);
   text-align: center;
 }
 
-.pause::backdrop {
-  background: rgb(0 0 0 / 0.6);
+.pause h1 {
+  font-size: 2.4rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
 
-.selection-box {
-  position: absolute;
-  border: 1px solid rgb(255 255 255 / 0.8);
-  background: rgb(255 255 255 / 0.12);
-  pointer-events: none;
+.pause-note {
+  margin: 4px 0 22px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.pause-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.pause-actions a {
+  text-decoration: none;
+}
+
+.pause::backdrop {
+  background: rgb(3 4 8 / 0.55);
+  backdrop-filter: blur(4px);
+}
+
+/* Small screens: stack the panels so nothing overlaps. */
+@media (max-width: 760px) {
+  .toast {
+    top: 90px;
+  }
+
+  .resources {
+    right: 14px;
+    gap: 14px;
+    justify-content: space-between;
+  }
+
+  .build {
+    left: 14px;
+    right: 14px;
+    translate: none;
+  }
+
+  .build-items {
+    flex: 1;
+  }
+
+  .build-item {
+    width: auto;
+    flex: 1;
+  }
+
+  .selection {
+    bottom: 104px;
+  }
+
+  .help {
+    bottom: 104px;
+  }
 }

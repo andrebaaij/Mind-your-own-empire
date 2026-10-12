@@ -26,3 +26,26 @@ export function playerColor(name: string | null): Color {
 export function toCss(color: Color): string {
   return `rgb(${color.r} ${color.g} ${color.b} / ${color.a})`;
 }
+
+/** Neutral players glow the pale cyan of a drone's aura field. */
+export const NEUTRAL_GLOW = "#8fe8ff";
+
+/**
+ * The saturated, luminous version of a (pastel) player colour, as a CSS colour. Used for
+ * aura fields and interface accents alike.
+ */
+export function glowCss(color: Color): string {
+  const r = color.r / 255;
+  const g = color.g / 255;
+  const b = color.b / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max - min < 0.05) return NEUTRAL_GLOW;
+
+  let hue: number;
+  if (max === r) hue = ((g - b) / (max - min) + 6) % 6;
+  else if (max === g) hue = (b - r) / (max - min) + 2;
+  else hue = (r - g) / (max - min) + 4;
+  // Comma syntax: Three.js parses only that form.
+  return `hsl(${Math.round(hue * 60)}, 80%, 62%)`;
+}

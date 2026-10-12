@@ -1,10 +1,4 @@
 @font-face {
-  font-family: "Visitor";
-  src: url("../assets/fonts/visitor2.ttf") format("truetype");
-  font-display: swap;
-}
-
-@font-face {
   font-family: "Ropa Sans";
   src: url("../assets/fonts/RopaSans-Regular.ttf") format("truetype");
   font-display: swap;
@@ -12,12 +6,26 @@
 
 :root {
   color-scheme: dark;
-  --bg: #0a0a0a;
-  --fg: #bbbbbb;
-  --fg-strong: #ffffff;
-  --border: #4d5255;
-  --font-pixel: "Visitor", ui-monospace, monospace;
-  --font-body: "Ropa Sans", system-ui, sans-serif;
+
+  /* Deep space, glass panels, and a luminous accent in the player's colour. */
+  --space: #05060b;
+  --panel: rgb(13 17 27 / 0.72);
+  --panel-solid: #0d111b;
+  --edge: rgb(170 220 255 / 0.16);
+  --edge-strong: rgb(170 220 255 / 0.32);
+  --text: #e7edf6;
+  --muted: #8e99ab;
+  --faint: #5b6577;
+  --accent: #8fe8ff;
+  --accent-soft: color-mix(in oklab, var(--accent) 18%, transparent);
+  --danger: #ff6b6b;
+  --iron: #f0a060;
+  --energy: #ffd76a;
+
+  --font-display: "Ropa Sans", system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 10px;
+  --blur: blur(14px) saturate(140%);
 }
 
 *,
@@ -30,31 +38,114 @@
 
 html,
 body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-pixel);
-  font-size: 18px;
+  background: var(--space);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1 {
-  color: var(--fg-strong);
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
   font-weight: 400;
-  font-size: 3rem;
+  letter-spacing: 0.06em;
+}
+
+a {
+  color: var(--accent);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.4em;
+  border: 1px solid var(--edge-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--text);
+  background: rgb(255 255 255 / 0.04);
+}
+
+/* A frosted panel with a thin luminous edge. */
+.glass {
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  box-shadow:
+    0 10px 30px rgb(0 0 0 / 0.35),
+    inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+.label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .button {
-  display: block;
-  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
   height: 40px;
-  margin: 10px 0;
-  border: none;
-  background: var(--fg-strong);
-  color: var(--bg);
-  font: inherit;
+  padding: 0 1.2em;
+  border: 1px solid var(--edge-strong);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.04);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .button:hover,
 .button:focus-visible {
-  filter: brightness(0.85);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  outline: none;
+}
+
+.button.primary {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 85%, black);
+  color: var(--space);
+  box-shadow: 0 0 24px color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+.button.primary:hover,
+.button.primary:focus-visible {
+  background: var(--accent);
+}
+
+.icon {
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must win over every rule */
+    transition: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must win over every rule */
+    animation: none !important;
+  }
 }

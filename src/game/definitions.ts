@@ -6,6 +6,10 @@ export type Skill = "walk" | "gather" | "scout";
 export type Movement = "ground" | "air";
 
 export interface ObjectDefinition {
+  /** Name shown in the interface. */
+  label: string;
+  /** One-line description for tooltips and the build bar. */
+  description: string;
   skills: Partial<Record<Skill, boolean>>;
   /** How a mobile unit moves. Objects without the walk skill don't move. */
   movement?: Movement;

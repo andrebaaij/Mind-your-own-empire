@@ -3,55 +3,78 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="/src/assets/icons/electricity.png" />
-    <title>Mind your own Empire!</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Mind your own Empire</title>
     <script type="module" src="/src/menu.ts"></script>
   </head>
   <body>
+    <div class="backdrop" aria-hidden="true">
+      <div class="stars"></div>
+      <div class="halo"></div>
+    </div>
+
     <main class="menu">
-      <section class="panel">
-        <h1>Play</h1>
-        <form class="play-form" action="./game.html" method="get">
-          <label for="name">Name</label>
-          <input id="name" name="name" value="Pleasant surprise" autocomplete="off" />
+      <header class="title">
+        <h1>Mind your own Empire</h1>
+        <p class="tagline">A real-time strategy game inspired by Iain M. Banks' Culture</p>
+      </header>
 
-          <label for="color">Color</label>
-          <select id="color" name="color">
-            <option value="white">White</option>
-            <option value="red">Red</option>
-            <option value="green">Green</option>
-            <option value="blue">Blue</option>
-            <option value="magenta">Magenta</option>
-            <option value="cyan">Cyan</option>
-            <option value="yellow">Yellow</option>
-          </select>
+      <div class="panels">
+        <section class="panel glass" aria-labelledby="new-game">
+          <h2 id="new-game" class="label">New game</h2>
+          <form class="play-form" action="./game.html" method="get">
+            <label class="field">
+              <span class="label">Mind's name</span>
+              <input name="name" value="Pleasant Surprise" autocomplete="off" maxlength="40" />
+            </label>
 
-          <label for="seed">Seed</label>
-          <input id="seed" name="seed" type="number" value="1500" />
+            <fieldset class="field">
+              <legend class="label">Aura colour</legend>
+              <div id="colors" class="swatches"></div>
+            </fieldset>
 
-          <button id="play" type="submit" class="button">PLAY</button>
-        </form>
-        <img class="controls" src="/src/assets/ui/controls.png" alt="Controls: mouse to select and order units, W A S D (with Shift for speed) to scroll, C (with Shift for all) to cancel orders" />
-      </section>
+            <div class="field">
+              <label class="label" for="seed">World seed</label>
+              <div class="seed-row">
+                <input id="seed" name="seed" type="number" value="1500" />
+                <button type="button" id="random-seed" class="button">Random</button>
+              </div>
+            </div>
 
-      <section class="panel about">
-        <h1>About</h1>
-        <p>
-          You are a Mind, landed on a new planet. You command/upgrade your minions/buildings. They
-          will be mining resources, fighting off the original inhabitants/other interested races and
-          building for you... The story will be a bit better in the future :)
-        </p>
-        <h1>Alpha version</h1>
-        <p>
-          The game is a procedurally sandboxed RTS; you could say it is kind of a Minecraft RTS in
-          that aspect. Just give it a try and let us know what you think at
-          <a href="https://twitter.com/andrebaaij">@andrebaaij</a>.
-        </p>
-        <p>
-          If you are interested in looking at the code, open a bug or help us squash those bugs,
-          look at our <a href="https://github.com/andrebaaij/mind-your-own-empire">GitHub repository</a>.
-        </p>
-      </section>
+            <button type="submit" class="button primary play">Play</button>
+          </form>
+        </section>
+
+        <section class="panel glass about" aria-labelledby="about">
+          <h2 id="about" class="label">About</h2>
+          <p>
+            You are a Mind, arrived on a new world to prepare it for the people who will follow.
+            Your drones mine and build for you; one day they will have to deal with the original
+            inhabitants and other interested parties, too.
+          </p>
+          <p>
+            This is an early prototype that started life in 2014 as a 2D side project. Explore the
+            procedurally generated terrain, send drones over the hills, mine iron and raise solar
+            arrays. Tell <a href="https://twitter.com/andrebaaij">@andrebaaij</a> what you think,
+            or have a look at the
+            <a href="https://github.com/andrebaaij/mind-your-own-empire">code on GitHub</a>.
+          </p>
+
+          <h3 class="label controls-title">Controls</h3>
+          <dl class="controls">
+            <dt>Left click / drag</dt>
+            <dd>Select drones, place buildings</dd>
+            <dt>Right click</dt>
+            <dd>Move, or mine iron</dd>
+            <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <kbd>Q</kbd><kbd>E</kbd> · wheel</dt>
+            <dd>Pan · rotate · zoom</dd>
+            <dt><kbd>1</kbd><kbd>2</kbd></dt>
+            <dd>Pick a building</dd>
+            <dt><kbd>P</kbd></dt>
+            <dd>Pause</dd>
+          </dl>
+        </section>
+      </div>
     </main>
   </body>
 </html>

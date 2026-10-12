@@ -1,58 +1,234 @@
 @import "./base.css";
 
+body {
+  min-height: 100vh;
+}
+
+/* --- Backdrop: deep space, scattered stars and a faint halo, like the Mind's --- */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 70% 110%, rgb(40 70 120 / 0.35), transparent 60%),
+    radial-gradient(ellipse at 10% -10%, rgb(90 40 110 / 0.25), transparent 55%), var(--space);
+}
+
+.stars {
+  position: absolute;
+  inset: -50%;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, rgb(255 255 255 / 0.8), transparent),
+    radial-gradient(1px 1px at 140px 90px, rgb(200 230 255 / 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 260px 180px, rgb(255 255 255 / 0.7), transparent),
+    radial-gradient(1px 1px at 330px 40px, rgb(255 240 220 / 0.5), transparent),
+    radial-gradient(1px 1px at 80px 220px, rgb(255 255 255 / 0.4), transparent);
+  background-size: 360px 260px;
+  animation: drift 240s linear infinite;
+}
+
+@keyframes drift {
+  to {
+    translate: 360px 260px;
+  }
+}
+
+.halo {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  width: min(1400px, 160vw);
+  aspect-ratio: 3.2;
+  translate: -50% -50%;
+  border: 2px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 60px color-mix(in oklab, var(--accent) 25%, transparent),
+    inset 0 0 60px color-mix(in oklab, var(--accent) 15%, transparent);
+  opacity: 0.35;
+  transition:
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+
+/* --- Layout --- */
+
 .menu {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 30px;
-  padding: 30px;
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  padding: clamp(24px, 6vh, 72px) 20px 40px;
+}
+
+.title {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.title h1 {
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-shadow: 0 0 30px color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+.tagline {
+  margin-top: 6px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .panels {
+    grid-template-columns: 1fr;
+  }
 }
 
 .panel {
-  width: 300px;
+  padding: 22px 24px 24px;
 }
 
-.panel.about {
-  width: min(500px, 100%);
+.panel > .label {
+  margin-bottom: 16px;
 }
+
+/* --- New game form --- */
 
 .play-form {
   display: grid;
-  grid-template-columns: 100px 1fr;
-  gap: 2px 0;
-  align-items: center;
-  margin-top: 10px;
+  gap: 18px;
 }
 
-.play-form label {
-  color: var(--fg-strong);
+.field {
+  display: grid;
+  gap: 6px;
+  border: none;
 }
 
-.play-form input,
-.play-form select {
-  height: 24px;
-  padding: 2px 5px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--fg-strong);
+.field legend {
+  margin-bottom: 6px;
+}
+
+.play-form input {
+  height: 40px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 8px;
+  background: rgb(0 0 0 / 0.3);
+  color: var(--text);
   font: inherit;
+  font-size: 1rem;
 }
 
-.play-form .button {
-  grid-column: 1 / -1;
+.play-form input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.seed-row {
+  display: flex;
+  gap: 8px;
+}
+
+.seed-row .button {
+  flex: none;
+}
+
+.play {
+  height: 48px;
+  margin-top: 6px;
+  font-size: 1.2rem;
+  letter-spacing: 0.3em;
+}
+
+/* Colour swatches: real radio buttons, drawn as glowing dots. */
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.swatch {
+  position: relative;
+  cursor: pointer;
+}
+
+.swatch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.swatch-dot {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--swatch);
+  border: 2px solid rgb(255 255 255 / 0.15);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--swatch) 40%, transparent);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+
+.swatch:hover .swatch-dot {
+  transform: scale(1.1);
+}
+
+.swatch input:checked + .swatch-dot {
+  border-color: white;
+  box-shadow:
+    0 0 0 3px var(--panel-solid),
+    0 0 0 5px var(--swatch),
+    0 0 18px var(--swatch);
+}
+
+.swatch input:focus-visible + .swatch-dot {
+  outline: 2px solid white;
+  outline-offset: 4px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* --- About --- */
+
+.about p {
+  margin-bottom: 12px;
+  color: color-mix(in oklab, var(--text) 85%, var(--muted));
+  line-height: 1.6;
+}
+
+.controls-title {
+  margin: 20px 0 10px;
 }
 
 .controls {
-  margin-top: 30px;
-  max-width: 100%;
-  image-rendering: pixelated;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  font-size: 0.9rem;
 }
 
-.about p {
-  margin: 10px 0 20px;
-  font-family: var(--font-body);
-  line-height: 1.4;
-}
-
-.about a {
-  color: var(--fg-strong);
+.controls dd {
+  color: var(--muted);
 }

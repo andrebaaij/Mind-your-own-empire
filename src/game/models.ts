@@ -5,17 +5,13 @@
 
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import * as THREE from "three/webgpu";
+import { glowCss } from "./colors";
 import type { ObjectName } from "./definitions";
 import type { Color } from "./units";
 
 /** A saturated glow colour derived from a (pastel) player colour. */
 export function glowColor(color: Color): THREE.Color {
-  const base = new THREE.Color(color.r / 255, color.g / 255, color.b / 255);
-  const hsl = { h: 0, s: 0, l: 0 };
-  base.getHSL(hsl);
-  // Neutral players glow the pale cyan of a drone's aura field.
-  if (hsl.s < 0.05) return new THREE.Color("#8fe8ff");
-  return new THREE.Color().setHSL(hsl.h, Math.max(hsl.s, 0.75), 0.6);
+  return new THREE.Color(glowCss(color));
 }
 
 const hull = new THREE.MeshStandardMaterial({ color: "#b7bdc9", metalness: 0.35, roughness: 0.3 });

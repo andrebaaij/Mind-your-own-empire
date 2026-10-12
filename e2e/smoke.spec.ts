@@ -13,9 +13,10 @@ test("start a game from the menu and build a solar panel", async ({ page }) => {
   const errors = collectErrors(page);
 
   await page.goto("/");
-  await page.getByLabel("Name").fill("Tester");
-  await page.getByLabel("Color").selectOption("green");
-  await page.getByRole("button", { name: "PLAY" }).click();
+  await page.getByLabel("Mind's name").fill("Tester");
+  await page.locator('label.swatch[title="Green"]').click();
+  await expect(page.getByRole("radio", { name: "Green" })).toBeChecked();
+  await page.getByRole("button", { name: "Play" }).click();
 
   await expect(page).toHaveURL(/game\.html\?name=Tester&color=green&seed=1500/);
   await expect(page.locator("#message")).toHaveText("Welcome Tester, good luck!");
@@ -76,4 +77,19 @@ test("the game canvas renders the world", async ({ page }) => {
   }, png.toString("base64"));
 
   expect(r + g + b).toBeGreaterThan(60);
+});
+
+test("number keys pick buildings from the build bar", async ({ page }) => {
+  await page.goto("/game.html");
+  await expect(page.locator("#iron")).toHaveText("100,000");
+  const solar = page.getByRole("button", { name: /Solar array/ });
+  const drone = page.getByRole("button", { name: /Worker drone/ });
+
+  await page.keyboard.press("1");
+  await expect(solar).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("2");
+  await expect(solar).toHaveAttribute("aria-pressed", "false");
+  await expect(drone).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+  await expect(drone).toHaveAttribute("aria-pressed", "false");
 });

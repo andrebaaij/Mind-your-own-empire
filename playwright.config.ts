@@ -4,6 +4,8 @@ const port = 4173;
 
 export default defineConfig({
   testDir: "e2e",
+  // Software-rendered 3D on CI runners is slow to start; give assertions room.
+  expect: { timeout: 15_000 },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",

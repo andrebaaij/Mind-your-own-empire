@@ -1,4 +1,5 @@
 import { gridFromWorld, type Point, rectFromPoints } from "./coords";
+import { BUILDABLE, getObjectDefinition } from "./definitions";
 import type { Hud } from "./hud";
 import type { Renderer } from "./renderer";
 import {
@@ -120,8 +121,11 @@ export function bindInput(
           state.building,
           buildTiles(state.pointer),
         );
-        if (outOfIron) hud.showMessage(`Not enough iron to build a ${state.building}`, 10_000);
-        else if (built === 0 && blocked > 0) hud.showMessage("You can't build there", 3_000);
+        const { label } = getObjectDefinition(state.building);
+        if (outOfIron)
+          hud.showMessage(`Not enough iron for a ${label.toLowerCase()}`, 4_000, "warning");
+        else if (built === 0 && blocked > 0)
+          hud.showMessage("You can't build there", 3_000, "warning");
         // Hold Shift to keep placing; a click on blocked ground keeps the building selected.
         if (!event.shiftKey && !outOfIron && built > 0) state.building = null;
       } else if (click) {
@@ -165,6 +169,11 @@ export function bindInput(
     } else if (event.code === "KeyC") {
       // C drops the next order of the selected units; Shift+C clears all their orders.
       cancelOrders(state, event.shiftKey);
+    } else if (/^Digit[1-9]$/.test(event.code)) {
+      // Number keys pick from the build bar; pressing the same one again puts it away.
+      const name = BUILDABLE[Number(event.code.slice(5)) - 1];
+      if (!name) return;
+      state.building = state.building === name ? null : name;
     } else if (event.code === "KeyP") {
       setPaused(state, hud, !state.paused);
     } else {
