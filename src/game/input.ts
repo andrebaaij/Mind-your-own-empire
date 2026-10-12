@@ -16,6 +16,7 @@ import {
   zoomCamera,
 } from "./state";
 import { setSilent } from "./stealth";
+import type { Unit } from "./units";
 
 /** Screen drags shorter than this many pixels count as a click. */
 const CLICK_PIXELS = 4;
@@ -64,6 +65,10 @@ export function bindInput(
   game.append(box);
 
   const at = (event: PointerEvent | MouseEvent): Point => ({ x: event.clientX, y: event.clientY });
+  /** Control groups, by number. */
+  const groups = new Map<number, Unit[]>();
+  let lastGroup = { number: 0, time: 0 };
+  let lastClick = { name: "", time: 0 };
   // Only the player's own units can be selected.
   const ownUnits = () => state.units.filter((unit) => unit.faction === "player");
   const isClick = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y) < CLICK_PIXELS;
@@ -147,7 +152,18 @@ export function bindInput(
         if (!event.shiftKey && !shortOf && built > 0) state.building = null;
       } else if (click) {
         const unit = renderer.unitAt(end, ownUnits());
-        setSelection(state, unit ? [unit] : []);
+        const now = performance.now();
+        if (unit && lastClick.name === unit.name && now - lastClick.time < 350) {
+          // Double-click: every unit of that kind on screen.
+          const everything = { left: 0, top: 0, right: renderer.width, bottom: renderer.height };
+          setSelection(
+            state,
+            renderer.unitsInScreenRect(everything, ownUnits()).filter((u) => u.name === unit.name),
+          );
+        } else {
+          setSelection(state, unit ? [unit] : []);
+        }
+        lastClick = { name: unit?.name ?? "", time: now };
         // Clicking a Tessilend site shows what it is.
         state.inspecting = unit ? null : siteUnder(end);
       } else {
@@ -195,6 +211,29 @@ export function bindInput(
     } else if (event.code === "KeyC") {
       // C drops the next order of the selected units; Shift+C clears all their orders.
       cancelOrders(state, event.shiftKey);
+    } else if (/^Digit[1-9]$/.test(event.code) && (event.ctrlKey || event.metaKey)) {
+      // Ctrl(+Shift)+number stores the selection as a control group.
+      const number = Number(event.code.slice(5));
+      groups.set(number, [...state.selection]);
+      hud.showMessage(
+        state.selection.length > 0
+          ? `Group ${number}: ${state.selection.length} selected.`
+          : `Group ${number} cleared.`,
+        1_500,
+      );
+    } else if (/^Digit[1-9]$/.test(event.code) && event.shiftKey) {
+      // Shift+number selects a control group; twice in quick succession looks at it.
+      const number = Number(event.code.slice(5));
+      const members = (groups.get(number) ?? []).filter((u) => state.units.includes(u));
+      groups.set(number, members);
+      if (members.length === 0) return;
+      setSelection(state, members);
+      const now = performance.now();
+      const first = members[0];
+      if (first && lastGroup.number === number && now - lastGroup.time < 400) {
+        state.camera.target = { ...first.position };
+      }
+      lastGroup = { number, time: now };
     } else if (/^Digit[1-9]$/.test(event.code)) {
       // Number keys pick from the build bar; pressing the same one again puts it away.
       const name = BUILDABLE[Number(event.code.slice(5)) - 1];

@@ -272,7 +272,7 @@ body {
 
 .selection {
   left: 14px;
-  bottom: 14px;
+  bottom: 214px;
   min-width: 220px;
   max-width: 300px;
   padding: 10px 14px 12px;
@@ -717,4 +717,92 @@ body {
   .objective-list li.fresh {
     animation: none;
   }
+}
+
+/* --- Minimap (bottom left) --- */
+
+.minimap {
+  position: absolute;
+  z-index: 1;
+  left: 14px;
+  bottom: 14px;
+  width: 188px;
+  height: 188px;
+  padding: 0;
+  border-radius: 50%;
+  cursor: crosshair;
+  box-shadow:
+    0 0 0 1px var(--edge-strong),
+    0 10px 30px rgb(0 0 0 / 0.45);
+}
+
+/* --- Settings --- */
+
+.settings {
+  width: min(560px, calc(100vw - 28px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.settings-form {
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+
+.settings-form fieldset {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+}
+
+.settings-form label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-form label:has(input[type="checkbox"]) {
+  justify-content: flex-start;
+}
+
+.settings-form select,
+.settings-form input[type="range"] {
+  min-width: 180px;
+  accent-color: var(--accent);
+}
+
+.settings-form select {
+  padding: 4px 8px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--text);
+  font: inherit;
+}
+
+.settings-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.button.small {
+  height: 30px;
+  padding: 0 0.9em;
+  font-size: 0.85rem;
+  justify-self: start;
+}
+
+.settings-keys .controls {
+  margin: 0;
+}
+
+/* Large text: everything in the interface scales from the root size. */
+:root.text-large {
+  font-size: 118%;
 }

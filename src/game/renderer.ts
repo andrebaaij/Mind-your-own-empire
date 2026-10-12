@@ -50,9 +50,13 @@ export type Quality = "high" | "low";
  * The graphics quality to use: `?quality=high|low` if given, otherwise low on software
  * rendering (no real GPU), high everywhere else.
  */
-export function chooseQuality(params: URLSearchParams): Quality {
+export function chooseQuality(
+  params: URLSearchParams,
+  preferred: Quality | "auto" = "auto",
+): Quality {
   const asked = params.get("quality");
   if (asked === "high" || asked === "low") return asked;
+  if (preferred !== "auto") return preferred;
   try {
     const gl = document.createElement("canvas").getContext("webgl2");
     const info = gl?.getExtension("WEBGL_debug_renderer_info");
@@ -393,6 +397,17 @@ export class Renderer {
     const ground = this.world.heightAt(position.x, position.y);
     const lift = definition.skills.walk ? (definition.altitude ?? 0) : definition.radius * 0.6;
     return new THREE.Vector3(position.x, ground + lift, position.y);
+  }
+
+  /** The camera's view on the ground: where the screen's corners land (for the minimap). */
+  viewFootprint(): Point[] {
+    const corners = [
+      { x: 0, y: this.height },
+      { x: this.width, y: this.height },
+      { x: this.width, y: 0 },
+      { x: 0, y: 0 },
+    ];
+    return corners.map((corner) => this.groundAt(corner)).filter((p): p is Point => p !== null);
   }
 
   /** The Tessilend site drawn under a screen position, if any. */

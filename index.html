@@ -22,6 +22,9 @@
       <div class="panels">
         <section class="panel glass" aria-labelledby="new-game">
           <h2 id="new-game" class="label">Play</h2>
+          <a id="continue" class="button primary continue" href="./game.html?load=1" hidden>
+            Continue <span class="continue-detail"></span>
+          </a>
           <form class="play-form" action="./game.html" method="get">
             <label class="field">
               <span class="label">Mind's name</span>
@@ -34,7 +37,7 @@
             </fieldset>
 
             <fieldset class="field">
-              <legend class="label">Campaign · Act I: Landfall</legend>
+              <legend class="label">Campaign</legend>
               <div id="missions" class="missions"></div>
             </fieldset>
 

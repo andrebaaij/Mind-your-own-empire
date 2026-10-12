@@ -102,6 +102,12 @@
           <dd>Zoom</dd>
           <dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></dt>
           <dd>Pick a building</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>…<kbd>9</kbd></dt>
+          <dd>Store the selection as a group</dd>
+          <dt><kbd>Shift</kbd>+<kbd>1</kbd>…<kbd>9</kbd></dt>
+          <dd>Select a group (twice: look at it)</dd>
+          <dt>Double-click</dt>
+          <dd>Select all of that kind on screen</dd>
           <dt><kbd>.</kbd></dt>
           <dd>Select idle worker drones</dd>
           <dt><kbd>C</kbd> / <kbd>Shift</kbd>+<kbd>C</kbd></dt>
@@ -126,12 +132,62 @@
         <div id="mission-dialog-actions" class="pause-actions"></div>
       </dialog>
 
+      <dialog id="settings" class="pause settings glass" aria-labelledby="settings-title">
+        <h1 id="settings-title">Settings</h1>
+        <form id="settings-form" class="settings-form" method="dialog">
+          <fieldset>
+            <legend class="label">Graphics</legend>
+            <label>
+              Quality
+              <select name="quality">
+                <option value="auto">Automatic</option>
+                <option value="high">High</option>
+                <option value="low">Low (faster)</option>
+              </select>
+            </label>
+            <p class="settings-note" id="settings-reload-note" hidden>
+              Takes effect when the game reloads.
+              <button type="button" id="settings-reload" class="button small">Reload now</button>
+            </p>
+            <label><input type="checkbox" name="reducedMotion" /> Reduce motion (no camera shake)</label>
+            <label>
+              Text size
+              <select name="textSize">
+                <option value="normal">Normal</option>
+                <option value="large">Large</option>
+              </select>
+            </label>
+          </fieldset>
+          <fieldset>
+            <legend class="label">Sound</legend>
+            <label>Master <input type="range" name="master" min="0" max="1" step="0.05" /></label>
+            <label>Ambience <input type="range" name="ambience" min="0" max="1" step="0.05" /></label>
+            <label>Effects <input type="range" name="effects" min="0" max="1" step="0.05" /></label>
+          </fieldset>
+          <fieldset>
+            <legend class="label">The Mind's voice</legend>
+            <label><input type="checkbox" name="voice" /> Speak the Mind's lines aloud</label>
+            <label>Voice volume <input type="range" name="voiceVolume" min="0" max="1" step="0.05" /></label>
+            <button type="button" id="settings-voice-test" class="button small">Hear it</button>
+          </fieldset>
+          <fieldset class="settings-keys">
+            <legend class="label">Controls</legend>
+            <div id="settings-keys"></div>
+          </fieldset>
+          <div class="pause-actions">
+            <button type="submit" class="button primary">Done</button>
+          </div>
+        </form>
+      </dialog>
+
       <dialog id="pause" class="pause glass">
         <h1>Paused</h1>
         <p class="pause-note">The game stops whenever the window loses focus.</p>
         <div class="pause-actions">
           <button type="button" id="pause-continue" class="button primary" autofocus>Continue</button>
           <button type="button" id="pause-fullscreen" class="button">Fullscreen</button>
+          <button type="button" id="pause-save" class="button">Save game</button>
+          <button type="button" id="pause-settings" class="button">Settings</button>
           <a class="button" href="./index.html">Main menu</a>
         </div>
       </dialog>

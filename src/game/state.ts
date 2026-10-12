@@ -107,6 +107,8 @@ export interface Stats {
 }
 
 export interface GameState {
+  /** The seed the world was made from. */
+  seed: string;
   world: World;
   player: Player;
   units: Unit[];
@@ -180,6 +182,7 @@ export function createGame(options: {
   sites?: readonly SiteSpec[];
 }): GameState {
   const state: GameState = {
+    seed: options.seed,
     world: new World(noiseTerrain(createNoise(options.seed)), options.sites),
     player: options.player,
     units: [],

@@ -49,6 +49,12 @@ export function setWardenHome(warden: Unit, home: Point, patrol = PATROL_RADIUS)
   memory.patrol = patrol;
 }
 
+/** Where a warden patrols, and how far (for saving). */
+export function wardenPatrol(warden: Unit): { home: Point; patrol: number } {
+  const memory = memoryOf(warden);
+  return { home: { ...memory.home }, patrol: memory.patrol };
+}
+
 export function isWarden(unit: Unit): boolean {
   return unit.faction === "custody";
 }

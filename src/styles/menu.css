@@ -310,3 +310,24 @@ body {
 .seed-row input {
   min-width: 0;
 }
+
+.continue {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.continue[hidden] {
+  display: none;
+}
+
+.continue-detail {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.mission-act {
+  grid-column: 1 / -1;
+  margin: 10px 0 2px;
+}

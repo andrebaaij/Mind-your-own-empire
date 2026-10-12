@@ -44,11 +44,16 @@ It started in 2014 as a 2D isometric game ([2015 screenshot](docs/screenshot-201
 | 1 / 2 / 3 / 4 | Pick a worker drone, collector, sensor spire or (once learned) scout drone to place (press again to put it away) |
 | Shift while placing | Keep the building selected to place more |
 | . (full stop) | Select idle worker drones and centre on them |
+| Ctrl+Shift+1–9 (or Ctrl+1–9) | Store the selection as a control group |
+| Shift+1–9 | Select a control group; press twice to look at it |
+| Double-click a unit | Select every unit of that kind on screen |
+| Minimap | Left-click or drag to look there; right-click to send the selection |
 | C / Shift + C | Cancel the next order / all orders of the selection |
 | Esc | Leave build mode and clear the selection |
 | P | Pause |
 | R | Run silent: half speed, a third as easy for the Idirans to detect |
 | M | Sound on / off (wind and distant chimes start on your first click or key press) |
+| P, then Save game / Settings | Save (the game also autosaves every two minutes; **Continue** on the main menu picks up the last save), or change graphics, volumes, the Mind's spoken voice, text size and motion |
 
 In Survey mode, the seed on the start screen picks the map, so the same seed always gives the same world.
 

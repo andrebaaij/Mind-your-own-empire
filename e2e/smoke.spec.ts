@@ -24,7 +24,7 @@ test("explore a world from the menu and build a collector", async ({ page }) => 
   await expect(page.locator("#iron")).toHaveText("150");
   await expect(page.locator("#energy")).toHaveText("+10");
 
-  const canvas = page.locator("#game canvas");
+  const canvas = page.locator("#game canvas:not(.minimap)");
   await expect(canvas).toBeVisible();
   const box = await canvas.boundingBox();
   if (!box) throw new Error("canvas has no size");
@@ -124,5 +124,32 @@ test("mission 4: run silent with R, shown in the stealth panel", async ({ page }
     "Plant a decoy beacon",
   );
   await expect(page.getByRole("button", { name: /Decoy beacon/ })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("the minimap, settings and save, then continue from the menu", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/game.html?seed=77");
+  await expect(page.locator("#iron")).toHaveText("150");
+  await expect(page.getByLabel("Minimap")).toBeVisible();
+
+  // Settings, from the pause menu: large text applies at once.
+  await page.keyboard.press("p");
+  await page.getByRole("button", { name: "Settings" }).click();
+  const settings = page.getByRole("dialog", { name: "Settings" });
+  await expect(settings).toBeVisible();
+  await settings.getByLabel("Text size").selectOption("large");
+  await expect(page.locator("html")).toHaveClass(/text-large/);
+  await settings.getByRole("button", { name: "Done" }).click();
+
+  // Save, then carry on from the main menu.
+  await page.getByRole("button", { name: "Save game" }).click();
+  await page.goto("/");
+  const resume = page.getByRole("link", { name: /Continue/ });
+  await expect(resume).toBeVisible();
+  await expect(resume).toContainText("world 77");
+  await resume.click();
+  await expect(page).toHaveURL(/load=1/);
+  await expect(page.locator("#iron")).toHaveText("150");
   expect(errors).toEqual([]);
 });

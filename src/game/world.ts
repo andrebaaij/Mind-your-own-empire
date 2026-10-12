@@ -90,6 +90,16 @@ export class World {
     };
   }
 
+  /** Every chunk generated so far (for saving). */
+  generatedChunks(): Chunk[] {
+    return [...this.chunks.values()];
+  }
+
+  /** Every Tessilend site worked out so far (for saving). */
+  knownSites(): Site[] {
+    return [...this.regions.values()].flat();
+  }
+
   /** The Tessilend sites whose centre lies in region (rx, ry). */
   sitesInRegion(rx: number, ry: number): Site[] {
     const key = `${rx},${ry}`;

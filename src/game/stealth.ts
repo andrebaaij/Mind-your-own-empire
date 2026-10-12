@@ -96,6 +96,16 @@ function memoryOf(skimmer: Unit): SkimmerMemory {
   return memory;
 }
 
+/** What a skimmer has been sent to do (for saving). */
+export function skimmerRole(skimmer: Unit): {
+  guarding: Unit | null;
+  post: Point | null;
+  raiding: boolean;
+} {
+  const memory = memoryOf(skimmer);
+  return { guarding: memory.guarding, post: memory.post, raiding: memory.raiding };
+}
+
 export function isSkimmer(unit: Unit): boolean {
   return unit.faction === "idiran";
 }

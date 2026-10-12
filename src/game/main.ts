@@ -4,10 +4,22 @@ import { glowCss, playerColor } from "./colors";
 import { MAX_TICKS_PER_FRAME, TICK_MS } from "./config";
 import { Hud } from "./hud";
 import { bindInput, setPaused } from "./input";
-import { getMission, MISSIONS, markCompleted, startMission, updateMission } from "./missions";
+import { Minimap } from "./minimap";
+import {
+  getMission,
+  MISSIONS,
+  type MissionDefinition,
+  markCompleted,
+  startMission,
+  updateMission,
+} from "./missions";
 import { chooseQuality, Renderer } from "./renderer";
+import { loadSaved, restore, saveGame } from "./save";
+import { loadSettings } from "./settings";
+import { bindSettings } from "./settingsPanel";
 import { build, canBuild, createGame, issueOrder, say, setSelection, tick } from "./state";
 import { setSilent } from "./stealth";
+import { Voice } from "./voice";
 
 const params = new URLSearchParams(window.location.search);
 const player = {
@@ -15,11 +27,15 @@ const player = {
   color: playerColor(params.get("color")),
 };
 
-// ?mission=<id> plays a campaign mission; anything else is the free-play survey.
-const mission = getMission(params.get("mission") ?? "");
-const state = mission
-  ? startMission(mission, player)
-  : createGame({ seed: params.get("seed") || "1500", player });
+// ?load carries on from the save; ?mission=<id> plays a campaign mission; anything else is
+// the free-play survey.
+const saved = params.has("load") ? loadSaved() : null;
+const state = saved
+  ? restore(saved)
+  : getMission(params.get("mission") ?? "")
+    ? startMission(getMission(params.get("mission") ?? "") as MissionDefinition, player)
+    : createGame({ seed: params.get("seed") || "1500", player });
+const mission = state.mission?.definition;
 
 const game = document.getElementById("game");
 if (!game) throw new Error("Missing #game");
@@ -37,7 +53,9 @@ const hud = new Hud({
 });
 hud.update(state);
 
-if (mission) {
+if (saved) {
+  say(state, "Where were we? Ah, yes.");
+} else if (mission) {
   state.paused = true;
   hud.showBriefing(mission, () => {
     state.paused = false;
@@ -92,9 +110,19 @@ function checkOutcome(): void {
   }
 }
 
-const renderer = await Renderer.create(game, state.world, chooseQuality(params));
+const settings = loadSettings();
+const renderer = await Renderer.create(game, state.world, chooseQuality(params, settings.quality));
 
 const screen = bindInput(renderer, state, hud, game);
+
+const minimap = new Minimap(game, {
+  look: (at) => {
+    state.camera.target = { ...at };
+  },
+  order: (at) => issueOrder(state, at),
+});
+let minimapClock = 0;
+let lastView: { x: number; y: number }[] = [];
 
 // Wind and distant chimes, once the player has clicked or pressed something. M mutes.
 const ambience = new Ambience();
@@ -104,7 +132,53 @@ document.addEventListener("keydown", (event) => {
   hud.showMessage(ambience.toggleMuted() ? "Sound off." : "Sound on. Listen: wind.", 2_000);
 });
 
-hud.onDisplay = (message) => ambience.play(message.tone);
+const voice = new Voice();
+hud.onDisplay = (message) => {
+  ambience.play(message.tone);
+  voice.say(message.text);
+};
+
+/** Put the player's settings into effect. */
+function applySettings(): void {
+  document.documentElement.classList.toggle("text-large", settings.textSize === "large");
+  ambience.setVolumes(settings);
+  voice.enabled = settings.voice;
+  voice.volume = settings.voiceVolume;
+  if (!settings.voice) voice.stop();
+  renderer.reducedMotion = settings.reducedMotion;
+}
+applySettings();
+
+const settingsDialog = document.getElementById("settings") as HTMLDialogElement;
+const settingsPanel = bindSettings(settingsDialog, settings, {
+  apply: applySettings,
+  testVoice: () => {
+    const was = voice.enabled;
+    voice.enabled = true;
+    voice.say("I did say I was only visiting.");
+    voice.enabled = was;
+  },
+  closed: () => {},
+});
+document.getElementById("pause-settings")?.addEventListener("click", () => settingsPanel.open());
+
+/** Save the game, unless it's over; says so unless `quietly`. */
+function save(quietly = false): void {
+  if (state.mission?.outcome) return;
+  const ok = saveGame(state);
+  if (!quietly || !ok) {
+    hud.showMessage(
+      ok
+        ? "Saved. Continue from the main menu."
+        : "Couldn't save: the browser won't let me store it.",
+      2_500,
+      ok ? "success" : "warning",
+    );
+  }
+}
+document.getElementById("pause-save")?.addEventListener("click", () => save());
+// Autosave every two minutes of play.
+let lastAutosave = state.ticks;
 
 // ?debug exposes the game to the console and to scripted browser tests.
 if (params.has("debug")) {
@@ -125,11 +199,20 @@ requestAnimationFrame(function frame(now) {
     accumulator -= TICK_MS;
   }
   checkOutcome();
+  if (state.ticks - lastAutosave >= 120 * 60) {
+    lastAutosave = state.ticks;
+    save(true);
+  }
   ambience.setPaused(state.paused);
   ambience.playEvents(state.events);
   // The camera may have moved, so find the ground under the pointer again.
   state.pointer.world = screen.position ? renderer.groundAt(screen.position) : null;
   renderer.render(state, now / 1000);
+  // The minimap's corners of view are found by ray-marching, so refresh them a few times a second.
+  minimapClock += 1;
+  if (minimapClock % 4 === 0) lastView = renderer.viewFootprint();
+  minimap.update(state, 1 / 60, lastView);
+
   // Effects and sound have both seen this frame's events.
   state.events.length = 0;
   hud.update(state);

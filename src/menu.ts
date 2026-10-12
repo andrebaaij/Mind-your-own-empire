@@ -1,6 +1,7 @@
 import "./styles/menu.css";
 import { glowCss, PLAYER_COLORS, type PlayerColorName } from "./game/colors";
 import { completedMissions, isUnlocked, MISSIONS } from "./game/missions";
+import { loadSaved } from "./game/save";
 
 const swatches = document.getElementById("colors");
 const seed = document.querySelector<HTMLInputElement>("#seed");
@@ -46,7 +47,16 @@ randomSeed?.addEventListener("click", () => {
 const missions = document.getElementById("missions");
 if (missions) {
   const completed = completedMissions();
+  let act = "";
   for (const mission of MISSIONS) {
+    // A heading for each act.
+    if (mission.act !== act) {
+      act = mission.act;
+      const heading = document.createElement("p");
+      heading.className = "mission-act label";
+      heading.textContent = act;
+      missions.append(heading);
+    }
     const unlocked = isUnlocked(mission, completed);
     const done = completed.has(mission.id);
     const button = document.createElement("button");
@@ -61,8 +71,17 @@ if (missions) {
       <span class="mission-state">${done ? "Completed" : unlocked ? "Play" : "Locked"}</span>`;
     missions.append(button);
   }
-  const more = document.createElement("p");
-  more.className = "mission-more";
-  more.textContent = "More missions are on their way. So, the Mind suspects, is something else.";
-  missions.append(more);
+}
+
+// Carry on from the last save, if there is one.
+const saved = loadSaved();
+const resume = document.getElementById("continue");
+if (saved && resume instanceof HTMLAnchorElement) {
+  const what = saved.missionId
+    ? (MISSIONS.find((m) => m.id === saved.missionId)?.title ?? "Campaign")
+    : `Survey, world ${saved.seed}`;
+  resume.hidden = false;
+  resume.href = "./game.html?load=1";
+  const detail = resume.querySelector(".continue-detail");
+  if (detail) detail.textContent = `${what} · saved ${new Date(saved.savedAt).toLocaleString()}`;
 }
