@@ -10,6 +10,13 @@ function byId<T extends HTMLElement = HTMLElement>(id: string): T {
   return element as T;
 }
 
+/** Restart a short "pop" animation on an element, e.g. a number that just went up. */
+function pop(element: HTMLElement): void {
+  element.classList.remove("pop");
+  void element.offsetWidth;
+  element.classList.add("pop");
+}
+
 function format(n: number): string {
   return n.toLocaleString("en");
 }
@@ -105,9 +112,14 @@ export class Hud {
   private readonly queue: Message[] = [];
   private messageUntil = 0;
   private speaker = "Only Visiting";
+  /** Called as each of the Mind's lines appears (for its sound and voice). */
+  onDisplay: ((message: Message) => void) | null = null;
   private shownEconomy = "";
   private shownSelection = "";
   private shownObjectives = "";
+  private shownObjectiveCount = 0;
+  private lastIron = Number.POSITIVE_INFINITY;
+  private lastLattice = Number.POSITIVE_INFINITY;
 
   constructor(handlers: {
     onBuild: (name: ObjectName) => void;
@@ -179,6 +191,10 @@ export class Hud {
     if (key === this.shownEconomy) return;
     this.shownEconomy = key;
 
+    if (economy.iron > this.lastIron) pop(this.iron);
+    if (economy.lattice > this.lastLattice) pop(this.lattice);
+    this.lastIron = economy.iron;
+    this.lastLattice = economy.lattice;
     this.iron.textContent = format(economy.iron);
     this.ironStorage.textContent = format(economy.storage.iron);
     // Lattice only appears once the Mind knows what it is.
@@ -254,6 +270,10 @@ export class Hud {
       ...rows.map((row) => {
         const item = document.createElement("li");
         item.className = row.done ? "done" : "active";
+        // A newly revealed objective slides in.
+        if (rows.length > this.shownObjectiveCount && item.className === "active") {
+          item.classList.add("fresh");
+        }
         const text = document.createElement("span");
         text.className = "objective-text";
         text.textContent = row.text;
@@ -273,6 +293,7 @@ export class Hud {
         return item;
       }),
     );
+    this.shownObjectiveCount = rows.length;
   }
 
   /** Take the Mind's new lines from the game and show them one after another. */
@@ -286,6 +307,7 @@ export class Hud {
   }
 
   private display(message: Message): void {
+    this.onDisplay?.(message);
     this.messageSpeaker.textContent = this.speaker;
     this.messageText.textContent = message.text;
     this.message.classList.toggle("warning", message.tone === "warning");

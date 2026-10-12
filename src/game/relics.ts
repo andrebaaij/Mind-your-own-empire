@@ -13,6 +13,7 @@
 
 import { TICK_RATE } from "./config";
 import { distance, gridRef, type Point } from "./coords";
+import { emit } from "./events";
 import { findFreeSpots } from "./pathfinding";
 import type { Site, SiteKind } from "./sites";
 import { type GameState, say, workRate } from "./state";
@@ -219,6 +220,7 @@ function payAndWake(state: GameState, site: Site): void {
 export function wake(state: GameState, site: Site): void {
   site.status = "awake";
   state.awake.push(site);
+  emit(state, { kind: "woke", at: { ...site.center } });
   state.stats.studied[site.kind] = (state.stats.studied[site.kind] ?? 0) + 1;
   switch (site.kind) {
     case "marker":

@@ -616,3 +616,105 @@ body {
     bottom: 104px;
   }
 }
+
+/* --- Floating numbers and words over the world --- */
+
+.floaters {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.floater {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--text);
+  text-shadow:
+    0 1px 3px rgb(0 0 0 / 0.8),
+    0 0 12px rgb(0 0 0 / 0.4);
+  will-change: transform, opacity;
+}
+
+.floater.bloom {
+  color: var(--iron);
+}
+
+.floater.lattice {
+  color: var(--lattice);
+}
+
+/* --- Motion: buttons respond, numbers pop, objectives arrive --- */
+
+.build-item,
+.silent-toggle,
+.button {
+  transition:
+    transform 0.12s ease,
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.build-item:hover:not(.unaffordable),
+.silent-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+}
+
+.build-item:active,
+.silent-toggle:active,
+.button:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.build-item[aria-pressed="true"] {
+  box-shadow: 0 0 18px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+@keyframes value-pop {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.18);
+    color: var(--text);
+    text-shadow: 0 0 10px currentColor;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pop {
+  display: inline-block;
+  animation: value-pop 0.35s ease-out;
+}
+
+@keyframes objective-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.objective-list li.fresh {
+  animation: objective-in 0.45s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop,
+  .objective-list li.fresh {
+    animation: none;
+  }
+}

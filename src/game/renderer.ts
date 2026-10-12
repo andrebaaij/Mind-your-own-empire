@@ -24,6 +24,7 @@ import { CHUNK_SIZE, ZOOM_DEFAULT, ZOOM_MIN } from "./config";
 import { gridFromWorld, type Point, type Rect, rectContains, worldFromGrid } from "./coords";
 import { CreatureView, FIRST_SIGHTING } from "./creatures";
 import { getObjectDefinition, type ObjectName } from "./definitions";
+import { Effects } from "./effects";
 import { Fauna } from "./fauna";
 import { createGroundMaterial } from "./ground";
 import {
@@ -113,6 +114,8 @@ interface UnitView {
   hover: THREE.Object3D | undefined;
   spinners: THREE.Object3D[];
   heading: number;
+  /** When a building went up (seconds), for its materialising animation; null for old ones. */
+  born: number | null;
 }
 
 /** Cheap deterministic per-tile variation, so flat colours don't look like a spreadsheet. */
@@ -173,6 +176,25 @@ export class Renderer {
   private readonly creatures: CreatureView;
   private lastFrame: number | null = null;
   private readonly ruins: RuinView;
+  readonly effects: Effects;
+  /** Where the camera actually looks: it glides towards the game's camera target. */
+  private readonly view = { x: 0, y: 0, ready: false };
+  /** Turn off camera shake (a setting). */
+  reducedMotion = false;
+  private readonly beams: THREE.Mesh[] = [];
+  private readonly beamMaterial = new THREE.MeshBasicMaterial({
+    color: "#ffb347",
+    transparent: true,
+    opacity: 0.75,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  private readonly beamGeometry = new THREE.CylinderGeometry(0.03, 0.03, 1, 6)
+    .translate(0, 0.5, 0)
+    .rotateX(Math.PI / 2);
+  private frameTime = 0;
+  /** Set after the first frame: buildings that exist by then were there from the start. */
+  private started = false;
   private readonly latticeGeometry = createLatticeGeometry();
   private readonly pipeline: THREE.RenderPipeline;
   private readonly raycaster = new THREE.Raycaster();
@@ -224,7 +246,10 @@ export class Renderer {
     private readonly renderer: THREE.WebGPURenderer,
     private readonly world: World,
     readonly quality: Quality,
+    overlay: HTMLElement,
   ) {
+    this.effects = new Effects(world, overlay);
+    this.scene.add(this.effects.group);
     this.canvas = renderer.domElement;
     this.terrainMaterial = createGroundMaterial(quality === "high");
 
@@ -296,6 +321,9 @@ export class Renderer {
   }
 
   static async create(parent: HTMLElement, world: World, quality: Quality): Promise<Renderer> {
+    const overlay = document.createElement("div");
+    overlay.className = "floaters";
+    parent.append(overlay);
     const renderer = new THREE.WebGPURenderer({ antialias: quality === "high" });
     await renderer.init();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality === "high" ? 2 : 1));
@@ -303,7 +331,7 @@ export class Renderer {
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     parent.prepend(renderer.domElement);
-    return new Renderer(renderer, world, quality);
+    return new Renderer(renderer, world, quality, overlay);
   }
 
   get width(): number {
@@ -426,9 +454,12 @@ export class Renderer {
 
   render(state: GameState, time: number): void {
     // Ambient life runs on its own clock, which stops when the game is paused.
-    const dt = this.lastFrame === null || state.paused ? 0 : Math.min(0.1, time - this.lastFrame);
+    const realDt = this.lastFrame === null ? 0 : Math.min(0.1, time - this.lastFrame);
+    const dt = state.paused ? 0 : realDt;
     this.lastFrame = time;
-    this.placeCamera(state);
+    this.frameTime = time;
+    this.effects.handle(state.events);
+    this.placeCamera(state, realDt);
     this.renderChunks(state);
     this.renderUnits(state, time);
     this.renderFauna(state, time, dt);
@@ -436,11 +467,25 @@ export class Renderer {
     this.ruins.update(state.world.sitesNear(target, distance * 2.5 + 12), time, dt);
     this.renderMarkers(state);
     this.renderGhosts(state);
+    this.renderBeams(state, time);
+    this.effects.update(dt, this.camera, this.width, this.height);
     this.pipeline.render();
+    this.started = true;
   }
 
-  private placeCamera(state: GameState): void {
-    const { target, yaw, distance } = state.camera;
+  private placeCamera(state: GameState, dt: number): void {
+    const { yaw, distance } = state.camera;
+    // Glide towards the target rather than jumping, so the camera's moves read as motion.
+    if (!this.view.ready || dt === 0) {
+      this.view.x = state.camera.target.x;
+      this.view.y = state.camera.target.y;
+      this.view.ready = true;
+    } else {
+      const ease = 1 - Math.exp(-dt * 10);
+      this.view.x += (state.camera.target.x - this.view.x) * ease;
+      this.view.y += (state.camera.target.y - this.view.y) * ease;
+    }
+    const target = { x: this.view.x, y: this.view.y };
     const ground = this.world.heightAt(target.x, target.y);
     const pitch = pitchFor(distance);
     const horizontal = Math.cos(pitch) * distance;
@@ -452,6 +497,13 @@ export class Renderer {
       target.y + Math.cos(yaw) * horizontal,
     );
     this.camera.lookAt(target.x, ground + lift, target.y);
+    // A shake for big moments, unless the player would rather not.
+    const shake = this.reducedMotion ? 0 : this.effects.shake;
+    if (shake > 0.002) {
+      this.camera.position.x += (Math.random() - 0.5) * shake;
+      this.camera.position.y += (Math.random() - 0.5) * shake;
+      this.camera.position.z += (Math.random() - 0.5) * shake;
+    }
     const focus = new THREE.Vector3(target.x, ground, target.y);
     this.atmosphere.update(this.camera.position, focus);
 
@@ -731,6 +783,7 @@ export class Renderer {
       hover: model.getObjectByName("hover"),
       spinners,
       heading: unit.heading,
+      born: unit.footprint.length > 0 && this.started ? this.frameTime : null,
     };
     this.unitViews.set(unit, view);
     return view;
@@ -781,6 +834,13 @@ export class Renderer {
       // A building being dismantled shudders and sinks.
       const dismantling = unit.dismantling ?? 0;
       view.model.scale.setScalar(1);
+      // A new building materialises: it rises out of the ground with a little overshoot.
+      if (view.born !== null) {
+        const t = Math.min(1, (time - view.born) / 0.6);
+        const grow = t < 1 ? 1 - (1 - t) ** 3 + Math.sin(t * Math.PI) * 0.12 : 1;
+        view.model.scale.set(0.6 + grow * 0.4, Math.max(0.02, grow), 0.6 + grow * 0.4);
+        if (t >= 1) view.born = null;
+      }
       if (dismantling > 0) {
         view.model.scale.y = 1 - dismantling * 0.7;
         view.model.position.x += Math.sin(time * 40) * 0.03 * dismantling;
@@ -817,6 +877,41 @@ export class Renderer {
     this.fauna.update(state.units, state.camera.target, dt);
     for (const kind of this.creatures.update(this.fauna, time)) {
       say(state, FIRST_SIGHTING[kind], "info", { once: `sighted-${kind}` });
+    }
+  }
+
+  /** Wardens dismantling something trail an amber beam to it. */
+  private renderBeams(state: GameState, time: number): void {
+    let used = 0;
+    for (const unit of state.units) {
+      const action = unit.actions[0];
+      if (action?.kind !== "tidy" || !this.world.isVisible(unit.grid)) continue;
+      let beam = this.beams[used];
+      if (!beam) {
+        beam = new THREE.Mesh(this.beamGeometry, this.beamMaterial);
+        this.beams.push(beam);
+        this.scene.add(beam);
+      }
+      used++;
+      const from = new THREE.Vector3(
+        unit.position.x,
+        this.world.heightAt(unit.position.x, unit.position.y) + 1,
+        unit.position.y,
+      );
+      const { position } = action.building;
+      const to = new THREE.Vector3(
+        position.x,
+        this.world.heightAt(position.x, position.y) + 0.5 + Math.sin(time * 9) * 0.1,
+        position.y,
+      );
+      beam.position.copy(from);
+      beam.lookAt(to);
+      beam.scale.set(1 + Math.sin(time * 20) * 0.3, 1, from.distanceTo(to));
+      beam.visible = true;
+    }
+    for (let i = used; i < this.beams.length; i++) {
+      const beam = this.beams[i];
+      if (beam) beam.visible = false;
     }
   }
 

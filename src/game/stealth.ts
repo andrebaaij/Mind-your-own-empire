@@ -191,7 +191,7 @@ export function idiranThink(state: GameState, seconds: number): void {
     }
     if (memory.leaving) {
       if (distance(skimmer.position, memory.leaving) < 3 || skimmer.actions.length === 0) {
-        removeUnit(state, skimmer);
+        removeUnit(state, skimmer, "left");
       }
       continue;
     }
@@ -337,7 +337,7 @@ function raidTick(state: GameState, skimmer: Unit, memory: SkimmerMemory, second
   memory.wrecking += seconds;
   target.dismantling = Math.min(1, memory.wrecking / WRECK_SECONDS);
   if (memory.wrecking >= WRECK_SECONDS) {
-    removeUnit(state, target);
+    removeUnit(state, target, "wrecked");
     state.stats.padsLost++;
     memory.wrecking = 0;
     say(state, "They've wrecked a landing pad. Build another, and keep them off it.", "warning");
@@ -346,7 +346,7 @@ function raidTick(state: GameState, skimmer: Unit, memory: SkimmerMemory, second
 
 function smashDecoy(state: GameState, decoy: Unit): void {
   const search = state.search;
-  removeUnit(state, decoy);
+  removeUnit(state, decoy, "smashed");
   state.stats.decoysFound++;
   state.suspicion = Math.max(0, state.suspicion - DECOY_RELIEF);
   // They're sure they were close: the search moves to where the decoy was, and widens again.

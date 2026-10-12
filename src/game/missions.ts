@@ -6,6 +6,7 @@ import { TICK_RATE } from "./config";
 import { distance, gridRef } from "./coords";
 import { isBuiltToPlan, setWardenHome } from "./custody";
 import type { ObjectName } from "./definitions";
+import { emit } from "./events";
 import type { SiteSpec } from "./sites";
 import {
   createGame,
@@ -650,7 +651,8 @@ const trespassers: MissionDefinition = {
       when: (state) => campsLeft(state) === 0,
       run: (state) => {
         // With their camps gone, the guards leave too.
-        for (const unit of [...state.units]) if (unit.faction === "idiran") removeUnit(state, unit);
+        for (const unit of [...state.units])
+          if (unit.faction === "idiran") removeUnit(state, unit, "left");
       },
     },
   ],
@@ -1117,6 +1119,9 @@ const onlyVisiting: MissionDefinition = {
     if (runtime.counters.nextShip <= 0 && padCount(state) > 0 && state.stats.landed < SHIPS) {
       runtime.counters.nextShip = SHIP_INTERVAL;
       state.stats.landed++;
+      const pads = state.units.filter((u) => u.faction === "player" && u.name === "pad");
+      const pad = pads[state.stats.landed % pads.length];
+      if (pad) emit(state, { kind: "landed", at: { ...pad.position } });
       say(
         state,
         state.stats.landed === 1

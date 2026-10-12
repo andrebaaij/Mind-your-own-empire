@@ -149,7 +149,7 @@ function escortIdirans(state: GameState): Set<Unit> {
       const held = (escorting.get(prey) ?? 0) + 10 / TICK_RATE;
       escorting.set(prey, held);
       if (held >= ESCORT_SECONDS) {
-        removeUnit(state, prey);
+        removeUnit(state, prey, "escorted");
         state.stats.escorted++;
         say(
           state,
@@ -267,7 +267,7 @@ export function tidyTick(state: GameState, warden: Unit, action: TidyAction): vo
     );
   }
   if (action.progress >= tidySeconds(building)) {
-    removeUnit(state, building);
+    removeUnit(state, building, building.faction === "player" ? "tidied" : "evicted");
     if (ours) {
       state.stats.tidied++;
       say(state, "Tidied away. I'd object, but there's no one to object to.", "warning");

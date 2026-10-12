@@ -104,6 +104,8 @@ document.addEventListener("keydown", (event) => {
   hud.showMessage(ambience.toggleMuted() ? "Sound off." : "Sound on. Listen: wind.", 2_000);
 });
 
+hud.onDisplay = (message) => ambience.play(message.tone);
+
 // ?debug exposes the game to the console and to scripted browser tests.
 if (params.has("debug")) {
   Object.assign(window, {
@@ -124,9 +126,12 @@ requestAnimationFrame(function frame(now) {
   }
   checkOutcome();
   ambience.setPaused(state.paused);
+  ambience.playEvents(state.events);
   // The camera may have moved, so find the ground under the pointer again.
   state.pointer.world = screen.position ? renderer.groundAt(screen.position) : null;
   renderer.render(state, now / 1000);
+  // Effects and sound have both seen this frame's events.
+  state.events.length = 0;
   hud.update(state);
   requestAnimationFrame(frame);
 });

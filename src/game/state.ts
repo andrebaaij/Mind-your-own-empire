@@ -16,6 +16,7 @@ import {
 import { distance, type GridRef, gridFromWorld, gridRange, type Point } from "./coords";
 import { custodyThink, tidyTick } from "./custody";
 import { type Faction, getObjectDefinition, type ObjectName } from "./definitions";
+import { emit, type GameEvent } from "./events";
 import type { MissionRuntime } from "./missions";
 import { assignSpots, findFreeSpots, tileKey } from "./pathfinding";
 import { orderStudy, relicsThink, studyTick } from "./relics";
@@ -150,6 +151,8 @@ export interface GameState {
   flags: Set<string>;
   /** Whether the Custody has sided with the Mind: wardens see Idirans off instead of tidying. */
   custodyAllied: boolean;
+  /** What happened since the last frame, for effects and sound. */
+  events: GameEvent[];
 }
 
 export type StartLayout = [ObjectName, number, number][];
@@ -220,6 +223,7 @@ export function createGame(options: {
     search: null,
     flags: new Set(),
     custodyAllied: false,
+    events: [],
   };
 
   for (const [name, x, y] of options.layout ?? SANDBOX_LAYOUT) spawn(state, name, x, y);
@@ -253,6 +257,7 @@ export function say(
     state.said.add(options.once);
   }
   state.messages.push({ text, tone });
+  emit(state, { kind: "said", tone });
 }
 
 export function spawn(
@@ -273,9 +278,14 @@ export function spawn(
 }
 
 /** Remove a unit from the game, undoing what it added to the economy. */
-export function removeUnit(state: GameState, unit: Unit): void {
+export function removeUnit(
+  state: GameState,
+  unit: Unit,
+  why?: Extract<GameEvent, { kind: "removed" }>["why"],
+): void {
   const index = state.units.indexOf(unit);
   if (index === -1) return;
+  if (why) emit(state, { kind: "removed", at: { ...unit.position }, name: unit.name, why });
   state.units.splice(index, 1);
   destroyUnit(state.world, unit);
   if (unit.faction === "player") {
@@ -325,6 +335,13 @@ function unitContext(state: GameState): UnitContext {
         Math.min(amount, state.economy.storage[kind] - state.economy[kind]),
       );
       state.economy[kind] += accepted;
+      if (accepted > 0)
+        emit(state, {
+          kind: "delivered",
+          at: { ...store.position },
+          resource: kind,
+          amount: accepted,
+        });
       if (kind === "iron") state.stats.ironDelivered += accepted;
       else state.stats.latticeDelivered += accepted;
       if (accepted > 0 && kind === "lattice") state.discovered.add("lattice");
@@ -343,6 +360,7 @@ function unitContext(state: GameState): UnitContext {
       return accepted;
     },
     tidy: (unit, action) => tidyTick(state, unit, action),
+    mined: (unit, kind) => emit(state, { kind: "mined", at: { ...unit.position }, resource: kind }),
     study: (unit, action) => studyTick(state, unit, action),
   };
 }
@@ -470,6 +488,7 @@ export function build(state: GameState, name: ObjectName, tiles: readonly GridRe
     state.economy.iron -= cost.iron ?? 0;
     state.economy.lattice -= cost.lattice ?? 0;
     const placed = spawn(state, name, tile.x, tile.y);
+    emit(state, { kind: "built", at: { ...placed.position }, name });
     state.stats.built[name] = (state.stats.built[name] ?? 0) + 1;
     clearFootprint(state, placed.footprint);
     result.built++;
@@ -498,6 +517,7 @@ function clearFootprint(state: GameState, footprint: readonly GridRef[]): void {
 }
 
 export function setSelection(state: GameState, units: Unit[]): void {
+  if (units.length > 0) emit(state, { kind: "selected", count: units.length });
   for (const unit of state.selection) unit.selected = false;
   state.selection = units;
   for (const unit of units) unit.selected = true;
@@ -521,16 +541,19 @@ export function issueOrder(
   const tile = gridFromWorld(target);
   const site = state.world.isExplored(tile) ? state.world.siteAt(tile) : undefined;
   if (site && gatherers.length > 0) {
+    emit(state, { kind: "ordered", at: { ...site.center }, order: "study" });
     orderStudy(state, gatherers, site, queue);
     return;
   }
   if (resources.length > 0 && gatherers.length > 0) {
+    emit(state, { kind: "ordered", at: { ...target }, order: "gather" });
     if (!queue) for (const unit of gatherers) cancelAllActions(unit);
     orderGather(gatherers, resources);
     return;
   }
 
   const walkers = state.selection.filter((unit) => hasSkill(unit, "walk"));
+  if (walkers.length > 0) emit(state, { kind: "ordered", at: { ...target }, order: "move" });
   if (!queue) for (const unit of walkers) cancelAllActions(unit);
   orderMove(state.world, walkers, target);
 }

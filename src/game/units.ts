@@ -341,6 +341,8 @@ export interface UnitContext {
   tidy(unit: Unit, action: TidyAction): void;
   /** Advance a drone's study of a Tessilend site. */
   study(unit: Unit, action: StudyAction): void;
+  /** A drone chipped off a piece of a deposit (for effects). */
+  mined?(unit: Unit, kind: ResourceKind): void;
 }
 
 /** A context for units working on their own: no power limits and nowhere to deliver. */
@@ -481,6 +483,7 @@ function gatherTick(world: World, unit: Unit, action: GatherAction, ctx: UnitCon
   while (unit.workProgress >= 1 && load(unit) < capacity && action.resource.exists) {
     unit.workProgress -= 1;
     unit.carrying[kind] += world.gather(action.resource, 1);
+    if (load(unit) % 3 === 0) ctx.mined?.(unit, kind);
   }
 }
 
