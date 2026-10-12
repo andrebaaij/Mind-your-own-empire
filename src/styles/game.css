@@ -88,3 +88,10 @@ body {
 .pause::backdrop {
   background: rgb(0 0 0 / 0.6);
 }
+
+.selection-box {
+  position: absolute;
+  border: 1px solid rgb(255 255 255 / 0.8);
+  background: rgb(255 255 255 / 0.12);
+  pointer-events: none;
+}

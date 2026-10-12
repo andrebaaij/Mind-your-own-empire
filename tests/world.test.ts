@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { gridRef } from "../src/game/coords";
 import { getResourceDefinition } from "../src/game/definitions";
 import { resourceLevel } from "../src/game/world";
-import { acid, ironWorld, openWorld } from "./fixtures";
+import { explore, ironWorld, openWorld, worldWithAcid, worldWithCliff } from "./fixtures";
 
 const ironEverywhere = ironWorld;
 const noIron = openWorld;
@@ -95,8 +95,7 @@ describe("resources", () => {
 
 describe("passability", () => {
   it("blocks acid and tiles under buildings", () => {
-    const world = openWorld();
-    acid(world, [[1, 0]]);
+    const world = worldWithAcid([[1, 0]]);
     world.occupy([gridRef(2, 0)], 1);
 
     expect(world.isPassable(gridRef(0, 0))).toBe(true);
@@ -114,5 +113,42 @@ describe("passability", () => {
     expect(world.isBuildable(gridRef(0, 0))).toBe(true);
     world.occupy([gridRef(0, 0)], 1);
     expect(world.isBuildable(gridRef(0, 0))).toBe(false);
+  });
+});
+
+describe("height and cliffs", () => {
+  it("stores tile heights and marks both sides of a cliff", () => {
+    const world = worldWithCliff(5);
+    expect(world.tileHeight(gridRef(4, 0))).toBe(0);
+    expect(world.tileHeight(gridRef(5, 0))).toBe(3);
+    expect(world.getChunk(0, 0).cliffs[4]).toBe(1);
+    expect(world.getChunk(0, 0).cliffs[5]).toBe(1);
+    expect(world.getChunk(0, 0).cliffs[2]).toBe(0);
+  });
+
+  it("only lets ground units climb gentle steps", () => {
+    const world = worldWithCliff(5);
+    expect(world.canClimb(gridRef(3, 0), gridRef(4, 0))).toBe(true);
+    expect(world.canClimb(gridRef(4, 0), gridRef(5, 0))).toBe(false);
+  });
+
+  it("doesn't reveal cliffs the player hasn't explored", () => {
+    const world = worldWithCliff(5);
+    expect(world.knownCanClimb(gridRef(4, 0), gridRef(5, 0))).toBe(true);
+    explore(world, [5, 0], 1);
+    expect(world.knownCanClimb(gridRef(4, 0), gridRef(5, 0))).toBe(false);
+  });
+
+  it("counts discovering a cliff or acid as learning of a new obstacle", () => {
+    const cliff = worldWithCliff(5);
+    const before = cliff.knownObstaclesVersion;
+    explore(cliff, [0, 0], 1); // no cliff here
+    expect(cliff.knownObstaclesVersion).toBe(before);
+    explore(cliff, [5, 0], 0);
+    expect(cliff.knownObstaclesVersion).toBeGreaterThan(before);
+
+    const acid = worldWithAcid([[3, 3]]);
+    explore(acid, [3, 3], 0);
+    expect(acid.knownObstaclesVersion).toBeGreaterThan(0);
   });
 });

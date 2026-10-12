@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CHUNK_SIZE } from "../src/game/config";
 import {
+  distance,
   gridFromWorld,
   gridRange,
   gridRef,
@@ -9,14 +10,10 @@ import {
   worldFromGrid,
 } from "../src/game/coords";
 
-describe("isometric coordinates", () => {
-  it("places tile (0, 0) with its centre at (32, 16)", () => {
-    expect(worldFromGrid(0, 0)).toEqual({ x: 32, y: 16 });
-  });
-
-  it("steps half a tile right and down per grid x, half left and down per grid y", () => {
-    expect(worldFromGrid(1, 0)).toEqual({ x: 64, y: 32 });
-    expect(worldFromGrid(0, 1)).toEqual({ x: 0, y: 32 });
+describe("ground coordinates", () => {
+  it("puts a tile's centre half a tile in from its corner", () => {
+    expect(worldFromGrid(0, 0)).toEqual({ x: 0.5, y: 0.5 });
+    expect(worldFromGrid(3, -2)).toEqual({ x: 3.5, y: -1.5 });
   });
 
   it("round-trips tile centres for positive and negative tiles", () => {
@@ -26,6 +23,14 @@ describe("isometric coordinates", () => {
         expect([grid.x, grid.y]).toEqual([x, y]);
       }
     }
+  });
+
+  it("finds the tile containing any point", () => {
+    expect(gridFromWorld({ x: 2.99, y: -0.01 })).toMatchObject({ x: 2, y: -1 });
+  });
+
+  it("measures straight-line distance", () => {
+    expect(distance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5);
   });
 });
 

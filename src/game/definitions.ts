@@ -1,32 +1,22 @@
 import type { ResourceKind } from "./world";
 
-export type Direction = "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW";
-
-/** Frame indices per direction for one animation. */
-export type Animation = Record<Direction, number[]>;
-
-export interface Box {
-  lx: number;
-  ty: number;
-  rx: number;
-  by: number;
-}
-
-export interface TilesetDefinition {
-  /** Base name of the PNG in `src/assets/tilesets`. */
-  image: string;
-  /** When set, `<image>Selected.png` is shown while the object is selected. */
-  imageSelected?: string;
-  grid: { width: number; height: number };
-  collisionBox?: Box;
-  defaultAnimation?: string;
-  animations?: Record<string, Animation>;
-}
-
 export type Skill = "walk" | "gather" | "scout";
+
+/** Ground units path around obstacles; air units fly straight over them. */
+export type Movement = "ground" | "air";
 
 export interface ObjectDefinition {
   skills: Partial<Record<Skill, boolean>>;
+  /** How a mobile unit moves. Objects without the walk skill don't move. */
+  movement?: Movement;
+  /** Movement speed in tiles per second. */
+  speed?: number;
+  /** Size used for clicking on the object, in tiles. */
+  radius: number;
+  /** Hover height above the ground, in tiles. */
+  altitude?: number;
+  /** Side length in tiles of the square a building stands on. Buildings only. */
+  footprint?: number;
   communicationRadius: number;
   /** Net energy produced (positive) or consumed (negative). */
   energy: number;
@@ -36,8 +26,7 @@ export interface ObjectDefinition {
 }
 
 export interface ResourceDefinition {
-  tileset: string;
-  /** Thresholds for each visual level; an amount above `levels[n]` shows tile `n`. */
+  /** Thresholds for each visual level; an amount above `levels[n]` shows level `n`. */
   levels: number[];
 }
 
@@ -49,13 +38,6 @@ function byBasename<T>(modules: Record<string, T>): Record<string, T> {
     ]),
   );
 }
-
-export const tilesets = byBasename(
-  import.meta.glob<TilesetDefinition>("../assets/tilesets/*.json", {
-    eager: true,
-    import: "default",
-  }),
-);
 
 export const objectDefinitions = byBasename(
   import.meta.glob<ObjectDefinition>("../data/objects/*.json", { eager: true, import: "default" }),
@@ -72,12 +54,6 @@ export type ObjectName = "block" | "mind" | "scout" | "solar" | "tower";
 
 /** Objects the player can build from the HUD. */
 export const BUILDABLE: readonly ObjectName[] = ["solar", "block"];
-
-export function getTileset(name: string): TilesetDefinition {
-  const tileset = tilesets[name];
-  if (!tileset) throw new Error(`Unknown tileset "${name}"`);
-  return tileset;
-}
 
 export function getObjectDefinition(name: ObjectName): ObjectDefinition {
   const definition = objectDefinitions[name];

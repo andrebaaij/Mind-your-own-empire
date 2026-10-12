@@ -1,28 +1,18 @@
 import {
   ARRIVAL_RADIUS,
   BLOCKED_WAIT_TICKS,
+  DEFAULT_SPEED,
   GATHER_RATE,
   MAX_REPATHS,
+  TICK_RATE,
   UNIT_RADIUS,
-  WALK_SPEED,
 } from "./config";
+import { type GridRef, gridFromWorld, gridRef, type Point, worldFromGrid } from "./coords";
 import {
-  type GridRef,
-  gridFromWorld,
-  gridRef,
-  type Point,
-  type Rect,
-  worldFromGrid,
-} from "./coords";
-import {
-  type Box,
-  type Direction,
   getObjectDefinition,
-  getTileset,
   type ObjectDefinition,
   type ObjectName,
   type Skill,
-  type TilesetDefinition,
 } from "./definitions";
 import { findPath, hasClearLine, tileKey } from "./pathfinding";
 import type { Resource, World } from "./world";
@@ -45,6 +35,8 @@ export interface WalkAction {
   repaths: number;
   /** `World.knownObstaclesVersion` when the route was planned. */
   plannedAt: number;
+  /** Where the unit was when the walk started; bounds how far re-plans may detour. */
+  origin: Point | null;
 }
 
 export interface GatherAction {
@@ -59,31 +51,22 @@ export interface Unit {
   id: number;
   name: ObjectName;
   definition: ObjectDefinition;
-  tileset: TilesetDefinition;
-  /** World position of the centre of the collision box. */
+  /** Ground position (tiles). */
   position: Point;
   grid: GridRef;
-  /** Sprite offset from the top-left of the tile frame to `position`. */
-  center: Point;
-  collisionBox: Box;
+  /** Facing on the ground plane, in radians (0 = +x, π/2 = +y). */
+  heading: number;
+  /** Whether the unit moved during the last tick, for animation. */
+  moving: boolean;
   /** Tiles a building stands on; empty for mobile units. */
   footprint: GridRef[];
   actions: Action[];
-  animation: { name: string; direction: Direction; index: number };
-  /** Current frame index in the tileset. */
-  frame: number;
   selected: boolean;
   color: Color;
   carrying: { iron: number };
 }
 
 let nextId = 1;
-
-const DEFAULT_BOX: Box = { lx: 0, ty: 0, rx: 0, by: 0 };
-
-export function boxCenter(box: Box): Point {
-  return { x: (box.lx + box.rx) / 2, y: (box.ty + box.by) / 2 };
-}
 
 export function createUnit(
   world: World,
@@ -93,57 +76,37 @@ export function createUnit(
   color: Color,
 ): Unit {
   const definition = getObjectDefinition(name);
-  const tileset = getTileset(name);
-  const collisionBox = tileset.collisionBox ?? DEFAULT_BOX;
   const position = worldFromGrid(gx, gy);
   const grid = gridFromWorld(position);
-  const footprint = definition.skills.walk ? [] : footprintTiles(tileset, gx, gy);
+  const footprint = definition.skills.walk ? [] : footprintTiles(definition, gx, gy);
 
   const unit: Unit = {
     id: nextId++,
     name,
     definition,
-    tileset,
     position,
     grid,
-    center: boxCenter(collisionBox),
-    collisionBox,
+    heading: Math.PI / 4,
+    moving: false,
     footprint,
     actions: [],
-    animation: { name: "", direction: "NE", index: 0 },
-    frame: 0,
     selected: false,
     color,
     carrying: { iron: 0 },
   };
 
-  setAnimation(unit, tileset.defaultAnimation ?? "rest");
-  advanceAnimation(unit);
   world.watch(grid, definition.communicationRadius);
   world.occupy(footprint, 1);
   return unit;
 }
 
-/**
- * Tiles a building on tile (gx, gy) covers: those whose centres fall inside its collision box
- * (the base of the sprite). Most buildings cover one tile; the Mind covers a cluster.
- */
-export function footprintTiles(tileset: TilesetDefinition, gx: number, gy: number): GridRef[] {
-  const box = tileset.collisionBox ?? DEFAULT_BOX;
-  const halfWidth = (box.rx - box.lx) / 2;
-  const halfHeight = (box.by - box.ty) / 2;
-  const center = worldFromGrid(gx, gy);
-  const reach = Math.ceil(halfWidth / 32) + Math.ceil(halfHeight / 16);
-
-  const tiles: GridRef[] = [gridRef(gx, gy)];
+/** The square of tiles a building centred on tile (gx, gy) stands on. */
+export function footprintTiles(definition: ObjectDefinition, gx: number, gy: number): GridRef[] {
+  const size = definition.footprint ?? 1;
+  const reach = Math.floor(size / 2);
+  const tiles: GridRef[] = [];
   for (let dy = -reach; dy <= reach; dy++) {
-    for (let dx = -reach; dx <= reach; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      const point = worldFromGrid(gx + dx, gy + dy);
-      if (Math.abs(point.x - center.x) < halfWidth && Math.abs(point.y - center.y) < halfHeight) {
-        tiles.push(gridRef(gx + dx, gy + dy));
-      }
-    }
+    for (let dx = -reach; dx <= reach; dx++) tiles.push(gridRef(gx + dx, gy + dy));
   }
   return tiles;
 }
@@ -152,31 +115,22 @@ export function hasSkill(unit: Unit, skill: Skill): boolean {
   return unit.definition.skills[skill] === true;
 }
 
-function frames(unit: Unit): number[] {
-  return unit.tileset.animations?.[unit.animation.name]?.[unit.animation.direction] ?? [0];
+export function isFlying(unit: Unit): boolean {
+  return unit.definition.movement === "air";
 }
 
-export function setAnimation(unit: Unit, name: string): void {
-  if (unit.animation.name === name || !unit.tileset.animations?.[name]) return;
-  unit.animation.name = name;
-  unit.animation.index = 0;
-}
-
-export function setDirection(unit: Unit, direction: Direction): void {
-  unit.animation.direction = direction;
-}
-
-export function advanceAnimation(unit: Unit): void {
-  const list = frames(unit);
-  if (unit.animation.index >= list.length) unit.animation.index = 0;
-  unit.frame = list[unit.animation.index] ?? 0;
-  unit.animation.index = (unit.animation.index + 1) % list.length;
+/** Distance covered per tick. */
+export function speedPerTick(unit: Unit): number {
+  return (unit.definition.speed ?? DEFAULT_SPEED) / TICK_RATE;
 }
 
 /** Move a unit, keeping the fog of war in sync when it crosses into a new tile. */
 export function moveBy(world: World, unit: Unit, dx: number, dy: number): void {
+  if (dx === 0 && dy === 0) return;
   unit.position.x += dx;
   unit.position.y += dy;
+  unit.heading = Math.atan2(dy, dx);
+  unit.moving = true;
 
   const grid = gridFromWorld(unit.position);
   if (grid.x !== unit.grid.x || grid.y !== unit.grid.y) {
@@ -194,6 +148,7 @@ function newWalk(target: Point): WalkAction {
     waitTicks: 0,
     repaths: 0,
     plannedAt: -1,
+    origin: null,
   };
 }
 
@@ -229,25 +184,6 @@ export function cancelAllActions(unit: Unit): void {
   unit.actions = [];
 }
 
-/** Half extents of a unit's collision box, centred on its position. */
-function halfExtents(unit: Unit): Point {
-  return {
-    x: (unit.collisionBox.rx - unit.collisionBox.lx) / 2,
-    y: (unit.collisionBox.by - unit.collisionBox.ty) / 2,
-  };
-}
-
-/** Whether the collision box of `unit` contains `point`. */
-export function unitContains(unit: Unit, point: Point): boolean {
-  const half = halfExtents(unit);
-  return (
-    unit.position.x - half.x <= point.x &&
-    point.x <= unit.position.x + half.x &&
-    unit.position.y - half.y <= point.y &&
-    point.y <= unit.position.y + half.y
-  );
-}
-
 export function isMobile(unit: Unit): boolean {
   return hasSkill(unit, "walk");
 }
@@ -256,19 +192,12 @@ function isWalking(unit: Unit): boolean {
   return unit.actions[0]?.kind === "walk";
 }
 
-const DIRECTIONS: Direction[] = ["E", "SE", "S", "SW", "W", "NW", "N", "NE"];
-
-/** Screen-space compass direction of a movement vector. */
-export function directionOf(dx: number, dy: number): Direction {
-  const octant = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));
-  return DIRECTIONS[(octant + 8) % 8] as Direction;
-}
-
 /** A mobile unit that stepping to `next` would bump into. Moving apart is always allowed. */
 function blockingUnit(unit: Unit, next: Point, others: readonly Unit[]): Unit | undefined {
   const space = 2 * UNIT_RADIUS;
   return others.find((other) => {
-    if (other === unit || !isMobile(other)) return false;
+    // Ground and air units are on different layers and pass over/under each other.
+    if (other === unit || !isMobile(other) || isFlying(other) !== isFlying(unit)) return false;
     const after = Math.hypot(other.position.x - next.x, other.position.y - next.y);
     const before = Math.hypot(
       other.position.x - unit.position.x,
@@ -281,6 +210,13 @@ function blockingUnit(unit: Unit, next: Point, others: readonly Unit[]): Unit | 
 /** Turns tried when swerving, in degrees clockwise. Right first, so two units meeting
  * head-on both keep right and pass each other instead of mirroring each other's dodge. */
 const SWERVE_ANGLES = [45, 90, -45, -90].map((degrees) => (degrees * Math.PI) / 180);
+
+/** Whether a ground unit may step to `next`: open ground, and no cliff from its current tile. */
+function canWalkTo(world: World, unit: Unit, next: Point): boolean {
+  const tile = gridFromWorld(next);
+  if (tile.x === unit.grid.x && tile.y === unit.grid.y) return true;
+  return world.isPassable(tile) && world.canClimb(unit.grid, tile);
+}
 
 /** A free spot one step to the side of the heading (ux, uy), if there is one. */
 function sidestep(
@@ -298,9 +234,7 @@ function sidestep(
       x: unit.position.x + (ux * cos - uy * sin) * step,
       y: unit.position.y + (ux * sin + uy * cos) * step,
     };
-    const tile = gridFromWorld(candidate);
-    const leavesTile = tile.x !== unit.grid.x || tile.y !== unit.grid.y;
-    if (leavesTile && !world.isPassable(tile)) continue;
+    if (!isFlying(unit) && !canWalkTo(world, unit, candidate)) continue;
     if (!blockingUnit(unit, candidate, others)) return candidate;
   }
   return null;
@@ -325,7 +259,12 @@ function replan(world: World, unit: Unit, action: WalkAction, avoid: ReadonlySet
 }
 
 function plan(world: World, unit: Unit, action: WalkAction, avoid?: ReadonlySet<string>): void {
-  action.path = findPath(world, unit.position, action.target, avoid ? { avoid } : {});
+  // Fliers go straight over terrain and buildings.
+  action.origin ??= { ...unit.position };
+  const options = avoid ? { avoid, anchor: action.origin } : { anchor: action.origin };
+  action.path = isFlying(unit)
+    ? [{ ...action.target }]
+    : findPath(world, unit.position, action.target, options);
   action.plannedAt = world.knownObstaclesVersion;
 }
 
@@ -355,8 +294,12 @@ function walkTick(
     if (budget.remaining <= 0) return; // wait for a planning slot next tick
     budget.remaining--;
     plan(world, unit, action);
-  } else if (action.plannedAt !== world.knownObstaclesVersion && budget.remaining > 0) {
-    // The player learned of new obstacles (acid came into view, a building went up). Routes
+  } else if (
+    !isFlying(unit) &&
+    action.plannedAt !== world.knownObstaclesVersion &&
+    budget.remaining > 0
+  ) {
+    // The player learned of new obstacles (acid or a cliff came into view, a building went up). Routes
     // through the fog were planned optimistically, so re-plan if this one now runs into one.
     if (routeStillClear(world, unit, action.path)) {
       action.plannedAt = world.knownObstaclesVersion;
@@ -376,7 +319,8 @@ function walkTick(
   const dx = waypoint.x - unit.position.x;
   const dy = waypoint.y - unit.position.y;
   const distance = Math.hypot(dx, dy);
-  const step = Math.min(WALK_SPEED, distance);
+  const speed = speedPerTick(unit);
+  const step = Math.min(speed, distance);
   const next =
     distance === 0
       ? waypoint
@@ -385,9 +329,8 @@ function walkTick(
           y: unit.position.y + (dy / distance) * step,
         };
 
-  // Safety net: never step onto ground that is actually blocked, known or not.
-  const nextTile = gridFromWorld(next);
-  if ((nextTile.x !== unit.grid.x || nextTile.y !== unit.grid.y) && !world.isPassable(nextTile)) {
+  // Safety net: never step onto ground that is actually blocked or up a cliff, known or not.
+  if (!isFlying(unit) && !canWalkTo(world, unit, next)) {
     replan(world, unit, action, new Set());
     return;
   }
@@ -409,7 +352,6 @@ function walkTick(
     if (action.waitTicks < BLOCKED_WAIT_TICKS) {
       const swerve = sidestep(world, unit, dx / distance, dy / distance, step, others);
       if (swerve) {
-        setDirection(unit, directionOf(swerve.x - unit.position.x, swerve.y - unit.position.y));
         moveBy(world, unit, swerve.x - unit.position.x, swerve.y - unit.position.y);
         return;
       }
@@ -420,10 +362,9 @@ function walkTick(
   }
   action.waitTicks = 0;
 
-  if (distance > 0) setDirection(unit, directionOf(dx, dy));
   moveBy(world, unit, next.x - unit.position.x, next.y - unit.position.y);
 
-  if (distance <= WALK_SPEED) {
+  if (distance <= speed) {
     // Snap exactly onto the waypoint so rounding can't leave the unit a hair short.
     unit.position.x = waypoint.x;
     unit.position.y = waypoint.y;
@@ -447,32 +388,9 @@ export function updateUnit(
   others: readonly Unit[],
   budget: PathBudget = { remaining: Number.POSITIVE_INFINITY },
 ): void {
-  advanceAnimation(unit);
-
+  unit.moving = false;
   const action = unit.actions[0];
-  if (!action) {
-    setAnimation(unit, "rest");
-    return;
-  }
-
-  setAnimation(unit, "walk");
+  if (!action) return;
   if (action.kind === "walk") walkTick(world, unit, action, others, budget);
   else gatherTick(world, unit, action);
-}
-
-/**
- * Units under a click (a point) or with their position inside a drag rectangle.
- */
-export function findUnits(units: readonly Unit[], rect: Rect, isClick: boolean): Unit[] {
-  if (isClick) {
-    const point = { x: rect.left, y: rect.top };
-    return units.filter((unit) => unitContains(unit, point));
-  }
-  return units.filter(
-    (unit) =>
-      rect.left <= unit.position.x &&
-      unit.position.x <= rect.right &&
-      rect.top <= unit.position.y &&
-      unit.position.y <= rect.bottom,
-  );
 }

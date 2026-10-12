@@ -1,30 +1,24 @@
 import {
-  CLICK_TOLERANCE,
+  MAX_BUILD_SLOPE,
   PATHS_PER_TICK,
+  ROTATE_SPEED,
   SCROLL_SHIFT_MULTIPLIER,
   SCROLL_SPEED,
   STARTING_IRON,
+  ZOOM_DEFAULT,
+  ZOOM_MAX,
+  ZOOM_MIN,
 } from "./config";
-import {
-  type GridRef,
-  gridFromWorld,
-  gridRange,
-  gridRef,
-  type Point,
-  type Rect,
-  rectContains,
-  rectFromPoints,
-} from "./coords";
-import { getObjectDefinition, getTileset, type ObjectName } from "./definitions";
+import { type GridRef, gridFromWorld, gridRange, type Point } from "./coords";
+import { getObjectDefinition, type ObjectName } from "./definitions";
 import { assignSpots, findFreeSpots, tileKey } from "./pathfinding";
-import { createNoise } from "./terrain";
+import { createNoise, noiseTerrain } from "./terrain";
 import {
   type Color,
   cancelAllActions,
   cancelNextAction,
   createUnit,
   finalPosition,
-  findUnits,
   footprintTiles,
   hasSkill,
   isMobile,
@@ -48,10 +42,28 @@ export interface Economy {
 }
 
 export interface Pointer {
-  /** World position of the pointer. */
-  world: Point;
-  /** World position where the current drag started, if a button is held. */
+  /** Ground position under the pointer, or null when it points at the sky. */
+  world: Point | null;
+  /** Ground position where the current drag started, if a button is held. */
   dragStart: Point | null;
+}
+
+/** An orbiting RTS camera: looks at `target` on the ground from `distance` away. */
+export interface Camera {
+  target: Point;
+  /** Rotation around the vertical axis, in radians. π/4 matches the old isometric view. */
+  yaw: number;
+  distance: number;
+}
+
+export interface CameraKeys {
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+  rotateLeft: boolean;
+  rotateRight: boolean;
+  fast: boolean;
 }
 
 export interface GameState {
@@ -59,28 +71,27 @@ export interface GameState {
   player: Player;
   units: Unit[];
   economy: Economy;
-  /** Camera offset: world position (0, 0) is drawn at this screen position. */
-  camera: Point;
+  camera: Camera;
   /** Object being placed, or null when not in build mode. */
   building: ObjectName | null;
   selection: Unit[];
   pointer: Pointer;
-  /** Currently held movement keys. */
-  scroll: { up: boolean; down: boolean; left: boolean; right: boolean; fast: boolean };
+  /** Currently held camera keys. */
+  keys: CameraKeys;
   paused: boolean;
 }
 
 export function createGame(options: { seed: string; player: Player }): GameState {
   const state: GameState = {
-    world: new World(createNoise(options.seed)),
+    world: new World(noiseTerrain(createNoise(options.seed))),
     player: options.player,
     units: [],
     economy: { iron: STARTING_IRON, energyPerHour: 0, storage: { iron: 0, energy: 0 } },
-    camera: { x: 0, y: 0 },
+    camera: { target: { x: 0, y: 0 }, yaw: Math.PI / 4, distance: ZOOM_DEFAULT },
     building: null,
     selection: [],
-    pointer: { world: { x: 0, y: 0 }, dragStart: null },
-    scroll: { up: false, down: false, left: false, right: false, fast: false },
+    pointer: { world: null, dragStart: null },
+    keys: noKeys(),
     paused: false,
   };
 
@@ -100,7 +111,21 @@ export function createGame(options: { seed: string; player: Player }): GameState
   ];
   for (const [name, x, y] of start) spawn(state, name, x, y);
 
+  const mind = state.units.find((unit) => unit.name === "mind");
+  if (mind) state.camera.target = { ...mind.position };
   return state;
+}
+
+export function noKeys(): CameraKeys {
+  return {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    rotateLeft: false,
+    rotateRight: false,
+    fast: false,
+  };
 }
 
 export function spawn(state: GameState, name: ObjectName, gx: number, gy: number): Unit {
@@ -117,53 +142,59 @@ export function spawn(state: GameState, name: ObjectName, gx: number, gy: number
 export function tick(state: GameState): void {
   if (state.paused) return;
 
-  const { scroll } = state;
-  let dx = 0;
-  let dy = 0;
-  if (scroll.up) dy += SCROLL_SPEED;
-  if (scroll.down) dy -= SCROLL_SPEED;
-  if (scroll.left) dx += SCROLL_SPEED;
-  if (scroll.right) dx -= SCROLL_SPEED;
-  if (scroll.fast) {
-    dx *= SCROLL_SHIFT_MULTIPLIER;
-    dy *= SCROLL_SHIFT_MULTIPLIER;
-  }
-  if (dx !== 0 || dy !== 0) {
-    state.camera.x += dx;
-    state.camera.y += dy;
-    // The pointer stays put on screen, so it moves through the world.
-    state.pointer.world.x -= dx;
-    state.pointer.world.y -= dy;
-  }
+  moveCamera(state.camera, state.keys);
 
   const budget = { remaining: PATHS_PER_TICK };
   for (const unit of state.units) updateUnit(state.world, unit, state.units, budget);
 }
 
-/** The rectangle being dragged, or the pointer position as a zero-size rectangle. */
-export function selectionRect(pointer: Pointer): Rect {
-  return rectFromPoints(pointer.dragStart ?? pointer.world, pointer.world);
+/** Pan and rotate the camera for one tick of held keys. Panning is relative to the view. */
+export function moveCamera(camera: Camera, keys: CameraKeys): void {
+  if (keys.rotateLeft) camera.yaw -= ROTATE_SPEED;
+  if (keys.rotateRight) camera.yaw += ROTATE_SPEED;
+
+  let forward = 0;
+  let right = 0;
+  if (keys.up) forward += 1;
+  if (keys.down) forward -= 1;
+  if (keys.right) right += 1;
+  if (keys.left) right -= 1;
+  if (forward === 0 && right === 0) return;
+
+  // Pan faster when zoomed out, so the screen moves at a similar pace.
+  let speed = SCROLL_SPEED * (camera.distance / ZOOM_DEFAULT);
+  if (keys.fast) speed *= SCROLL_SHIFT_MULTIPLIER;
+  const sin = Math.sin(camera.yaw);
+  const cos = Math.cos(camera.yaw);
+  camera.target.x += (-sin * forward + cos * right) * speed;
+  camera.target.y += (-cos * forward - sin * right) * speed;
 }
 
-export function isClick(rect: Rect): boolean {
-  return rect.right - rect.left < CLICK_TOLERANCE && rect.bottom - rect.top < CLICK_TOLERANCE;
+export function zoomCamera(camera: Camera, factor: number): void {
+  camera.distance = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, camera.distance * factor));
 }
 
 /** Tiles covered by the current build preview. */
 export function buildTiles(pointer: Pointer): GridRef[] {
+  if (!pointer.world) return [];
   return gridRange(gridFromWorld(pointer.dragStart ?? pointer.world), gridFromWorld(pointer.world));
 }
 
 /** Tiles an object placed on `tile` would cover. */
 export function placementTiles(name: ObjectName, tile: GridRef): GridRef[] {
-  return getObjectDefinition(name).skills.walk
-    ? [tile]
-    : footprintTiles(getTileset(name), tile.x, tile.y);
+  const definition = getObjectDefinition(name);
+  return definition.skills.walk ? [tile] : footprintTiles(definition, tile.x, tile.y);
 }
 
-/** Whether `name` can be placed on `tile`: every covered tile explored and free to build on. */
+/**
+ * Whether `name` can be placed on `tile`: every covered tile explored and free to build on,
+ * and the ground under a building level enough.
+ */
 export function canPlace(state: GameState, name: ObjectName, tile: GridRef): boolean {
-  return placementTiles(name, tile).every((t) => state.world.isBuildable(t));
+  const tiles = placementTiles(name, tile);
+  if (!tiles.every((t) => state.world.isBuildable(t))) return false;
+  const heights = tiles.map((t) => state.world.tileHeight(t));
+  return Math.max(...heights) - Math.min(...heights) <= MAX_BUILD_SLOPE;
 }
 
 export interface BuildResult {
@@ -224,45 +255,20 @@ export function setSelection(state: GameState, units: Unit[]): void {
   for (const unit of units) unit.selected = true;
 }
 
-export function selectInRect(state: GameState, rect: Rect): void {
-  setSelection(state, findUnits(state.units, rect, isClick(rect)));
-}
-
-/** Explored resources under a click or within a drag rectangle. */
-export function resourcesInRect(world: World, rect: Rect): Resource[] {
-  if (isClick(rect)) {
-    const resource = world.resourceAt(gridFromWorld({ x: rect.left, y: rect.top }));
-    return resource ? [resource] : [];
-  }
-
-  const corners = [
-    gridFromWorld({ x: rect.left, y: rect.top }),
-    gridFromWorld({ x: rect.right, y: rect.top }),
-    gridFromWorld({ x: rect.left, y: rect.bottom }),
-    gridFromWorld({ x: rect.right, y: rect.bottom }),
-  ];
-  const min = { x: Math.min(...corners.map((c) => c.x)), y: Math.min(...corners.map((c) => c.y)) };
-  const max = { x: Math.max(...corners.map((c) => c.x)), y: Math.max(...corners.map((c) => c.y)) };
-
-  const found: Resource[] = [];
-  for (const tile of gridRange(gridRef(min.x, min.y), gridRef(max.x, max.y))) {
-    const resource = world.resourceAt(tile);
-    if (resource && rectContains(rect, resource.position)) found.push(resource);
-  }
-  return found;
-}
-
 /**
- * Right-click order for the selection: gatherers mine the iron in the rectangle; if nobody can
- * gather there, walkers spread out around the pointer. A plain order replaces what the units
- * were doing; with `queue` (Shift held) it is added after their current orders.
+ * Right-click order for the selection: gatherers mine the given iron; if there is none or
+ * nobody can gather, mobile units spread out around `target`. A plain order replaces what
+ * the units were doing; with `queue` (Shift held) it is added after their current orders.
  */
-export function issueOrder(state: GameState, rect: Rect, target: Point, queue = false): void {
+export function issueOrder(
+  state: GameState,
+  target: Point,
+  resources: readonly Resource[] = [],
+  queue = false,
+): void {
   if (state.selection.length === 0) return;
 
-  const resources = resourcesInRect(state.world, rect);
   const gatherers = state.selection.filter((unit) => hasSkill(unit, "gather"));
-
   if (resources.length > 0 && gatherers.length > 0) {
     if (!queue) for (const unit of gatherers) cancelAllActions(unit);
     orderGather(gatherers, resources);

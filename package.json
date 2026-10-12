@@ -21,13 +21,14 @@
   },
   "dependencies": {
     "alea": "^1.0.1",
-    "pixi.js": "^8.22.0",
-    "simplex-noise": "^4.0.3"
+    "simplex-noise": "^4.0.3",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@playwright/test": "^1.64.0",
     "@types/node": "^24.19.2",
+    "@types/three": "^0.186.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
     "vitest": "^5.0.3"

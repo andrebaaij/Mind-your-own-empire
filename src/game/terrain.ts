@@ -7,16 +7,16 @@ export function createNoise(seed: string): Noise2D {
   return createNoise2D(alea(seed));
 }
 
-/** Base terrain types, named after their tile index in the `tiles` tileset. */
+/** Ground types. Acid can't be crossed by ground units or built on. */
 export const Terrain = {
   Dirt: 0,
-  Sand: 5,
-  Acid: 14,
+  Sand: 1,
+  Acid: 2,
 } as const;
 
 export type TerrainType = (typeof Terrain)[keyof typeof Terrain];
 
-/** Raw terrain type for a tile, before the transition tiles are chosen. */
+/** Ground type of the tile at (x, y). */
 export function baseTerrain(noise: Noise2D, x: number, y: number): TerrainType {
   let n = Math.round(noise(x / 150, y / 150) * 20) - 15;
   if (n > 5 || n < 0) n = 0;
@@ -26,63 +26,53 @@ export function baseTerrain(noise: Noise2D, x: number, y: number): TerrainType {
   return Terrain.Acid;
 }
 
+/** Where the starting base sits; the ground around it is flattened so it can be built on. */
+export const START_CENTER = { x: 5.5, y: 5.5 };
+const FLAT_INNER = 9;
+const FLAT_OUTER = 17;
+
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
 /**
- * Tile index to draw at (x, y). Sand tiles bordering dirt or acid get transition
- * tiles so the edges blend.
+ * Ground height at any point (in tiles, continuous): rolling hills, sharp ridges that form
+ * cliffs, and hollows where the acid pools. Flat around the starting base.
  */
-export function terrainTile(noise: Noise2D, x: number, y: number): number {
-  const at = (dx: number, dy: number) => baseTerrain(noise, x + dx, y + dy);
+export function terrainHeight(noise: Noise2D, x: number, y: number): number {
+  const hills = 2 * noise(x / 32 + 1000, y / 32 - 1000) + 0.4 * noise(x / 11 - 2000, y / 11 + 2000);
+  // Sharp crests along the zero lines of a second noise; the steepest parts become cliffs.
+  const ridges = (1 - Math.abs(noise(x / 26 + 300, y / 26 + 300))) ** 4;
+  // The acid noise (see baseTerrain) also digs the hollows the acid lies in.
+  const lake = smoothstep(0.78, 0.9, noise(x / 150, y / 150)) * 1.6;
 
-  const MM = at(0, 0);
-  if (MM !== Terrain.Sand) return MM;
-
-  const TL = at(-1, -1);
-  const TM = at(0, -1);
-  const TR = at(1, -1);
-  const ML = at(-1, 0);
-  const MR = at(1, 0);
-  const BL = at(-1, 1);
-  const BM = at(0, 1);
-  const BR = at(1, 1);
-
-  const { Dirt, Sand, Acid } = Terrain;
-
-  // Sand to dirt: outside corners, inside corners, borders.
-  if (ML === Sand && TM === Sand && TL === Dirt) return 6;
-  if (MR === Sand && BM === Sand && BR === Dirt) return 7;
-  if (ML === Sand && BM === Sand && BL === Dirt) return 8;
-  if (MR === Sand && TM === Sand && TR === Dirt) return 9;
-
-  if (ML === Dirt && TL === Dirt && TM === Dirt) return 10;
-  if (MR === Dirt && BM === Dirt && BR === Dirt) return 11;
-  if (ML === Dirt && BM === Dirt && BL === Dirt) return 12;
-  if (TM === Dirt && TR === Dirt && MR === Dirt) return 13;
-
-  if (ML === Dirt) return 1;
-  if (TM === Dirt) return 2;
-  if (BM === Dirt) return 3;
-  if (MR === Dirt) return 4;
-
-  // Sand to acid: outside corners, inside corners, borders.
-  if (ML === Sand && TM === Sand && TL === Acid) return 29;
-  if (MR === Sand && BM === Sand && BR === Acid) return 28;
-  if (ML === Sand && BM === Sand && BL === Acid) return 31;
-  if (MR === Sand && TM === Sand && TR === Acid) return 30;
-
-  if (ML === Acid && TL === Acid && TM === Acid) return 35;
-  if (MR === Acid && BM === Acid && BR === Acid) return 34;
-  if (ML === Acid && BM === Acid && BL === Acid) return 33;
-  if (TM === Acid && TR === Acid && MR === Acid) return 32;
-
-  if (ML === Acid) return 39;
-  if (TM === Acid) return 37;
-  if (BM === Acid) return 38;
-  if (MR === Acid) return 36;
-
-  return MM;
+  const flat = smoothstep(
+    FLAT_INNER,
+    FLAT_OUTER,
+    Math.hypot(x - START_CENTER.x, y - START_CENTER.y),
+  );
+  return (hills + ridges - lake) * flat;
 }
 
 /** Amount of iron in the ground at (x, y). Zero or negative means none. */
 export function ironAmount(noise: Noise2D, x: number, y: number): number {
   return Math.round((Math.sin(noise(x / 50, y / 250)) - 0.4) * 15000);
+}
+
+/** Where terrain comes from. The game uses seeded noise; tests can supply simple layouts. */
+export interface TerrainGenerator {
+  ground(x: number, y: number): TerrainType;
+  /** Continuous ground height at any point. */
+  height(x: number, y: number): number;
+  /** Iron in the tile at (x, y); zero or negative means none. */
+  iron(x: number, y: number): number;
+}
+
+export function noiseTerrain(noise: Noise2D): TerrainGenerator {
+  return {
+    ground: (x, y) => baseTerrain(noise, x, y),
+    height: (x, y) => terrainHeight(noise, x, y),
+    iron: (x, y) => ironAmount(noise, x, y),
+  };
 }

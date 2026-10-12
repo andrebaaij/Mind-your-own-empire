@@ -1,7 +1,7 @@
-import { CHUNK_SIZE } from "./config";
+import { CHUNK_SIZE, MAX_CLIMB } from "./config";
 import { type GridRef, gridRef, type Point, worldFromGrid } from "./coords";
 import { getResourceDefinition } from "./definitions";
-import { ironAmount, type Noise2D, Terrain, terrainTile } from "./terrain";
+import { Terrain, type TerrainGenerator } from "./terrain";
 
 export type ResourceKind = "iron";
 
@@ -16,7 +16,12 @@ export interface Resource {
 }
 
 export class Chunk {
+  /** Ground type of each tile (see `Terrain`). */
   readonly tiles = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
+  /** Ground height at each tile's centre. */
+  readonly heights = new Float32Array(CHUNK_SIZE * CHUNK_SIZE);
+  /** Whether a tile has a cliff edge: a neighbour too steep to climb to. */
+  readonly cliffs = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
   readonly resources: (Resource | undefined)[] = new Array(CHUNK_SIZE * CHUNK_SIZE);
   /** Whether a tile has ever been seen. Unexplored tiles are not drawn. */
   readonly explored = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
@@ -46,12 +51,12 @@ export function resourceLevel(amount: number, levels: readonly number[]): number
 export class World {
   private readonly chunks = new Map<string, Chunk>();
   /**
-   * Bumped whenever the player learns of a new obstacle (acid comes into view, a building goes
-   * up or comes down), so units can check whether their planned routes still hold.
+   * Bumped whenever the player learns of a new obstacle (acid or a cliff comes into view, a
+   * building goes up or comes down), so units can check whether their planned routes still hold.
    */
   knownObstaclesVersion = 0;
 
-  constructor(private readonly noise: Noise2D) {}
+  constructor(private readonly terrain: TerrainGenerator) {}
 
   getChunk(cx: number, cy: number): Chunk {
     const key = `${cx},${cy}`;
@@ -73,9 +78,22 @@ export class World {
         const y = cy * CHUNK_SIZE + ly;
         const i = lx + ly * CHUNK_SIZE;
 
-        chunk.tiles[i] = terrainTile(this.noise, x, y);
+        chunk.tiles[i] = this.terrain.ground(x, y);
+        const height = this.computeTileHeight(x, y);
+        chunk.heights[i] = height;
+        const neighbours = [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ] as const;
+        chunk.cliffs[i] = neighbours.some(
+          ([dx, dy]) => Math.abs(this.computeTileHeight(x + dx, y + dy) - height) > MAX_CLIMB,
+        )
+          ? 1
+          : 0;
 
-        const amount = ironAmount(this.noise, x, y);
+        const amount = this.terrain.iron(x, y);
         if (amount > 0) {
           chunk.resources[i] = {
             kind: "iron",
@@ -89,6 +107,31 @@ export class World {
       }
     }
     return chunk;
+  }
+
+  private computeTileHeight(x: number, y: number): number {
+    return this.terrain.height(x + 0.5, y + 0.5);
+  }
+
+  /** Ground height at any point on the map (continuous, for placing things in 3D). */
+  heightAt(x: number, y: number): number {
+    return this.terrain.height(x, y);
+  }
+
+  /** Ground height at a tile's centre. */
+  tileHeight(grid: GridRef): number {
+    return this.chunkOf(grid).heights[grid.i] ?? 0;
+  }
+
+  /** Whether a ground unit can step between two neighbouring tiles (not up or down a cliff). */
+  canClimb(from: GridRef, to: GridRef): boolean {
+    return Math.abs(this.tileHeight(from) - this.tileHeight(to)) <= MAX_CLIMB;
+  }
+
+  /** `canClimb` as far as the player knows: cliffs in unexplored ground are unknown. */
+  knownCanClimb(from: GridRef, to: GridRef): boolean {
+    if (!this.isExplored(from) || !this.isExplored(to)) return true;
+    return this.canClimb(from, to);
   }
 
   private chunkOf(grid: GridRef): Chunk {
@@ -119,7 +162,7 @@ export class World {
     return chunk.explored[grid.i] === 0 || chunk.tiles[grid.i] !== Terrain.Acid;
   }
 
-  /** Whether a building may be placed here: explored, passable ground. */
+  /** Whether a building may be placed on this tile: explored, passable ground. */
   isBuildable(grid: GridRef): boolean {
     return this.isExplored(grid) && this.isPassable(grid);
   }
@@ -146,7 +189,9 @@ export class World {
       chunk.watchers[i] = (chunk.watchers[i] ?? 0) + 1;
       if (chunk.explored[i] === 0) {
         chunk.explored[i] = 1;
-        if (chunk.tiles[i] === Terrain.Acid) this.knownObstaclesVersion++;
+        if (chunk.tiles[i] === Terrain.Acid || chunk.cliffs[i] === 1) {
+          this.knownObstaclesVersion++;
+        }
       }
     });
   }

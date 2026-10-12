@@ -1,12 +1,14 @@
 # Mind your own Empire
 
-A single-player, procedurally generated isometric RTS for the browser.
+A single-player, procedurally generated 3D RTS for the browser, inspired by Iain M. Banks' Culture novels.
 
 You are a Mind, landed on a new planet, preparing it for the coming of humans. You command and upgrade your minions and buildings. They mine resources, fight off the original inhabitants and other interested races, and build for you.
 
-The game is an early prototype. You can explore, select units, walk them around, mine iron and place buildings.
+The game is an early prototype. You can explore, select units, send drones over hills and around cliffs, mine iron and place buildings.
 
-![Screenshot from 2015](docs/screenshot-2015-01-03.png)
+![The Mind and its drones](docs/screenshot-3d.png)
+
+It started in 2014 as a 2D isometric game ([2015 screenshot](docs/screenshot-2015-01-03.png)); the old sprites are kept in `art/legacy-2d/`.
 
 ## Playing
 
@@ -15,7 +17,9 @@ The game is an early prototype. You can explore, select units, walk them around,
 | Left click / drag | Select units, or place the chosen building on every free tile in the drag area (red tiles are blocked) |
 | Right click / drag | Order the selection: mine the iron in the area, or walk to the pointer |
 | Shift + right click | Queue the order after the current ones instead of replacing them |
-| W A S D / arrow keys | Scroll (hold Shift to scroll faster) |
+| W A S D / arrow keys | Pan the camera (hold Shift to pan faster) |
+| Q / E, or middle-mouse drag | Rotate the camera |
+| Mouse wheel | Zoom |
 | Shift while placing | Keep the building selected to place more |
 | C / Shift + C | Cancel the next order / all orders of the selection |
 | Esc | Leave build mode and clear the selection |
@@ -48,7 +52,7 @@ Run `npx playwright install chromium` once before the first `npm run test:e2e`.
 ### Stack
 
 - **TypeScript** and **Vite**, built as two pages: `index.html` (start menu) and `game.html`.
-- **PixiJS** renders the world, using WebGPU where the browser supports it and WebGL otherwise.
+- **Three.js** renders the world in 3D with `WebGPURenderer`: WebGPU where the browser supports it, WebGL 2 otherwise. Shadows and bloom are included, and all models are built in code (`models.ts`), with no asset files.
 - **simplex-noise** with an **Alea** seeded random generator for terrain and iron.
 - **Biome** for linting and formatting, **Vitest** for unit tests and **Playwright** for browser tests.
 
@@ -61,27 +65,37 @@ src/
     state.ts        game state and player commands (select, build, order, scroll)
     units.ts        units and buildings: footprints, path following, unit avoidance, gathering
     pathfinding.ts  A* route planning, path smoothing, group destination spreading
-    world.ts        chunked world: terrain, iron and fog of war
-    terrain.ts      noise-based terrain and iron generation, sand transition tiles
-    coords.ts       isometric grid <-> world maths
-    renderer.ts     PixiJS rendering
-    input.ts        mouse and keyboard handling
+    world.ts        chunked world: ground, heights, cliffs, iron and fog of war
+    terrain.ts      noise-based terrain: ground types, heights and iron
+    coords.ts       tile and ground-plane maths
+    renderer.ts     Three.js scene: terrain meshes, units, previews, camera, picking
+    models.ts       procedural 3D models: the Mind, drones, towers, solar arrays, iron
+    input.ts        mouse and keyboard handling, picking through the 3D view
     hud.ts          resource bar, build buttons, messages, pause dialog
     definitions.ts  typed access to the JSON data below
   data/             object and resource definitions (JSON)
-  assets/           tilesets (PNG + JSON), icons, fonts
+  assets/           HUD icons, fonts
   styles/           CSS
 tests/              unit tests
 e2e/                browser tests
-art/                source artwork (GIMP .xcf) and unused images, not shipped
+art/                source artwork (GIMP .xcf), the old 2D sprites and unused images, not shipped
 docs/               design notes
 ```
+
+### The 3D world
+
+- **Units:** one tile is one world unit, horizontally and vertically. The game logic works on the ground plane, and height is only added when placing things in 3D.
+- **Terrain:** heights come from noise. Rolling hills, sharp ridges whose steepest parts become cliffs, and hollows where acid pools. The ground around the starting base is flattened so you can build there.
+- **Cliffs:** a step between neighbouring tiles that climbs more than `MAX_CLIMB` can't be walked. Climbing gentler slopes costs extra, so routes go around hills when that isn't much further.
+- **Buildings:** they need fairly level ground, so placement is refused if the footprint varies in height by more than `MAX_BUILD_SLOPE`.
+- **Drones and flying:** worker drones hover close to the ground and follow paths. The scout flies higher and goes straight over acid, cliffs and buildings. Flying and ground units don't block each other.
+- **Fog:** unexplored ground isn't drawn, and explored ground nobody can currently see is dimmed.
 
 ### Pathfinding
 
 Movement follows the approach classic RTS games such as Age of Empires use, split into two layers:
 
-- **Long-range planning** (`pathfinding.ts`): A* over the tile grid, using only what the player knows. Explored acid and the tiles under buildings are impassable. Unexplored ground is assumed walkable, so routes don't give away what's hidden in the fog. When a unit uncovers acid or a new building cuts across its remaining route, it re-plans. Units never cut diagonally between two blocked tiles. Each step costs its real on-screen length, because isometric tiles aren't square. The route is then smoothed into straight legs. If the target can't be reached, the unit walks to the nearest tile it can reach. The search has a node budget, and at most a few new routes are planned per tick, so a large group order can't stall a frame.
+- **Long-range planning** (`pathfinding.ts`): A* over the tile grid, using only what the player knows. Explored acid, explored cliffs and the tiles under buildings are impassable. Unexplored ground is assumed walkable, so routes don't give away what's hidden in the fog. When a unit uncovers acid or a cliff, or a new building cuts across its remaining route, it re-plans. Units never cut diagonally between two blocked tiles. The search stays within a box around where the order was given and the target, so an unreachable target can't send units roaming the map. They get as close as they can and stop. The route is then smoothed into straight legs. If the target can't be reached, the unit walks to the nearest tile it can reach. The search has a node budget, and at most a few new routes are planned per tick, so a large group order can't stall a frame.
 - **Short-range avoidance** (`units.ts`): units keep a little personal space. A unit that runs into another one first swerves, always to its own right so two units meeting head-on pass each other. If it can't swerve, it waits briefly for a moving unit to clear. After that it re-plans its route around the blocker, and it gives up after a few attempts. If the destination itself is taken by a unit that isn't moving, getting close counts as arriving.
 - **Groups**: every unit in a move order gets its own spot around the clicked point, and spots go to the nearest units first, so groups fan out instead of piling up. Gatherers each start on a different iron tile.
 - **Buildings**: buildings occupy the tiles under their base. They can't be placed on unexplored, blocked or acid tiles, and units standing on a new building's footprint are moved out of the way.

@@ -1,11 +1,8 @@
 {
   "skills": {},
-  "targetActions": [],
+  "footprint": 3,
+  "radius": 1.5,
   "communicationRadius": 10,
-  "hasWindow": true,
   "energy": -6,
-  "storage": {
-    "iron": 20000,
-    "energy": 2000
-  }
+  "storage": { "iron": 20000, "energy": 2000 }
 }

@@ -1,5 +1,9 @@
-import { CHUNK_SIZE, TILE_HEIGHT, TILE_WIDTH } from "./config";
+import { CHUNK_SIZE } from "./config";
 
+/**
+ * A position on the ground plane, in tiles. Tile (x, y) covers [x, x + 1) × [y, y + 1).
+ * In 3D, `x` maps to the scene's x axis and `y` to its z axis; height is separate.
+ */
 export interface Point {
   x: number;
   y: number;
@@ -27,26 +31,18 @@ export function gridRef(x: number, y: number): GridRef {
   };
 }
 
-/** World position of the centre of tile (x, y). */
+/** Ground position of the centre of tile (x, y). */
 export function worldFromGrid(x: number, y: number): Point {
-  return {
-    x: (x - y) * (TILE_WIDTH / 2) + TILE_WIDTH / 2,
-    y: (x + y) * (TILE_HEIGHT / 2) + TILE_HEIGHT / 2,
-  };
+  return { x: x + 0.5, y: y + 0.5 };
 }
 
-/** The tile containing a world position. */
+/** The tile containing a ground position. */
 export function gridFromWorld(point: Point): GridRef {
-  const x = point.x - TILE_WIDTH / 2;
-  return gridRef(
-    Math.floor(x / TILE_WIDTH + point.y / TILE_HEIGHT),
-    Math.floor(point.y / TILE_HEIGHT - x / TILE_WIDTH),
-  );
+  return gridRef(Math.floor(point.x), Math.floor(point.y));
 }
 
-/** Convert a screen position to world space for a camera offset. */
-export function worldFromScreen(screen: Point, camera: Point): Point {
-  return { x: screen.x - camera.x, y: screen.y - camera.y };
+export function distance(a: Point, b: Point): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
 export interface Rect {

@@ -19,7 +19,7 @@ const state = createGame({
 const game = document.getElementById("game");
 if (!game) throw new Error("Missing #game");
 
-const renderer = await Renderer.create(game);
+const renderer = await Renderer.create(game, state.world);
 
 const hud = new Hud({
   onBuild: (name) => {
@@ -28,25 +28,23 @@ const hud = new Hud({
   onResume: () => setPaused(state, hud, false),
 });
 
-bindInput(renderer.app.canvas, state, hud);
-
-// Start with the Mind in the middle of the screen.
-const mind = state.units.find((unit) => unit.name === "mind");
-if (mind) {
-  state.camera.x = Math.round(renderer.width / 2 - mind.position.x);
-  state.camera.y = Math.round(renderer.height / 2 - mind.position.y);
-}
+const screen = bindInput(renderer, state, hud, game);
 
 // Fixed-timestep simulation, decoupled from the display refresh rate.
 let accumulator = 0;
-renderer.app.ticker.add((ticker) => {
-  accumulator = Math.min(accumulator + ticker.deltaMS, TICK_MS * MAX_TICKS_PER_FRAME);
+let last = performance.now();
+requestAnimationFrame(function frame(now) {
+  accumulator = Math.min(accumulator + (now - last), TICK_MS * MAX_TICKS_PER_FRAME);
+  last = now;
   while (accumulator >= TICK_MS) {
     tick(state);
     accumulator -= TICK_MS;
   }
-  renderer.render(state);
+  // The camera may have moved, so find the ground under the pointer again.
+  state.pointer.world = screen.position ? renderer.groundAt(screen.position) : null;
+  renderer.render(state, now / 1000);
   hud.update(state.economy, state.building);
+  requestAnimationFrame(frame);
 });
 
 hud.showMessage(`Welcome ${state.player.name}, good luck!`, 20_000);

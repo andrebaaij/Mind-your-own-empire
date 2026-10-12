@@ -1,19 +1,12 @@
 {
-  "skills": {
-    "walk": true,
-    "scout": true
-  },
+  "skills": { "walk": true, "scout": true },
+  "movement": "air",
+  "speed": 5,
+  "radius": 0.25,
+  "altitude": 2.2,
   "communicationRadius": 3,
-  "hasWindow": true,
   "energy": -1,
-  "cost": {
-    "iron": 5000
-  },
-  "capacity": {
-    "energy": 100
-  },
-  "storage": {
-    "iron": 0,
-    "energy": 0
-  }
+  "cost": { "iron": 5000 },
+  "capacity": { "energy": 100 },
+  "storage": { "iron": 0, "energy": 0 }
 }

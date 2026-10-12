@@ -1,19 +1,36 @@
 import { type GridRef, gridRef } from "../src/game/coords";
-import { Terrain } from "../src/game/terrain";
+import { Terrain, type TerrainGenerator, type TerrainType } from "../src/game/terrain";
 import { World } from "../src/game/world";
 
+/** A test terrain: dirt everywhere at height 0 unless overridden. */
+export function terrain(overrides: Partial<TerrainGenerator> = {}): TerrainGenerator {
+  return {
+    ground: () => Terrain.Dirt,
+    height: () => 0,
+    iron: () => 0,
+    ...overrides,
+  };
+}
+
 /** Flat dirt everywhere, no iron. */
-export const openWorld = () => new World(() => -1);
+export const openWorld = () => new World(terrain());
 
-/** Flat dirt with iron on every tile: 0.5 is below the sand band but sin(0.5) > 0.4. */
-export const ironWorld = () => new World(() => 0.5);
+/** Flat dirt with iron on every tile. */
+export const ironWorld = () => new World(terrain({ iron: () => 1200 }));
 
-/** Turn tiles into acid, which ground units can't cross. */
-export function acid(world: World, tiles: readonly [number, number][]): void {
-  for (const [x, y] of tiles) {
-    const tile = gridRef(x, y);
-    world.getChunk(tile.chunkX, tile.chunkY).tiles[tile.i] = Terrain.Acid;
-  }
+/** Flat ground with acid on the given tiles. */
+export function worldWithAcid(tiles: readonly [number, number][]): World {
+  const acid = new Set(tiles.map(([x, y]) => `${x},${y}`));
+  return new World(
+    terrain({
+      ground: (x, y): TerrainType => (acid.has(`${x},${y}`) ? Terrain.Acid : Terrain.Dirt),
+    }),
+  );
+}
+
+/** Flat ground with a plateau `height` tall over x ≥ `edge`: a cliff along x = edge. */
+export function worldWithCliff(edge: number, height = 3): World {
+  return new World(terrain({ height: (x) => (x >= edge ? height : 0) }));
 }
 
 /** Block tiles as if a building stood on them. */
@@ -32,4 +49,9 @@ export function area(from: [number, number], to: [number, number]): [number, num
     for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) tiles.push([x, y]);
   }
   return tiles;
+}
+
+/** Explore a square of tiles, so the player knows what's there. */
+export function explore(world: World, center: [number, number], radius: number): void {
+  world.watch(gridRef(center[0], center[1]), radius);
 }

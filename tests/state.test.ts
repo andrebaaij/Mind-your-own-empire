@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { WHITE } from "../src/game/colors";
-import { STARTING_IRON } from "../src/game/config";
-import { gridFromWorld, gridRef, rectFromPoints, worldFromGrid } from "../src/game/coords";
+import { STARTING_IRON, ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN } from "../src/game/config";
+import { gridFromWorld, gridRef, worldFromGrid } from "../src/game/coords";
 import { getObjectDefinition } from "../src/game/definitions";
 import {
   build,
   canPlace,
   createGame,
   issueOrder,
-  resourcesInRect,
-  selectInRect,
+  moveCamera,
+  noKeys,
   setSelection,
   spawn,
   tick,
+  zoomCamera,
 } from "../src/game/state";
-import { ironWorld } from "./fixtures";
 
 const newGame = () => createGame({ seed: "1500", player: { name: "Test", color: WHITE } });
 
@@ -73,68 +73,72 @@ describe("build", () => {
   });
 });
 
-describe("tick", () => {
-  it("scrolls the camera while keeping the pointer fixed on screen", () => {
+describe("camera", () => {
+  it("starts looking at the Mind from the old isometric angle", () => {
     const state = newGame();
-    state.scroll.right = true;
-    state.scroll.fast = true;
-    tick(state);
-    expect(state.camera).toEqual({ x: -15, y: 0 });
-    expect(state.pointer.world).toEqual({ x: 15, y: 0 });
+    const mind = state.units.find((u) => u.name === "mind");
+    expect(state.camera.target).toEqual(mind?.position);
+    expect(state.camera.yaw).toBeCloseTo(Math.PI / 4);
   });
 
-  it("does nothing while paused", () => {
+  it("pans relative to the way the camera faces", () => {
+    const camera = { target: { x: 0, y: 0 }, yaw: 0, distance: ZOOM_DEFAULT };
+    moveCamera(camera, { ...noKeys(), up: true });
+    // Facing yaw 0 the camera looks towards -y, so "up" moves the target that way.
+    expect(camera.target.x).toBeCloseTo(0);
+    expect(camera.target.y).toBeLessThan(0);
+
+    const turned = { target: { x: 0, y: 0 }, yaw: Math.PI / 2, distance: ZOOM_DEFAULT };
+    moveCamera(turned, { ...noKeys(), up: true });
+    expect(turned.target.x).toBeLessThan(0);
+    expect(turned.target.y).toBeCloseTo(0);
+  });
+
+  it("pans faster with Shift and when zoomed out", () => {
+    const pan = (distance: number, fast: boolean) => {
+      const camera = { target: { x: 0, y: 0 }, yaw: 0, distance };
+      moveCamera(camera, { ...noKeys(), right: true, fast });
+      return camera.target.x;
+    };
+    expect(pan(ZOOM_DEFAULT, true)).toBeCloseTo(pan(ZOOM_DEFAULT, false) * 3);
+    expect(pan(ZOOM_DEFAULT * 2, false)).toBeCloseTo(pan(ZOOM_DEFAULT, false) * 2);
+  });
+
+  it("rotates and clamps zoom", () => {
+    const camera = { target: { x: 0, y: 0 }, yaw: 0, distance: ZOOM_DEFAULT };
+    moveCamera(camera, { ...noKeys(), rotateRight: true });
+    expect(camera.yaw).toBeGreaterThan(0);
+    zoomCamera(camera, 100);
+    expect(camera.distance).toBe(ZOOM_MAX);
+    zoomCamera(camera, 0.0001);
+    expect(camera.distance).toBe(ZOOM_MIN);
+  });
+
+  it("stays put while paused", () => {
     const state = newGame();
+    const before = { ...state.camera.target };
     state.paused = true;
-    state.scroll.up = true;
+    state.keys.up = true;
     tick(state);
-    expect(state.camera).toEqual({ x: 0, y: 0 });
+    expect(state.camera.target).toEqual(before);
   });
 });
 
 describe("orders", () => {
-  it("selects units by drag rectangle and walks them on right-click", () => {
+  it("walks the selection to a right-clicked spot", () => {
     const state = newGame();
     const blocks = state.units.filter((u) => u.name === "block");
     const [first] = blocks;
     if (!first) throw new Error("expected blocks");
-
-    // The three starting blocks sit in a row near the top of the map.
-    const xs = blocks.map((b) => b.position.x);
-    const ys = blocks.map((b) => b.position.y);
-    selectInRect(
-      state,
-      rectFromPoints(
-        { x: Math.min(...xs) - 1, y: Math.min(...ys) - 1 },
-        { x: Math.max(...xs) + 1, y: Math.max(...ys) + 1 },
-      ),
-    );
-    expect(state.selection.map((u) => u.name)).toEqual(["block", "block", "block"]);
+    setSelection(state, blocks);
     expect(first.selected).toBe(true);
 
-    // Right-click somewhere without explored iron: everyone walks there.
-    const target = { x: first.position.x, y: first.position.y - 200 };
-    issueOrder(state, rectFromPoints(target, target), target);
+    const target = { x: first.position.x - 4, y: first.position.y };
+    issueOrder(state, target);
     expect(blocks.every((b) => b.actions[0]?.kind === "walk")).toBe(true);
 
     setSelection(state, []);
     expect(first.selected).toBe(false);
-  });
-
-  it("finds only explored resources inside a drag rectangle", () => {
-    const world = ironWorld();
-    world.watch(gridRef(0, 0), 1); // explore tiles -1..1
-
-    // A screen-aligned strip through the centres of (0, 0), (1, -1) and (1, 0), running on
-    // into unexplored ground at (2, -1) and beyond.
-    const rect = rectFromPoints({ x: 20, y: 10 }, { x: 300, y: 40 });
-    const found = resourcesInRect(world, rect).map((r) => [r.grid.x, r.grid.y]);
-
-    expect(found).toEqual([
-      [1, -1],
-      [0, 0],
-      [1, 0],
-    ]);
   });
 
   it("orders gatherers to mine when right-clicking explored iron", () => {
@@ -151,7 +155,7 @@ describe("orders", () => {
     if (!resource) throw new Error("expected iron along the x axis");
     state.world.watch(resource.grid, 0);
 
-    issueOrder(state, rectFromPoints(resource.position, resource.position), resource.position);
+    issueOrder(state, resource.position, [resource]);
     expect(block.actions.map((a) => a.kind)).toEqual(["walk", "gather"]);
     expect(mind.actions).toEqual([]);
   });
@@ -162,13 +166,13 @@ describe("orders", () => {
     if (!block) throw new Error("expected a block");
     setSelection(state, [block]);
 
-    const a = { x: block.position.x - 100, y: block.position.y + 100 };
-    const b = { x: block.position.x - 200, y: block.position.y + 100 };
-    issueOrder(state, rectFromPoints(a, a), a);
-    issueOrder(state, rectFromPoints(b, b), b);
+    const a = { x: block.position.x - 3, y: block.position.y + 1 };
+    const b = { x: block.position.x - 6, y: block.position.y + 1 };
+    issueOrder(state, a);
+    issueOrder(state, b);
     expect(block.actions.map((x) => x.target)).toEqual([b]);
 
-    issueOrder(state, rectFromPoints(a, a), a, true);
+    issueOrder(state, a, [], true);
     expect(block.actions.map((x) => x.target)).toEqual([b, a]);
   });
 });
@@ -181,9 +185,9 @@ describe("group movement", () => {
     );
     setSelection(state, group);
 
-    // Across the map, on the far side of the Mind.
-    const target = { x: 600, y: 400 };
-    issueOrder(state, rectFromPoints(target, target), target);
+    // On the far side of the Mind.
+    const target = { x: 10.5, y: 8.5 };
+    issueOrder(state, target);
 
     const destinations = group.map((u) => u.actions[0]?.target);
     const tiles = new Set(
@@ -199,7 +203,7 @@ describe("group movement", () => {
     for (const unit of group) expect(state.world.isPassable(unit.grid)).toBe(true);
     const arrived = group.filter((u, i) => {
       const d = destinations[i];
-      return d && Math.hypot(u.position.x - d.x, u.position.y - d.y) < 30;
+      return d && Math.hypot(u.position.x - d.x, u.position.y - d.y) < 1;
     });
     expect(arrived.length).toBeGreaterThanOrEqual(group.length - 2);
   });
@@ -215,7 +219,7 @@ describe("group movement", () => {
     setSelection(state, group);
 
     const target = worldFromGrid(8, 12);
-    issueOrder(state, rectFromPoints(target, target), target);
+    issueOrder(state, target);
 
     let ticks = 0;
     while (group.some((u) => u.actions.length > 0) && ticks++ < 5000) tick(state);

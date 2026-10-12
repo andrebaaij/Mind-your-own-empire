@@ -5,7 +5,14 @@
  * string-pulled into straight segments, plus destination spreading for group moves.
  * Unit-versus-unit avoidance is handled separately, at movement time, in `units.ts`.
  */
-import { HEURISTIC_WEIGHT, LOS_SAMPLE_STEP, MAX_PATH_NODES, UNIT_RADIUS } from "./config";
+import {
+  CLIMB_COST,
+  HEURISTIC_WEIGHT,
+  LOS_SAMPLE_STEP,
+  MAX_PATH_NODES,
+  MIN_DETOUR,
+  UNIT_RADIUS,
+} from "./config";
 import { type GridRef, gridFromWorld, gridRef, type Point, worldFromGrid } from "./coords";
 import type { World } from "./world";
 
@@ -18,6 +25,11 @@ export interface PathOptions {
   avoid?: ReadonlySet<string>;
   /** Search budget; when exhausted the path leads to the closest tile found so far. */
   maxNodes?: number;
+  /**
+   * Where the order was given. The search box always includes it, so re-planning from further
+   * along a route can't keep pushing the search outwards.
+   */
+  anchor?: Point;
 }
 
 /** Planning only uses what the player knows: unexplored ground counts as open. */
@@ -25,7 +37,20 @@ function passable(world: World, x: number, y: number, avoid?: ReadonlySet<string
   return world.isKnownPassable(gridRef(x, y)) && !avoid?.has(tileKey(x, y));
 }
 
-/** Neighbour steps with their cost: the world-space length of the step (iso tiles aren't square). */
+/** Whether a ground unit can step from one tile to a neighbouring one, as far as the player knows. */
+function canStep(world: World, fromX: number, fromY: number, toX: number, toY: number): boolean {
+  return world.knownCanClimb(gridRef(fromX, fromY), gridRef(toX, toY));
+}
+
+/** Height gained stepping between two tiles, counted only where the player has seen both. */
+function knownRise(world: World, fromX: number, fromY: number, toX: number, toY: number): number {
+  const from = gridRef(fromX, fromY);
+  const to = gridRef(toX, toY);
+  if (!world.isExplored(from) || !world.isExplored(to)) return 0;
+  return Math.max(0, world.tileHeight(to) - world.tileHeight(from));
+}
+
+/** Neighbour steps with their ground distance (1 straight, √2 diagonal). */
 const STEPS = [
   [1, 0],
   [-1, 0],
@@ -153,6 +178,15 @@ export function findTilePath(
   let best = startNode;
   let expanded = 0;
 
+  // Only search a box around start and goal. Without it, a goal that can't be reached sends
+  // units on ever longer detours through the fog, which is assumed open.
+  const origin = options.anchor ? gridFromWorld(options.anchor) : start;
+  const margin = Math.max(MIN_DETOUR, Math.hypot(goal.x - origin.x, goal.y - origin.y));
+  const minX = Math.min(origin.x, goal.x) - margin;
+  const maxX = Math.max(origin.x, goal.x) + margin;
+  const minY = Math.min(origin.y, goal.y) - margin;
+  const maxY = Math.max(origin.y, goal.y) + margin;
+
   while (open.size > 0 && expanded < maxNodes) {
     const node = open.pop() as Node;
     if (node.closed) continue;
@@ -165,14 +199,19 @@ export function findTilePath(
     for (const { dx, dy, cost } of STEPS) {
       const x = node.x + dx;
       const y = node.y + dy;
+      if (x < minX || x > maxX || y < minY || y > maxY) continue;
       if (!passable(world, x, y, avoid)) continue;
-      // No squeezing diagonally between two blocked tiles.
+      if (!canStep(world, node.x, node.y, x, y)) continue; // cliff
+      // No squeezing diagonally between two blocked tiles or around a cliff corner.
       if (dx !== 0 && dy !== 0) {
         if (!passable(world, node.x + dx, node.y, avoid)) continue;
         if (!passable(world, node.x, node.y + dy, avoid)) continue;
+        if (!canStep(world, node.x, node.y, node.x + dx, node.y)) continue;
+        if (!canStep(world, node.x, node.y, node.x, node.y + dy)) continue;
       }
 
-      const g = node.g + cost;
+      // Climbing costs extra, so routes go around hills when that's not much further.
+      const g = node.g + cost + CLIMB_COST * knownRise(world, node.x, node.y, x, y);
       const key = nodeKey(x, y);
       const existing = nodes.get(key);
       if (existing && (existing.closed || existing.g <= g)) continue;
@@ -199,8 +238,8 @@ export function findTilePath(
 
 /**
  * Whether a unit can walk in a straight line from `a` to `b`: the line and two parallel lines
- * a unit-radius to either side stay on passable tiles. Tiles under `a` are ignored so a unit
- * standing on a freshly blocked tile can still leave it.
+ * a unit-radius to either side stay on passable tiles, without crossing a cliff. Tiles under
+ * `a` are ignored so a unit standing on a freshly blocked tile can still leave it.
  */
 export function hasClearLine(
   world: World,
@@ -217,6 +256,7 @@ export function hasClearLine(
   const ny = (dx / length) * UNIT_RADIUS;
   const startTile = gridFromWorld(a);
   const samples = Math.ceil(length / LOS_SAMPLE_STEP);
+  let previous = startTile;
 
   for (let i = 1; i <= samples; i++) {
     const t = i / samples;
@@ -226,6 +266,12 @@ export function hasClearLine(
       const tile = gridFromWorld({ x: px + nx * side, y: py + ny * side });
       if (tile.x === startTile.x && tile.y === startTile.y) continue;
       if (!passable(world, tile.x, tile.y, avoid)) return false;
+    }
+    // The centre line must not run up or down a cliff.
+    const tile = gridFromWorld({ x: px, y: py });
+    if (tile.x !== previous.x || tile.y !== previous.y) {
+      if (!canStep(world, previous.x, previous.y, tile.x, tile.y)) return false;
+      previous = tile;
     }
   }
   return true;

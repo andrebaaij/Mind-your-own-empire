@@ -1,17 +1,24 @@
-import { worldFromScreen } from "./coords";
+import { gridFromWorld, type Point, rectFromPoints } from "./coords";
 import type { Hud } from "./hud";
+import type { Renderer } from "./renderer";
 import {
   build,
   buildTiles,
+  type CameraKeys,
   cancelOrders,
   type GameState,
   issueOrder,
-  selectInRect,
-  selectionRect,
+  noKeys,
   setSelection,
+  zoomCamera,
 } from "./state";
 
-const SCROLL_KEYS: Record<string, keyof GameState["scroll"]> = {
+/** Screen drags shorter than this many pixels count as a click. */
+const CLICK_PIXELS = 4;
+/** Camera rotation per pixel of middle-mouse drag. */
+const DRAG_ROTATE = 0.008;
+
+const CAMERA_KEYS: Record<string, keyof CameraKeys> = {
   KeyW: "up",
   ArrowUp: "up",
   KeyS: "down",
@@ -20,6 +27,8 @@ const SCROLL_KEYS: Record<string, keyof GameState["scroll"]> = {
   ArrowLeft: "left",
   KeyD: "right",
   ArrowRight: "right",
+  KeyQ: "rotateLeft",
+  KeyE: "rotateRight",
 };
 
 export function setPaused(state: GameState, hud: Hud, paused: boolean): void {
@@ -27,33 +36,84 @@ export function setPaused(state: GameState, hud: Hud, paused: boolean): void {
   hud.setPaused(paused);
 }
 
-/** Wire mouse and keyboard input on `canvas` to game commands. */
-export function bindInput(canvas: HTMLCanvasElement, state: GameState, hud: Hud): void {
-  const updatePointer = (event: PointerEvent) => {
-    state.pointer.world = worldFromScreen({ x: event.clientX, y: event.clientY }, state.camera);
-  };
+/** Tracks the pointer on screen; the ground point under it is refreshed every frame. */
+export interface ScreenPointer {
+  position: Point | null;
+  dragStart: Point | null;
+  button: number | null;
+}
+
+/** Wire mouse and keyboard input to game commands, picking through the 3D view. */
+export function bindInput(
+  renderer: Renderer,
+  state: GameState,
+  hud: Hud,
+  game: HTMLElement,
+): ScreenPointer {
+  const canvas = renderer.canvas;
+  const screen: ScreenPointer = { position: null, dragStart: null, button: null };
+
+  // The drag-select box is a plain DOM overlay.
+  const box = document.createElement("div");
+  box.className = "selection-box";
+  box.hidden = true;
+  game.append(box);
+
+  const at = (event: PointerEvent | MouseEvent): Point => ({ x: event.clientX, y: event.clientY });
+  const isClick = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y) < CLICK_PIXELS;
 
   canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 
-  canvas.addEventListener("pointermove", updatePointer);
+  canvas.addEventListener("pointermove", (event) => {
+    const previous = screen.position;
+    screen.position = at(event);
+
+    if (screen.button === 1 && previous) {
+      state.camera.yaw += (screen.position.x - previous.x) * DRAG_ROTATE;
+      return;
+    }
+    // Show the selection box while left-dragging (not while placing buildings).
+    if (screen.button === 0 && screen.dragStart && !state.building) {
+      const rect = rectFromPoints(screen.dragStart, screen.position);
+      box.hidden = isClick(screen.dragStart, screen.position);
+      box.style.left = `${rect.left}px`;
+      box.style.top = `${rect.top}px`;
+      box.style.width = `${rect.right - rect.left}px`;
+      box.style.height = `${rect.bottom - rect.top}px`;
+    }
+  });
+
+  canvas.addEventListener("pointerleave", () => {
+    if (screen.button === null) screen.position = null;
+  });
 
   canvas.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0 && event.button !== 2) return;
-    updatePointer(event);
-    state.pointer.dragStart = { ...state.pointer.world };
+    if (event.button > 2) return;
+    screen.position = at(event);
+    screen.dragStart = at(event);
+    screen.button = event.button;
+    state.pointer.dragStart = renderer.groundAt(screen.position);
     canvas.setPointerCapture(event.pointerId);
+    if (event.button === 1) event.preventDefault();
   });
 
   canvas.addEventListener("pointerup", (event) => {
-    if (!state.pointer.dragStart) return;
-    if (state.paused) {
+    const start = screen.dragStart;
+    const button = screen.button;
+    screen.dragStart = null;
+    screen.button = null;
+    box.hidden = true;
+    if (!start || button !== event.button || state.paused) {
       state.pointer.dragStart = null;
       return;
     }
-    updatePointer(event);
-    const rect = selectionRect(state.pointer);
 
-    if (event.button === 0) {
+    const end = at(event);
+    state.pointer.world = renderer.groundAt(end);
+    const click = isClick(start, end);
+    const rect = rectFromPoints(start, end);
+
+    if (button === 0) {
       if (state.building) {
         const { built, blocked, outOfIron } = build(
           state,
@@ -64,23 +124,41 @@ export function bindInput(canvas: HTMLCanvasElement, state: GameState, hud: Hud)
         else if (built === 0 && blocked > 0) hud.showMessage("You can't build there", 3_000);
         // Hold Shift to keep placing; a click on blocked ground keeps the building selected.
         if (!event.shiftKey && !outOfIron && built > 0) state.building = null;
+      } else if (click) {
+        const unit = renderer.unitAt(end, state.units);
+        setSelection(state, unit ? [unit] : []);
       } else {
-        selectInRect(state, rect);
+        setSelection(state, renderer.unitsInScreenRect(rect, state.units));
       }
-    } else if (event.button === 2) {
+    } else if (button === 2 && state.pointer.world) {
+      const ground = state.pointer.world;
+      let resources = click ? [] : renderer.resourcesInScreenRect(rect);
+      if (click) {
+        const resource = state.world.resourceAt(gridFromWorld(ground));
+        if (resource) resources = [resource];
+      }
       // Shift queues the order after the current ones instead of replacing them.
-      issueOrder(state, rect, state.pointer.world, event.shiftKey);
+      issueOrder(state, ground, resources, event.shiftKey);
     }
 
     state.pointer.dragStart = null;
   });
 
+  canvas.addEventListener(
+    "wheel",
+    (event) => {
+      event.preventDefault();
+      zoomCamera(state.camera, Math.exp(event.deltaY * 0.0012));
+    },
+    { passive: false },
+  );
+
   document.addEventListener("keydown", (event) => {
-    const direction = SCROLL_KEYS[event.code];
-    if (direction) {
-      state.scroll[direction] = true;
+    const key = CAMERA_KEYS[event.code];
+    if (key) {
+      state.keys[key] = true;
     } else if (event.key === "Shift") {
-      state.scroll.fast = true;
+      state.keys.fast = true;
     } else if (event.code === "Escape") {
       state.building = null;
       setSelection(state, []);
@@ -96,15 +174,20 @@ export function bindInput(canvas: HTMLCanvasElement, state: GameState, hud: Hud)
   });
 
   document.addEventListener("keyup", (event) => {
-    const direction = SCROLL_KEYS[event.code];
-    if (direction) state.scroll[direction] = false;
-    else if (event.key === "Shift") state.scroll.fast = false;
+    const key = CAMERA_KEYS[event.code];
+    if (key) state.keys[key] = false;
+    else if (event.key === "Shift") state.keys.fast = false;
   });
 
   // Losing focus pauses the game and releases any held keys or buttons.
   window.addEventListener("blur", () => {
-    state.scroll = { up: false, down: false, left: false, right: false, fast: false };
+    state.keys = noKeys();
     state.pointer.dragStart = null;
+    screen.dragStart = null;
+    screen.button = null;
+    box.hidden = true;
     setPaused(state, hud, true);
   });
+
+  return screen;
 }
