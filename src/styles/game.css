@@ -60,6 +60,16 @@ body {
   filter: drop-shadow(0 0 6px color-mix(in oklab, var(--iron) 60%, transparent));
 }
 
+.stat-icon.lattice {
+  color: var(--lattice);
+  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--lattice) 60%, transparent));
+}
+
+.stat[hidden],
+.build-item[hidden] {
+  display: none;
+}
+
 .stat-icon.energy {
   color: var(--energy);
   filter: drop-shadow(0 0 6px color-mix(in oklab, var(--energy) 60%, transparent));
@@ -331,6 +341,10 @@ body {
 
 .build-meta .energy {
   color: var(--energy);
+}
+
+.build-meta .lattice {
+  color: var(--lattice);
 }
 
 .build-item.unaffordable .build-name,

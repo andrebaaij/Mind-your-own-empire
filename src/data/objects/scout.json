@@ -12,7 +12,8 @@
   "communicationRadius": 3,
   "energy": -1,
   "cost": {
-    "iron": 150
+    "iron": 100,
+    "lattice": 10
   },
   "capacity": {
     "energy": 100

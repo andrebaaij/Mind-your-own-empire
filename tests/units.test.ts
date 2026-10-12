@@ -300,7 +300,7 @@ describe("gathering", () => {
     const ctx: UnitContext = {
       ...standaloneContext(),
       dropOff: () => home,
-      deposit: (_unit, amount) => {
+      deposit: (_unit, _kind, amount) => {
         delivered.push(amount);
         return amount;
       },

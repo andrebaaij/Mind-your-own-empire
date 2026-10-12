@@ -28,7 +28,7 @@ describe("createGame", () => {
     expect(state.economy.iron).toBe(STARTING_IRON);
     // Mind +4, three drones and a scout -4, spire -2, four collectors +12.
     expect(state.economy.power).toBe(10);
-    expect(state.economy.storage).toEqual({ iron: 1000 });
+    expect(state.economy.storage).toEqual({ iron: 1000, lattice: 200 });
   });
 });
 
@@ -42,7 +42,7 @@ describe("build", () => {
 
     const result = build(state, "solar", [gridRef(20, 20), gridRef(21, 20), gridRef(22, 20)]);
 
-    expect(result).toEqual({ built: 2, blocked: 0, outOfIron: true });
+    expect(result).toEqual({ built: 2, blocked: 0, shortOf: "iron" });
     expect(state.units.length).toBe(before + 2);
     expect(state.economy.iron).toBe(1);
     expect(state.economy.power).toBe(10 + 6);
@@ -58,7 +58,7 @@ describe("build", () => {
     expect(canPlace(state, "solar", gridRef(8, 8))).toBe(true);
 
     const result = build(state, "solar", [gridRef(5, 5), gridRef(8, 8), gridRef(40, 40)]);
-    expect(result).toEqual({ built: 1, blocked: 2, outOfIron: false });
+    expect(result).toEqual({ built: 1, blocked: 2, shortOf: null });
   });
 
   it("moves units off the ground a new building covers", () => {

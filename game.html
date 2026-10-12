@@ -14,6 +14,10 @@
           <path d="M12 2 17 9 12 22 7 9Z" fill="currentColor" opacity="0.9" />
           <path d="M5 8 8 12 6 18 2 12Z M19 8 22 12 18 18 16 12Z" fill="currentColor" opacity="0.55" />
         </symbol>
+        <symbol id="icon-lattice" viewBox="0 0 24 24">
+          <path d="M12 2 20.5 7v10L12 22 3.5 17V7Z" fill="none" stroke="currentColor" stroke-width="2" />
+          <path d="M12 7 16 9.5v5L12 17 8 14.5v-5Z" fill="currentColor" />
+        </symbol>
         <symbol id="icon-energy" viewBox="0 0 24 24">
           <path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6Z" fill="currentColor" />
         </symbol>
@@ -26,6 +30,15 @@
             <div class="label">Iron</div>
             <div class="value">
               <span id="iron"></span><span class="cap"> / <span id="iron-storage"></span></span>
+            </div>
+          </div>
+        </div>
+        <div id="lattice-stat" class="stat" title="Lattice in store / storage capacity. Mined from the seams around Tessilend sites." hidden>
+          <svg class="icon stat-icon lattice" aria-hidden="true"><use href="#icon-lattice" /></svg>
+          <div>
+            <div class="label">Lattice</div>
+            <div class="value">
+              <span id="lattice"></span><span class="cap"> / <span id="lattice-storage"></span></span>
             </div>
           </div>
         </div>
@@ -65,7 +78,7 @@
           <dt>Left click / drag</dt>
           <dd>Select, or place a building</dd>
           <dt>Right click / drag</dt>
-          <dd>Move, or mine iron</dd>
+          <dd>Move, mine, or study a Tessilend site</dd>
           <dt><kbd>Shift</kbd> + right click</dt>
           <dd>Queue the order</dd>
           <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt>

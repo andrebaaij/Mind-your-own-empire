@@ -73,6 +73,8 @@ export interface TerrainGenerator {
   height(x: number, y: number): number;
   /** Iron in the tile at (x, y); zero or negative means none. */
   iron(x: number, y: number): number;
+  /** Seeds where Tessilend sites are. Without it, only sites placed by hand exist. */
+  siteSalt?: number;
 }
 
 /** Deposits placed a short drone trip from the start, so there's always something to mine. */
@@ -97,5 +99,6 @@ export function noiseTerrain(noise: Noise2D): TerrainGenerator {
     ground: (x, y) => baseTerrain(noise, x, y),
     height: (x, y) => terrainHeight(noise, x, y),
     iron: (x, y) => Math.max(ironAmount(noise, x, y), starterIron(x, y)),
+    siteSalt: Math.floor((noise(0.317, -0.713) + 1) * 1_000_000),
   };
 }

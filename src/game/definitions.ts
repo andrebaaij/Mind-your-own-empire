@@ -25,13 +25,16 @@ export interface ObjectDefinition {
   /** Net energy produced (positive) or consumed (negative). */
   energy: number;
   cost?: Partial<Record<ResourceKind, number>>;
-  capacity?: Partial<Record<ResourceKind | "energy", number>>;
-  storage: { iron: number; energy: number };
+  /** `load`: how much a drone can carry, of any resources together. */
+  capacity?: Partial<Record<"load" | "energy", number>>;
+  storage: { iron: number; energy: number; lattice?: number };
 }
 
 export interface ResourceDefinition {
   /** Thresholds for each visual level; an amount above `levels[n]` shows level `n`. */
   levels: number[];
+  /** Mining speed relative to iron. */
+  rate?: number;
 }
 
 function byBasename<T>(modules: Record<string, T>): Record<string, T> {
@@ -60,7 +63,7 @@ export type ObjectName = "block" | "mind" | "scout" | "solar" | "tower" | "warde
 export type Faction = "player" | "custody";
 
 /** Objects the player can build from the HUD. */
-export const BUILDABLE: readonly ObjectName[] = ["block", "solar", "tower"];
+export const BUILDABLE: readonly ObjectName[] = ["block", "solar", "tower", "scout"];
 
 export function getObjectDefinition(name: ObjectName): ObjectDefinition {
   const definition = objectDefinitions[name];

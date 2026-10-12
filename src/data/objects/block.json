@@ -15,7 +15,7 @@
     "iron": 50
   },
   "capacity": {
-    "iron": 10
+    "load": 10
   },
   "storage": {
     "iron": 0,

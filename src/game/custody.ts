@@ -50,16 +50,23 @@ export function isWarden(unit: Unit): boolean {
 
 /**
  * Whether the Custody considers a building looked after. The Mind and sensor spires always are:
- * the Custody leaves alone anything that is itself keeping watch.
+ * the Custody leaves alone anything that is itself keeping watch. So is anything built on
+ * Tessilend foundations: that's built to plan, and the plan is sacred.
  */
 export function isAttended(state: GameState, building: Unit): boolean {
   if (building.name === "mind" || building.name === "tower") return true;
+  if (isBuiltToPlan(state, building)) return true;
   return state.units.some((unit) => {
     if (unit.faction !== "player" || unit === building) return false;
     const d = distance(unit.position, building.position);
     if (isMobile(unit)) return d <= ATTEND_RADIUS;
     return unit.name === "tower" && d <= SPIRE_ATTEND_RADIUS;
   });
+}
+
+/** A building standing on Tessilend paving. */
+export function isBuiltToPlan(state: GameState, building: Unit): boolean {
+  return building.footprint.length > 0 && building.footprint.every((t) => state.world.isPaved(t));
 }
 
 function isTarget(state: GameState, unit: Unit): boolean {

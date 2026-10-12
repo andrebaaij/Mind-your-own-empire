@@ -1,6 +1,7 @@
 import { BUILDABLE, getObjectDefinition, type ObjectName } from "./definitions";
 import type { MissionDefinition, MissionRuntime } from "./missions";
-import type { GameState, Message } from "./state";
+import { SITE_INFO, siteStatusText } from "./relics";
+import { canBuild, type GameState, type Message, shortfall } from "./state";
 import type { Unit } from "./units";
 
 function byId<T extends HTMLElement = HTMLElement>(id: string): T {
@@ -18,7 +19,7 @@ function signed(n: number): string {
 }
 
 /** An SVG reference to one of the icon symbols defined in game.html. */
-function icon(name: "iron" | "energy"): string {
+function icon(name: "iron" | "lattice" | "energy"): string {
   return `<svg class="icon ${name}" aria-hidden="true"><use href="#icon-${name}"/></svg>`;
 }
 
@@ -27,7 +28,11 @@ export function unitStatus(unit: Unit): string {
   if (!unit.definition.skills.walk) return "Standing";
   const action = unit.actions[0];
   if (!action) return "Idle";
-  return action.kind === "walk" ? "Moving" : "Mining";
+  const next = action.kind === "walk" ? unit.actions[1] : action;
+  if (next?.kind === "study") return "Studying";
+  if (action.kind === "walk") return "Moving";
+  if (action.kind === "tidy") return "Tidying";
+  return "Mining";
 }
 
 export interface SelectionRow {
@@ -54,8 +59,10 @@ export function summarizeSelection(units: readonly Unit[]): SelectionRow[] {
       counts.size === 1
         ? ([...counts.keys()][0] ?? "")
         : [...counts].map(([s, n]) => `${n} ${s.toLowerCase()}`).join(", ");
-    const carried = members.reduce((sum, unit) => sum + unit.carrying.iron, 0);
-    if (carried > 0) status += ` · carrying ${format(carried)} iron`;
+    for (const kind of ["iron", "lattice"] as const) {
+      const carried = members.reduce((sum, unit) => sum + unit.carrying[kind], 0);
+      if (carried > 0) status += ` · carrying ${format(carried)} ${kind}`;
+    }
     return { label, count: members.length, status };
   });
 }
@@ -76,6 +83,9 @@ export interface DialogAction {
 export class Hud {
   private readonly iron = byId("iron");
   private readonly ironStorage = byId("iron-storage");
+  private readonly lattice = byId("lattice");
+  private readonly latticeStorage = byId("lattice-storage");
+  private readonly latticeStat = byId("lattice-stat");
   private readonly power = byId("energy");
   private readonly powerStatus = byId("power-status");
   private readonly message = byId<HTMLOutputElement>("message");
@@ -105,11 +115,15 @@ export class Hud {
       button.dataset.build = name;
       button.title = definition.description;
       button.setAttribute("aria-pressed", "false");
+      const lattice = definition.cost?.lattice
+        ? `<span>${icon("lattice")}${format(definition.cost.lattice)}</span>`
+        : "";
       button.innerHTML = `
         <kbd>${index + 1}</kbd>
         <span class="build-name">${definition.label}</span>
         <span class="build-meta">
           <span>${icon("iron")}${format(definition.cost?.iron ?? 0)}</span>
+          ${lattice}
           <span>${icon("energy")}${signed(definition.energy)}</span>
         </span>`;
       button.addEventListener("click", () => handlers.onBuild(name));
@@ -139,26 +153,39 @@ export class Hud {
     this.updateMessages(state);
   }
 
-  private updateEconomy({ economy, building }: GameState): void {
-    const key = `${economy.iron}|${economy.storage.iron}|${economy.power}|${building}`;
+  private updateEconomy(state: GameState): void {
+    const { economy, building } = state;
+    const key = `${economy.iron}|${economy.storage.iron}|${economy.lattice}|${economy.storage.lattice}|${economy.power}|${building}|${[...state.designs]}|${state.discovered.has("lattice")}`;
     if (key === this.shownEconomy) return;
     this.shownEconomy = key;
 
     this.iron.textContent = format(economy.iron);
     this.ironStorage.textContent = format(economy.storage.iron);
+    // Lattice only appears once the Mind knows what it is.
+    this.latticeStat.hidden = !state.discovered.has("lattice");
+    this.lattice.textContent = format(economy.lattice);
+    this.latticeStorage.textContent = format(economy.storage.lattice);
     this.power.textContent = signed(economy.power);
     this.power.classList.toggle("negative", economy.power < 0);
     this.powerStatus.textContent = economy.power < 0 ? "· brownout" : "";
 
     for (const [name, button] of this.buildButtons) {
+      button.hidden = !canBuild(state, name);
       button.setAttribute("aria-pressed", String(name === building));
-      const cost = getObjectDefinition(name).cost?.iron ?? 0;
-      button.classList.toggle("unaffordable", economy.iron < cost);
+      button.classList.toggle("unaffordable", shortfall(state, name) !== null);
     }
   }
 
-  private updateSelection({ selection }: GameState): void {
+  private updateSelection({ selection, inspecting }: GameState): void {
     const rows = summarizeSelection(selection);
+    // With nothing selected, show the Tessilend site the player clicked on.
+    if (rows.length === 0 && inspecting) {
+      rows.push({
+        label: SITE_INFO[inspecting.kind].label,
+        count: 0,
+        status: siteStatusText(inspecting),
+      });
+    }
     const key = JSON.stringify(rows);
     if (key === this.shownSelection) return;
     this.shownSelection = key;
@@ -169,7 +196,7 @@ export class Hud {
         const item = document.createElement("li");
         const count = document.createElement("span");
         count.className = "selection-count";
-        count.textContent = `${row.count}×`;
+        count.textContent = row.count > 0 ? `${row.count}×` : "";
         const name = document.createElement("span");
         name.className = "selection-name";
         name.textContent = row.label;

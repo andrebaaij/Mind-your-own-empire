@@ -6,7 +6,7 @@ import { Hud } from "./hud";
 import { bindInput, setPaused } from "./input";
 import { getMission, MISSIONS, markCompleted, startMission, updateMission } from "./missions";
 import { Renderer } from "./renderer";
-import { build, createGame, issueOrder, say, setSelection, tick } from "./state";
+import { build, canBuild, createGame, issueOrder, say, setSelection, tick } from "./state";
 
 const params = new URLSearchParams(window.location.search);
 const player = {
@@ -28,6 +28,7 @@ document.documentElement.style.setProperty("--accent", glowCss(state.player.colo
 // The interface is ready straight away; the 3D view follows once the GPU is set up.
 const hud = new Hud({
   onBuild: (name) => {
+    if (!canBuild(state, name)) return;
     state.building = state.building === name ? null : name;
   },
   onResume: () => setPaused(state, hud, false),

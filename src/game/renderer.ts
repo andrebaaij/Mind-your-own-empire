@@ -14,7 +14,9 @@ import {
   crystalMaterial,
   glowColor,
 } from "./models";
+import { createLatticeGeometry, latticeMaterial, RuinView } from "./ruins";
 import { Scenery, valueNoise } from "./scenery";
+import type { Site } from "./sites";
 import { buildTiles, canPlace, type GameState, say } from "./state";
 import { START_CENTER, Terrain } from "./terrain";
 import type { Unit } from "./units";
@@ -37,6 +39,9 @@ const GROUND_COLORS: Record<number, readonly [THREE.Color, THREE.Color]> = {
   [Terrain.Acid]: [new THREE.Color("#2c4a1e"), new THREE.Color("#3a5a22")],
 };
 const CLIFF_COLOR = new THREE.Color("#4e3f3e");
+/** Tessilend paving, pale and worn, and the darker stone under their structures. */
+const PAVED_COLOR = new THREE.Color("#a3977f");
+const RUIN_COLOR = new THREE.Color("#6e6455");
 const SCORCH_COLOR = new THREE.Color("#2a1f1e");
 /** The Mind came down hard: the ground is scorched this far around where it landed. */
 const SCORCH_RADIUS = 4.5;
@@ -51,6 +56,7 @@ interface ChunkView {
   /** A glowing film over the chunk's explored acid. */
   acid: THREE.Mesh;
   crystals: THREE.InstancedMesh;
+  lattice: THREE.InstancedMesh;
   /** Ground heights at the (CHUNK_SIZE + 1)² tile corners, and their normals. */
   cornerHeights: Float32Array;
   cornerNormals: Float32Array;
@@ -109,6 +115,8 @@ export class Renderer {
   private readonly fauna: Fauna;
   private readonly creatures: CreatureView;
   private lastFrame: number | null = null;
+  private readonly ruins: RuinView;
+  private readonly latticeGeometry = createLatticeGeometry();
   private readonly pipeline: THREE.RenderPipeline;
   private readonly raycaster = new THREE.Raycaster();
 
@@ -162,7 +170,13 @@ export class Renderer {
     this.scenery = new Scenery(world);
     this.fauna = new Fauna(world);
     this.creatures = new CreatureView(world);
-    this.scene.add(this.atmosphere.group, this.scenery.group, this.creatures.group);
+    this.ruins = new RuinView(world);
+    this.scene.add(
+      this.atmosphere.group,
+      this.scenery.group,
+      this.creatures.group,
+      this.ruins.group,
+    );
 
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -252,6 +266,11 @@ export class Renderer {
     return new THREE.Vector3(position.x, ground + lift, position.y);
   }
 
+  /** The Tessilend site drawn under a screen position, if any. */
+  siteAt(screen: Point): Site | null {
+    return this.ruins.pick(this.rayFrom(screen));
+  }
+
   /** The unit under a screen position, nearest to the camera. */
   unitAt(screen: Point, units: readonly Unit[]): Unit | null {
     const ray = this.rayFrom(screen);
@@ -305,10 +324,15 @@ export class Renderer {
   // --- Frame -----------------------------------------------------------------------------
 
   render(state: GameState, time: number): void {
+    // Ambient life runs on its own clock, which stops when the game is paused.
+    const dt = this.lastFrame === null || state.paused ? 0 : Math.min(0.1, time - this.lastFrame);
+    this.lastFrame = time;
     this.placeCamera(state);
     this.renderChunks(state);
     this.renderUnits(state, time);
-    this.renderFauna(state, time);
+    this.renderFauna(state, time, dt);
+    const { target, distance } = state.camera;
+    this.ruins.update(state.world.sitesNear(target, distance * 2.5 + 12), time, dt);
     this.renderMarkers(state);
     this.renderGhosts(state);
     this.pipeline.render();
@@ -381,6 +405,7 @@ export class Renderer {
         view.terrain.visible = false;
         view.acid.visible = false;
         view.crystals.visible = false;
+        view.lattice.visible = false;
       }
     }
     this.shownChunks.clear();
@@ -388,6 +413,7 @@ export class Renderer {
       view.terrain.visible = true;
       view.acid.visible = true;
       view.crystals.visible = true;
+      view.lattice.visible = true;
       this.shownChunks.add(view);
     }
   }
@@ -426,7 +452,14 @@ export class Renderer {
     );
     crystals.castShadow = true;
     crystals.count = 0;
-    this.scene.add(terrain, acid, crystals);
+    const lattice = new THREE.InstancedMesh(
+      this.latticeGeometry,
+      latticeMaterial,
+      CHUNK_SIZE * CHUNK_SIZE,
+    );
+    lattice.castShadow = true;
+    lattice.count = 0;
+    this.scene.add(terrain, acid, crystals, lattice);
 
     const view: ChunkView = {
       chunk,
@@ -434,6 +467,7 @@ export class Renderer {
       terrain,
       acid,
       crystals,
+      lattice,
       cornerHeights,
       cornerNormals,
     };
@@ -482,6 +516,8 @@ export class Renderer {
           // Bare rock shows on steep slopes and cliffs; high ground is sun-bleached.
           const steep = Math.min(1, Math.max(0, (0.93 - ny) * 5));
           color.lerp(CLIFF_COLOR, Math.max(steep, cliff ? 0.55 : 0));
+          if (chunk.paved[i] === 1) color.lerp(PAVED_COLOR, 0.82);
+          else if (chunk.ruin[i] === 1) color.lerp(RUIN_COLOR, 0.85);
           color.multiplyScalar(0.92 + height * 0.04 + tileNoise(cx, cy) * 0.08);
           const scorch = Math.hypot(cx - START_CENTER.x, cy - START_CENTER.y) / SCORCH_RADIUS;
           if (scorch < 1) color.lerp(SCORCH_COLOR, (1 - scorch) * 0.7);
@@ -521,21 +557,34 @@ export class Renderer {
     const rotation = new THREE.Quaternion();
     const scale = new THREE.Vector3();
     const position = new THREE.Vector3();
-    let count = 0;
+    let irons = 0;
+    let lattices = 0;
     chunk.resources.forEach((resource, i) => {
       if (!resource?.exists || resource.level < 0 || chunk.explored[i] !== 1) return;
       const { x, y } = resource.position;
       const jitter = tileNoise(x, y);
       position.set(x, this.world.heightAt(x, y), y);
       rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), jitter * Math.PI * 2);
+      if (resource.kind === "lattice") {
+        const size = 0.7 + resource.level * 0.18;
+        scale.set(size, size * (0.8 + jitter * 0.4), size);
+        matrix.compose(position, rotation, scale);
+        view.lattice.setMatrixAt(lattices++, matrix);
+        return;
+      }
       const size = 0.6 + resource.level * 0.18;
       scale.set(size, size * (0.8 + jitter * 0.5), size);
       matrix.compose(position, rotation, scale);
-      view.crystals.setMatrixAt(count++, matrix);
+      view.crystals.setMatrixAt(irons++, matrix);
     });
-    view.crystals.count = count;
-    view.crystals.instanceMatrix.needsUpdate = true;
-    view.crystals.computeBoundingSphere();
+    for (const [mesh, count] of [
+      [view.crystals, irons],
+      [view.lattice, lattices],
+    ] as const) {
+      mesh.count = count;
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+    }
 
     view.version = chunk.version;
   }
@@ -646,10 +695,7 @@ export class Renderer {
     }
   }
 
-  /** Wildlife lives on its own clock: it stops when the game is paused. */
-  private renderFauna(state: GameState, time: number): void {
-    const dt = this.lastFrame === null || state.paused ? 0 : Math.min(0.1, time - this.lastFrame);
-    this.lastFrame = time;
+  private renderFauna(state: GameState, time: number, dt: number): void {
     this.fauna.update(state.units, state.camera.target, dt);
     for (const kind of this.creatures.update(this.fauna, time)) {
       say(state, FIRST_SIGHTING[kind], "info", { once: `sighted-${kind}` });

@@ -18,6 +18,8 @@ import { custodyThink, tidyTick } from "./custody";
 import { type Faction, getObjectDefinition, type ObjectName } from "./definitions";
 import type { MissionRuntime } from "./missions";
 import { assignSpots, findFreeSpots, tileKey } from "./pathfinding";
+import { orderStudy, relicsThink, studyTick } from "./relics";
+import type { Site, SiteKind, SiteSpec } from "./sites";
 import { createNoise, noiseTerrain } from "./terrain";
 import {
   type Color,
@@ -35,7 +37,7 @@ import {
   type UnitContext,
   updateUnit,
 } from "./units";
-import { type Resource, World } from "./world";
+import { type Resource, type ResourceKind, World } from "./world";
 
 export interface Player {
   name: string;
@@ -44,9 +46,11 @@ export interface Player {
 
 export interface Economy {
   iron: number;
+  /** The Tessilend's building crystal, mined from seams around their sites. */
+  lattice: number;
   /** Net power: what everything produces minus what it uses. Below zero, drones slow down. */
   power: number;
-  storage: { iron: number };
+  storage: Record<ResourceKind, number>;
 }
 
 export interface Pointer {
@@ -82,6 +86,9 @@ export interface Message {
 
 export interface Stats {
   ironDelivered: number;
+  latticeDelivered: number;
+  /** Tessilend sites studied (and woken), by kind. */
+  studied: Partial<Record<SiteKind, number>>;
   built: Partial<Record<ObjectName, number>>;
   /** Player buildings the Custody dismantled. */
   tidied: number;
@@ -112,6 +119,14 @@ export interface GameState {
   /** Whether wardens dismantle unattended buildings yet, or only look around. */
   custodyTidying: boolean;
   mission: MissionRuntime | null;
+  /** Designs learned from Tessilend fabrication beds, buildable on top of the basics. */
+  designs: Set<ObjectName>;
+  /** Things the player has come across, e.g. "lattice"; the HUD shows what's been found. */
+  discovered: Set<string>;
+  /** Tessilend sites brought back to life. */
+  awake: Site[];
+  /** The site the player last clicked, shown in the selection panel. */
+  inspecting: Site | null;
 }
 
 export type StartLayout = [ObjectName, number, number][];
@@ -135,12 +150,19 @@ export function createGame(options: {
   player: Player;
   layout?: StartLayout;
   iron?: number;
+  /** Tessilend sites to place by hand, on top of the generated ones. */
+  sites?: readonly SiteSpec[];
 }): GameState {
   const state: GameState = {
-    world: new World(noiseTerrain(createNoise(options.seed))),
+    world: new World(noiseTerrain(createNoise(options.seed)), options.sites),
     player: options.player,
     units: [],
-    economy: { iron: options.iron ?? STARTING_IRON, power: 0, storage: { iron: 0 } },
+    economy: {
+      iron: options.iron ?? STARTING_IRON,
+      lattice: 0,
+      power: 0,
+      storage: { iron: 0, lattice: 0 },
+    },
     camera: { target: { x: 0, y: 0 }, yaw: Math.PI / 4, distance: ZOOM_DEFAULT },
     building: null,
     selection: [],
@@ -151,9 +173,13 @@ export function createGame(options: {
     random: alea(`${options.seed}:sim`),
     messages: [],
     said: new Set(),
-    stats: { ironDelivered: 0, built: {}, tidied: 0 },
+    stats: { ironDelivered: 0, latticeDelivered: 0, studied: {}, built: {}, tidied: 0 },
     custodyTidying: true,
     mission: null,
+    designs: new Set(),
+    discovered: new Set(),
+    awake: [],
+    inspecting: null,
   };
 
   for (const [name, x, y] of options.layout ?? SANDBOX_LAYOUT) spawn(state, name, x, y);
@@ -200,6 +226,7 @@ export function spawn(
   if (faction === "player") {
     state.economy.power += unit.definition.energy;
     state.economy.storage.iron += unit.definition.storage.iron;
+    state.economy.storage.lattice += unit.definition.storage.lattice ?? 0;
   }
   state.units.push(unit);
   return unit;
@@ -214,7 +241,9 @@ export function removeUnit(state: GameState, unit: Unit): void {
   if (unit.faction === "player") {
     state.economy.power -= unit.definition.energy;
     state.economy.storage.iron -= unit.definition.storage.iron;
+    state.economy.storage.lattice -= unit.definition.storage.lattice ?? 0;
     state.economy.iron = Math.min(state.economy.iron, state.economy.storage.iron);
+    state.economy.lattice = Math.min(state.economy.lattice, state.economy.storage.lattice);
   }
   if (unit.selected)
     setSelection(
@@ -223,7 +252,7 @@ export function removeUnit(state: GameState, unit: Unit): void {
     );
 }
 
-/** The nearest building that takes iron (the Mind). */
+/** The nearest building that takes deliveries (the Mind). */
 function nearestStore(state: GameState, from: Point): Unit | undefined {
   let best: Unit | undefined;
   for (const unit of state.units) {
@@ -241,21 +270,25 @@ function unitContext(state: GameState): UnitContext {
       const store = nearestStore(state, unit.position);
       return store ? { ...store.position } : null;
     },
-    deposit: (unit, amount) => {
+    deposit: (unit, kind, amount) => {
       const store = nearestStore(state, unit.position);
       if (!store) return 0;
       const reach = (store.definition.footprint ?? 1) / 2 + DELIVERY_RANGE;
       if (distance(store.position, unit.position) > reach) return 0;
       const accepted = Math.max(
         0,
-        Math.min(amount, state.economy.storage.iron - state.economy.iron),
+        Math.min(amount, state.economy.storage[kind] - state.economy[kind]),
       );
-      state.economy.iron += accepted;
-      state.stats.ironDelivered += accepted;
+      state.economy[kind] += accepted;
+      if (kind === "iron") state.stats.ironDelivered += accepted;
+      else state.stats.latticeDelivered += accepted;
+      if (accepted > 0 && kind === "lattice") state.discovered.add("lattice");
       if (accepted < amount) {
         say(
           state,
-          "The store is full. Build nothing, or build something; just not more iron.",
+          kind === "iron"
+            ? "The store is full. Build nothing, or build something; just not more iron."
+            : "No room for more lattice. It's precious, not plentiful; spend some.",
           "warning",
           {
             once: `store-full-${Math.floor(state.ticks / (TICK_RATE * 30))}`,
@@ -265,6 +298,7 @@ function unitContext(state: GameState): UnitContext {
       return accepted;
     },
     tidy: (unit, action) => tidyTick(state, unit, action),
+    study: (unit, action) => studyTick(state, unit, action),
   };
 }
 
@@ -280,6 +314,7 @@ export function tick(state: GameState): void {
     if (state.units.includes(unit)) updateUnit(state.world, unit, state.units, ctx);
   }
   if (state.ticks % 10 === 0) custodyThink(state);
+  if (state.ticks % TICK_RATE === 0) relicsThink(state, 1);
   watchPower(state);
 }
 
@@ -352,8 +387,23 @@ export interface BuildResult {
   built: number;
   /** Tiles skipped because something was in the way. */
   blocked: number;
-  /** True when iron ran out before every tile was built. */
-  outOfIron: boolean;
+  /** The resource that ran out before every tile was built, if one did. */
+  shortOf: ResourceKind | null;
+}
+
+/** Whether the player knows how to build `name`: the basics, or a design they've learned. */
+export function canBuild(state: GameState, name: ObjectName): boolean {
+  return BASIC_DESIGNS.includes(name) || state.designs.has(name);
+}
+
+const BASIC_DESIGNS: readonly ObjectName[] = ["block", "solar", "tower"];
+
+/** What the player is short of to afford `name`, if anything. */
+export function shortfall(state: GameState, name: ObjectName): ResourceKind | null {
+  const cost = getObjectDefinition(name).cost ?? {};
+  if (state.economy.iron < (cost.iron ?? 0)) return "iron";
+  if (state.economy.lattice < (cost.lattice ?? 0)) return "lattice";
+  return null;
 }
 
 /**
@@ -361,18 +411,18 @@ export interface BuildResult {
  * unexplored or blocked by buildings or acid are skipped, as when dragging walls in AoE.
  */
 export function build(state: GameState, name: ObjectName, tiles: readonly GridRef[]): BuildResult {
-  const cost = getObjectDefinition(name).cost?.iron ?? 0;
-  const result: BuildResult = { built: 0, blocked: 0, outOfIron: false };
+  const cost = getObjectDefinition(name).cost ?? {};
+  const result: BuildResult = { built: 0, blocked: 0, shortOf: null };
+  if (!canBuild(state, name)) return result;
   for (const tile of tiles) {
     if (!canPlace(state, name, tile)) {
       result.blocked++;
       continue;
     }
-    if (state.economy.iron < cost) {
-      result.outOfIron = true;
-      break;
-    }
-    state.economy.iron -= cost;
+    result.shortOf = shortfall(state, name);
+    if (result.shortOf) break;
+    state.economy.iron -= cost.iron ?? 0;
+    state.economy.lattice -= cost.lattice ?? 0;
     const placed = spawn(state, name, tile.x, tile.y);
     state.stats.built[name] = (state.stats.built[name] ?? 0) + 1;
     clearFootprint(state, placed.footprint);
@@ -421,6 +471,13 @@ export function issueOrder(
   if (state.selection.length === 0) return;
 
   const gatherers = state.selection.filter((unit) => hasSkill(unit, "gather"));
+  // Right-clicking a Tessilend site sets worker drones studying it.
+  const tile = gridFromWorld(target);
+  const site = state.world.isExplored(tile) ? state.world.siteAt(tile) : undefined;
+  if (site && gatherers.length > 0) {
+    orderStudy(state, gatherers, site, queue);
+    return;
+  }
   if (resources.length > 0 && gatherers.length > 0) {
     if (!queue) for (const unit of gatherers) cancelAllActions(unit);
     orderGather(gatherers, resources);

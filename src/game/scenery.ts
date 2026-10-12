@@ -98,6 +98,12 @@ export function generateDecor(world: World, chunk: Chunk): DecorItem[] {
         });
       };
 
+      // Tessilend paving: only a little grass has found the cracks.
+      if (chunk.paved[i] === 1 || chunk.ruin[i] === 1) {
+        if (chunk.paved[i] === 1 && r(15) < 0.12) place("grass", 130, 0.7);
+        continue;
+      }
+
       const fromStart = Math.hypot(x + 0.5 - START_CENTER.x, y + 0.5 - START_CENTER.y);
       if (fromStart < CRASH_RADIUS) {
         if (r(1) < 0.09) place("debris", 10);

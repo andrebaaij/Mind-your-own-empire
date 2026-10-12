@@ -2,10 +2,12 @@ import { gridFromWorld, type Point, rectFromPoints } from "./coords";
 import { BUILDABLE, getObjectDefinition } from "./definitions";
 import type { Hud } from "./hud";
 import type { Renderer } from "./renderer";
+import type { Site } from "./sites";
 import {
   build,
   buildTiles,
   type CameraKeys,
+  canBuild,
   cancelOrders,
   type GameState,
   issueOrder,
@@ -64,6 +66,14 @@ export function bindInput(
   // Only the player's own units can be selected.
   const ownUnits = () => state.units.filter((unit) => unit.faction === "player");
   const isClick = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y) < CLICK_PIXELS;
+  /** The Tessilend site under the pointer: its structure, or the ground it stands on. */
+  const siteUnder = (screen: Point): Site | null => {
+    const site = renderer.siteAt(screen);
+    if (site) return site;
+    const ground = renderer.groundAt(screen);
+    const tile = ground ? gridFromWorld(ground) : null;
+    return tile && state.world.isExplored(tile) ? (state.world.siteAt(tile) ?? null) : null;
+  };
 
   canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 
@@ -118,15 +128,11 @@ export function bindInput(
 
     if (button === 0) {
       if (state.building) {
-        const { built, blocked, outOfIron } = build(
-          state,
-          state.building,
-          buildTiles(state.pointer),
-        );
+        const { built, blocked, shortOf } = build(state, state.building, buildTiles(state.pointer));
         const { label } = getObjectDefinition(state.building);
-        if (outOfIron)
+        if (shortOf)
           hud.showMessage(
-            `Not enough iron for a ${label.toLowerCase()}. We appear to have built everything we can afford.`,
+            `Not enough ${shortOf} for a ${label.toLowerCase()}. We appear to have built everything we can afford.`,
             5_000,
             "warning",
           );
@@ -137,13 +143,19 @@ export function bindInput(
             "warning",
           );
         // Hold Shift to keep placing; a click on blocked ground keeps the building selected.
-        if (!event.shiftKey && !outOfIron && built > 0) state.building = null;
+        if (!event.shiftKey && !shortOf && built > 0) state.building = null;
       } else if (click) {
         const unit = renderer.unitAt(end, ownUnits());
         setSelection(state, unit ? [unit] : []);
+        // Clicking a Tessilend site shows what it is.
+        state.inspecting = unit ? null : siteUnder(end);
       } else {
+        state.inspecting = null;
         setSelection(state, renderer.unitsInScreenRect(rect, ownUnits()));
       }
+    } else if (button === 2 && click && siteUnder(end)) {
+      // Right-clicking a Tessilend site sends worker drones to study it.
+      issueOrder(state, (siteUnder(end) as Site).center, [], event.shiftKey);
     } else if (button === 2 && state.pointer.world) {
       const ground = state.pointer.world;
       let resources = click ? [] : renderer.resourcesInScreenRect(rect);
@@ -177,6 +189,7 @@ export function bindInput(
       state.keys.fast = true;
     } else if (event.code === "Escape") {
       state.building = null;
+      state.inspecting = null;
       setSelection(state, []);
     } else if (event.code === "KeyC") {
       // C drops the next order of the selected units; Shift+C clears all their orders.
@@ -184,7 +197,7 @@ export function bindInput(
     } else if (/^Digit[1-9]$/.test(event.code)) {
       // Number keys pick from the build bar; pressing the same one again puts it away.
       const name = BUILDABLE[Number(event.code.slice(5)) - 1];
-      if (!name) return;
+      if (!name || !canBuild(state, name)) return;
       state.building = state.building === name ? null : name;
     } else if (event.code === "Period") {
       // Like AoE's idle-villager key: select idle worker drones and look at them.

@@ -11,12 +11,14 @@ import { type GridRef, gridFromWorld, gridRef, type Point, worldFromGrid } from 
 import {
   type Faction,
   getObjectDefinition,
+  getResourceDefinition,
   type ObjectDefinition,
   type ObjectName,
   type Skill,
 } from "./definitions";
 import { findPath, hasClearLine, tileKey } from "./pathfinding";
-import type { Resource, World } from "./world";
+import type { Site } from "./sites";
+import type { Resource, ResourceKind, World } from "./world";
 
 export interface Color {
   r: number;
@@ -46,7 +48,7 @@ export interface GatherAction {
   resource: Resource;
 }
 
-/** Hand the iron a unit is carrying over to the Mind. */
+/** Hand what a unit is carrying over to the Mind. */
 export interface DeliverAction {
   kind: "deliver";
   target: Point;
@@ -61,7 +63,14 @@ export interface TidyAction {
   progress: number;
 }
 
-export type Action = WalkAction | GatherAction | DeliverAction | TidyAction;
+/** A worker drone studying (or restoring) a Tessilend site. */
+export interface StudyAction {
+  kind: "study";
+  target: Point;
+  site: Site;
+}
+
+export type Action = WalkAction | GatherAction | DeliverAction | TidyAction | StudyAction;
 
 export interface Unit {
   id: number;
@@ -80,7 +89,7 @@ export interface Unit {
   actions: Action[];
   selected: boolean;
   color: Color;
-  carrying: { iron: number };
+  carrying: Record<ResourceKind, number>;
   /** Fraction of the next unit of work (e.g. iron mined) done so far. */
   workProgress: number;
   /** How far a warden has got dismantling this building, from 0 to 1. */
@@ -117,7 +126,7 @@ export function createUnit(
     actions: [],
     selected: false,
     color,
-    carrying: { iron: 0 },
+    carrying: { iron: 0, lattice: 0 },
     workProgress: 0,
   };
 
@@ -324,12 +333,14 @@ export interface UnitContext {
   budget: PathBudget;
   /** Speed and work-rate multiplier, e.g. less than 1 during a power shortage. */
   power(unit: Unit): number;
-  /** Where a unit should take the iron it carries, or null if there's nowhere. */
+  /** Where a unit should take what it carries, or null if there's nowhere. */
   dropOff(unit: Unit): Point | null;
-  /** Hand over iron; returns how much was accepted. */
-  deposit(unit: Unit, amount: number): number;
+  /** Hand over some of a resource; returns how much was accepted. */
+  deposit(unit: Unit, kind: ResourceKind, amount: number): number;
   /** Advance a warden's tidying. */
   tidy(unit: Unit, action: TidyAction): void;
+  /** Advance a drone's study of a Tessilend site. */
+  study(unit: Unit, action: StudyAction): void;
 }
 
 /** A context for units working on their own: no power limits and nowhere to deliver. */
@@ -340,6 +351,9 @@ export function standaloneContext(): UnitContext {
     dropOff: () => null,
     deposit: () => 0,
     tidy: (unit) => {
+      unit.actions.shift();
+    },
+    study: (unit) => {
       unit.actions.shift();
     },
   };
@@ -440,13 +454,19 @@ function walkTick(
  * Mine until full, then fly the load home and come back, AoE-villager style. Without a home to
  * deliver to, the unit simply stops when full.
  */
-function gatherTick(world: World, unit: Unit, action: GatherAction, ctx: UnitContext): void {
-  const capacity = unit.definition.capacity?.iron ?? Number.POSITIVE_INFINITY;
-  const exhausted = !action.resource.exists;
+/** Everything a unit is carrying, of every kind. */
+export function load(unit: Unit): number {
+  return unit.carrying.iron + unit.carrying.lattice;
+}
 
-  if (exhausted || unit.carrying.iron >= capacity) {
+function gatherTick(world: World, unit: Unit, action: GatherAction, ctx: UnitContext): void {
+  const capacity = unit.definition.capacity?.load ?? Number.POSITIVE_INFINITY;
+  const exhausted = !action.resource.exists;
+  const { kind } = action.resource;
+
+  if (exhausted || load(unit) >= capacity) {
     if (exhausted) unit.actions.shift();
-    const home = unit.carrying.iron > 0 ? ctx.dropOff(unit) : null;
+    const home = load(unit) > 0 ? ctx.dropOff(unit) : null;
     if (home) {
       const back = exhausted ? [] : [newWalk(action.resource.position)];
       unit.actions.unshift(newWalk(home), { kind: "deliver", target: { ...home } }, ...back);
@@ -456,19 +476,22 @@ function gatherTick(world: World, unit: Unit, action: GatherAction, ctx: UnitCon
     return;
   }
 
-  unit.workProgress += (GATHER_PER_SECOND / TICK_RATE) * ctx.power(unit);
-  while (unit.workProgress >= 1 && unit.carrying.iron < capacity && action.resource.exists) {
+  const rate = getResourceDefinition(kind).rate ?? 1;
+  unit.workProgress += ((GATHER_PER_SECOND * rate) / TICK_RATE) * ctx.power(unit);
+  while (unit.workProgress >= 1 && load(unit) < capacity && action.resource.exists) {
     unit.workProgress -= 1;
-    unit.carrying.iron += world.gather(action.resource, 1);
+    unit.carrying[kind] += world.gather(action.resource, 1);
   }
 }
 
 function deliverTick(unit: Unit, ctx: UnitContext): void {
   unit.actions.shift();
-  const accepted = ctx.deposit(unit, unit.carrying.iron);
-  unit.carrying.iron -= accepted;
+  for (const kind of ["iron", "lattice"] as const) {
+    if (unit.carrying[kind] > 0)
+      unit.carrying[kind] -= ctx.deposit(unit, kind, unit.carrying[kind]);
+  }
   // The store is full: stop rather than shuttle the same load back and forth.
-  if (unit.carrying.iron > 0) unit.actions = [];
+  if (load(unit) > 0) unit.actions = [];
 }
 
 /** Advance one unit by one simulation tick. */
@@ -493,6 +516,9 @@ export function updateUnit(
       break;
     case "tidy":
       ctx.tidy(unit, action);
+      break;
+    case "study":
+      ctx.study(unit, action);
       break;
   }
 }

@@ -8,6 +8,7 @@
   "energy": 4,
   "storage": {
     "iron": 1000,
+    "lattice": 200,
     "energy": 0
   }
 }
