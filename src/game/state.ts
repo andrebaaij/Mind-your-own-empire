@@ -187,7 +187,7 @@ export function createGame(options: {
 }): GameState {
   const state: GameState = {
     seed: options.seed,
-    world: new World(noiseTerrain(createNoise(options.seed)), options.sites),
+    world: new World(noiseTerrain(createNoise(options.seed), options.seed), options.sites),
     player: options.player,
     units: [],
     economy: {

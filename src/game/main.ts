@@ -17,6 +17,7 @@ import { bindSettings } from "./settingsPanel";
 import { build, canBuild, createGame, issueOrder, say, setSelection, spawn, tick } from "./state";
 import { setSilent } from "./stealth";
 import { Voice } from "./voice";
+import { windStrength } from "./windField";
 
 const params = new URLSearchParams(window.location.search);
 const player = {
@@ -249,6 +250,7 @@ requestAnimationFrame(function frame(now) {
     save(true);
   }
   ambience.setPaused(state.paused);
+  ambience.setWind(windStrength.value);
   ambience.playEvents(state.events);
   // The camera may have moved, so find the ground under the pointer again.
   state.pointer.world = screen.position ? renderer.groundAt(screen.position) : null;

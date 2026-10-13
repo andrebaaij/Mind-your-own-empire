@@ -78,6 +78,8 @@ export class Ambience {
   private master: GainNode | null = null;
   private ambienceBus: GainNode | null = null;
   private effectsBus: GainNode | null = null;
+  /** The wind's loudness, which follows how hard it's blowing. */
+  private windGain: GainNode | null = null;
   private noise: AudioBuffer | null = null;
   private volumes: Volumes = { master: 1, ambience: 1, effects: 1 };
   /** When each sound last played, so a busy base doesn't become a din. */
@@ -110,7 +112,10 @@ export class Ambience {
     this.effectsBus = context.createGain();
     this.effectsBus.gain.value = this.volumes.effects;
     this.effectsBus.connect(this.master);
-    this.wind(context, this.ambienceBus);
+    this.windGain = context.createGain();
+    this.windGain.gain.value = 0.8;
+    this.windGain.connect(this.ambienceBus);
+    this.wind(context, this.windGain);
     this.scheduleChime();
     this.apply();
   }
@@ -220,6 +225,12 @@ export class Ambience {
     this.effectsBus?.gain.setTargetAtTime(this.volumes.effects, context.currentTime, 0.1);
     if (this.paused) void context.suspend();
     else void context.resume();
+  }
+
+  /** Let the wind be heard as hard as it blows (0.25, a breeze, to 1, a gust). */
+  setWind(strength: number): void {
+    if (!this.windGain || !this.context) return;
+    this.windGain.gain.setTargetAtTime(0.35 + strength * 1.1, this.context.currentTime, 0.4);
   }
 
   /** Quiet while the game is paused; the world isn't moving, so neither is the air. */

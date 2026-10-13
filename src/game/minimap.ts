@@ -8,6 +8,7 @@
 import { gridRef, type Point } from "./coords";
 import type { GameState } from "./state";
 import { Terrain } from "./terrain";
+import { windDirection, windStrength } from "./windField";
 
 /** Tiles from the centre to the edge of the minimap. */
 const REACH = 48;
@@ -17,6 +18,11 @@ const TERRAIN_INTERVAL = 0.4;
 
 const RGB = {
   dirt: [150, 70, 52],
+  dunes: [196, 146, 86],
+  ash: [102, 82, 94],
+  salt: [214, 200, 194],
+  lush: [72, 108, 72],
+  water: [44, 112, 128],
   sand: [196, 150, 98],
   acid: [92, 210, 70],
   cliff: [78, 62, 60],
@@ -114,9 +120,13 @@ export class Minimap {
           } else if (chunk.ruin[k] === 1) rgb = RGB.ruin;
           else if (chunk.paved[k] === 1) rgb = RGB.paved;
           else if (chunk.tiles[k] === Terrain.Acid) rgb = RGB.acid;
+          else if (chunk.tiles[k] === Terrain.Water) rgb = RGB.water;
           else if (chunk.cliffs[k] === 1) rgb = RGB.cliff;
           else if (chunk.tiles[k] === Terrain.Sand) rgb = RGB.sand;
-          else rgb = RGB.dirt;
+          else {
+            const region = world.regionOf(grid);
+            rgb = region === "rust" ? RGB.dirt : RGB[region];
+          }
           // A little relief from the height, and the fog where nobody's watching.
           shade = 0.85 + (chunk.heights[k] ?? 0) * 0.06;
           if ((chunk.watchers[k] ?? 0) === 0) shade *= 0.5;
@@ -200,6 +210,25 @@ export class Minimap {
         ctx.fill();
       }
     }
+
+    // Which way the wind blows: an arrow at the rim, pointing downwind, longer in a gust.
+    const wind = windDirection.value;
+    const reach = REACH - 5;
+    const length = 3 + windStrength.value * 4;
+    ctx.save();
+    ctx.translate(wind.x * reach, wind.y * reach);
+    ctx.rotate(Math.atan2(wind.y, wind.x));
+    ctx.strokeStyle = "rgba(255, 236, 210, 0.85)";
+    ctx.lineWidth = 0.9;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-length, 0);
+    ctx.lineTo(0, 0);
+    ctx.moveTo(-1.8, -1.5);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(-1.8, 1.5);
+    ctx.stroke();
+    ctx.restore();
 
     // Where the camera is looking.
     if (view.length >= 3) {

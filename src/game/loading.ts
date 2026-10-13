@@ -18,6 +18,8 @@ const TIPS = [
   "The minimap turns with the camera. Right-click it to send the selection somewhere.",
   "The Mind saves every two minutes. Minds are like that.",
   "Suspicion fades if you give it time. So does most of the Idirans' patience.",
+  "The wind always blows on Lessuin. The arrow on the minimap says where to.",
+  "Far out, the land turns to dune seas, ash, salt and green basins. Sinkholes hide gardens.",
 ];
 
 const STEPS = [

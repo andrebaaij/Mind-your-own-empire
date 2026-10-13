@@ -1,7 +1,7 @@
 /**
  * Lessuin's sky and air: a late-afternoon sky that never quite ends, the ringed gas giant
- * Lessuin orbits, warm haze where the unexplored ground fades out, and spores drifting on the
- * wind. Everything here follows the camera; none of it is part of the world.
+ * Lessuin orbits, warm haze where the unexplored ground fades out, and spores and dust drifting
+ * on the wind. Everything here follows the camera; none of it is part of the world.
  */
 
 import {
@@ -21,6 +21,7 @@ import {
   vec3,
 } from "three/tsl";
 import * as THREE from "three/webgpu";
+import { windDirection, windDrift, windStrength } from "./windField";
 
 /** The haze below the horizon, which is also the fog colour: unexplored ground fades into it. */
 export const MIST = new THREE.Color("#4a3230");
@@ -126,10 +127,11 @@ function createSpores(center: SporeCenter): THREE.InstancedMesh {
   });
   const seed = instanceIndex.toFloat();
   const start = vec3(hash(seed), hash(seed.add(17.3)), hash(seed.add(41.9)));
+  // Carried by the wind, each wandering a little on its own way.
   const drift = vec3(
-    time.mul(0.55),
+    windDrift.x.add(sin(time.mul(0.3).add(seed.mul(2.1))).mul(0.6)),
     sin(time.mul(0.4).add(seed)).mul(0.5),
-    time.mul(0.22).add(sin(time.mul(0.3).add(seed.mul(2.1))).mul(0.6)),
+    windDrift.y.add(sin(time.mul(0.27).add(seed.mul(1.3))).mul(0.6)),
   );
   const box = float(SPORE_BOX);
   const wrapped = start.mul(vec3(box, 2.6, box)).add(drift);
@@ -154,6 +156,54 @@ function createSpores(center: SporeCenter): THREE.InstancedMesh {
   return spores;
 }
 
+const DUST_COUNT = 240;
+/** Dust wisps fill a box this wide around what the camera looks at. */
+const DUST_BOX = 36;
+
+/**
+ * Dust wisps: faint streaks of blown sand skimming low over the ground, lined up with the wind
+ * and carried along faster than the spores. They show in the gusts and all but vanish in a
+ * breeze.
+ */
+function createDust(center: SporeCenter): THREE.InstancedMesh {
+  const material = new THREE.MeshBasicNodeMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const seed = instanceIndex.toFloat().add(500);
+  const start = vec3(hash(seed), hash(seed.add(13.1)), hash(seed.add(29.7)));
+  const box = float(DUST_BOX);
+  const carried = start
+    .mul(vec3(box, 1, box))
+    .add(vec3(windDrift.x.mul(2.6), 0, windDrift.y.mul(2.6)));
+  const x = mod(carried.x.sub(center.x), box).add(center.x).sub(box.div(2));
+  const z = mod(carried.z.sub(center.z), box).add(center.z).sub(box.div(2));
+  const y = center.y.add(start.y.mul(1.1)).add(0.15);
+  // Turn the streak (long along its local x) to lie along the wind.
+  const local = positionLocal;
+  const along = vec3(
+    local.x.mul(windDirection.x).sub(local.z.mul(windDirection.y)),
+    local.y,
+    local.x.mul(windDirection.y).add(local.z.mul(windDirection.x)),
+  );
+  material.positionNode = along.add(vec3(x, y, z));
+
+  // Each wisp comes and goes, and only shows when the wind is up.
+  const life = sin(time.mul(hash(seed.add(3)).mul(0.6).add(0.4)).add(seed.mul(7)))
+    .mul(0.5)
+    .add(0.5);
+  const gusting = smoothstep(0.35, 0.85, windStrength);
+  material.colorNode = color("#e2b98a");
+  material.opacityNode = life.mul(life).mul(gusting).mul(0.16);
+
+  const geometry = new THREE.PlaneGeometry(2.2, 0.07);
+  geometry.rotateX(-Math.PI / 2);
+  const dust = new THREE.InstancedMesh(geometry, material, DUST_COUNT);
+  dust.frustumCulled = false;
+  return dust;
+}
+
 /** The sky on its own, for lighting the scene with it (image-based lighting). */
 export function createSkyScene(): THREE.Scene {
   const scene = new THREE.Scene();
@@ -171,7 +221,7 @@ export class Atmosphere {
     const dome = new THREE.Mesh(new THREE.SphereGeometry(SKY_RADIUS, 48, 24), skyMaterial());
     dome.renderOrder = -2;
     this.sky.add(dome, createGiant());
-    this.group.add(this.sky, createSpores(this.sporeCenter));
+    this.group.add(this.sky, createSpores(this.sporeCenter), createDust(this.sporeCenter));
   }
 
   /** Keep the sky around the camera and the spores around what it looks at. */

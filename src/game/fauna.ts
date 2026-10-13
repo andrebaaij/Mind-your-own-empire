@@ -12,7 +12,7 @@
 
 import alea from "alea";
 import { distance, gridFromWorld, type Point } from "./coords";
-import { START_CENTER, Terrain } from "./terrain";
+import { isImpassableGround, START_CENTER } from "./terrain";
 import { isMobile, type Unit } from "./units";
 import type { World } from "./world";
 
@@ -107,7 +107,7 @@ export class Fauna {
     if (!this.world.isPassable(grid)) return false;
     if (distance(point, START_CENTER) < BASE_CLEARANCE) return false;
     const chunk = this.world.getChunk(grid.chunkX, grid.chunkY);
-    return chunk.cliffs[grid.i] !== 1 && chunk.tiles[grid.i] !== Terrain.Acid;
+    return chunk.cliffs[grid.i] !== 1 && !isImpassableGround(chunk.tiles[grid.i]);
   }
 
   private canStep(from: Point, to: Point): boolean {

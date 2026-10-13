@@ -1,3 +1,4 @@
+import { BIOMES, type Biome, type BiomeWeights, dominantBiome, type Sinkhole } from "./biomes";
 import { CHUNK_SIZE, MAX_CLIMB } from "./config";
 import { type GridRef, gridRef, type Point, worldFromGrid } from "./coords";
 import { getResourceDefinition } from "./definitions";
@@ -11,7 +12,7 @@ import {
   type SiteGround,
   type SiteSpec,
 } from "./sites";
-import { Terrain, type TerrainGenerator } from "./terrain";
+import { isImpassableGround, type TerrainGenerator } from "./terrain";
 
 export type ResourceKind = "iron" | "lattice";
 
@@ -48,6 +49,8 @@ export class Chunk {
   readonly ruin = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
   /** Tessilend foundations: paved ground the Custody considers built to plan. */
   readonly paved = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
+  /** The region each tile mostly belongs to (an index into BIOMES), worked out when first asked. */
+  regions?: Uint8Array;
   /** Bumped on every visible change so the renderer knows to resync this chunk. */
   version = 0;
 
@@ -85,7 +88,7 @@ export class World {
   ) {
     this.explicit = [...sites];
     this.siteGround = {
-      acid: (x, y) => terrain.ground(x, y) === Terrain.Acid,
+      acid: (x, y) => isImpassableGround(terrain.ground(x, y)),
       height: (x, y) => terrain.height(x + 0.5, y + 0.5),
     };
   }
@@ -284,6 +287,36 @@ export class World {
     return this.terrain.height(x + 0.5, y + 0.5);
   }
 
+  /** Which regions a point belongs to (all rust desert, for terrain without regions). */
+  biomeAt(x: number, y: number): BiomeWeights {
+    return this.terrain.biome?.(x, y) ?? { rust: 1, dunes: 0, ash: 0, salt: 0, lush: 0 };
+  }
+
+  /** The region a tile mostly belongs to. */
+  regionOf(grid: GridRef): Biome {
+    const chunk = this.chunkOf(grid);
+    if (!chunk.regions) {
+      const regions = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
+      for (let i = 0; i < regions.length; i++) {
+        const x = chunk.x * CHUNK_SIZE + (i % CHUNK_SIZE);
+        const y = chunk.y * CHUNK_SIZE + Math.floor(i / CHUNK_SIZE);
+        regions[i] = BIOMES.indexOf(dominantBiome(this.biomeAt(x + 0.5, y + 0.5)));
+      }
+      chunk.regions = regions;
+    }
+    return BIOMES[chunk.regions[grid.i] ?? 0] ?? "rust";
+  }
+
+  /** Height of the water surface at or near a point, or null if there's no water. */
+  waterLevelAt(x: number, y: number): number | null {
+    return this.terrain.waterLevel?.(x, y) ?? null;
+  }
+
+  /** Sinkholes reaching within `range` of a point. */
+  sinkholesNear(x: number, y: number, range: number): Sinkhole[] {
+    return this.terrain.sinkholes?.(x, y, range) ?? [];
+  }
+
   /** Ground height at any point on the map (continuous, for placing things in 3D). */
   heightAt(x: number, y: number): number {
     return this.terrain.height(x, y);
@@ -320,7 +353,7 @@ export class World {
   /** Whether ground units can stand on or walk through a tile: no acid and no building. */
   isPassable(grid: GridRef): boolean {
     const chunk = this.chunkOf(grid);
-    return chunk.tiles[grid.i] !== Terrain.Acid && chunk.occupied[grid.i] === 0;
+    return !isImpassableGround(chunk.tiles[grid.i]) && chunk.occupied[grid.i] === 0;
   }
 
   /**
@@ -333,7 +366,7 @@ export class World {
     if (chunk.explored[grid.i] === 0)
       return chunk.ruin[grid.i] === 1 || chunk.occupied[grid.i] === 0;
     if (chunk.occupied[grid.i] !== 0) return false;
-    return chunk.tiles[grid.i] !== Terrain.Acid;
+    return !isImpassableGround(chunk.tiles[grid.i]);
   }
 
   /** Whether a tile is Tessilend foundation. */
@@ -369,7 +402,7 @@ export class World {
       chunk.watchers[i] = (chunk.watchers[i] ?? 0) + 1;
       if (chunk.explored[i] === 0) {
         chunk.explored[i] = 1;
-        if (chunk.tiles[i] === Terrain.Acid || chunk.cliffs[i] === 1 || chunk.ruin[i] === 1) {
+        if (isImpassableGround(chunk.tiles[i]) || chunk.cliffs[i] === 1 || chunk.ruin[i] === 1) {
           this.knownObstaclesVersion++;
         }
       }

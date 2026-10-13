@@ -2,6 +2,7 @@ import { bloom } from "three/addons/tsl/display/BloomNode.js";
 import { denoise } from "three/addons/tsl/display/DenoiseNode.js";
 import { ao } from "three/addons/tsl/display/GTAONode.js";
 import {
+  bumpMap,
   color,
   float,
   mix,
@@ -9,17 +10,20 @@ import {
   normalView,
   output,
   pass,
+  positionGeometry,
   positionWorld,
   saturation,
   screenUV,
   sin,
   smoothstep,
   time,
+  vec2,
   vec4,
   vertexColor,
 } from "three/tsl";
 import * as THREE from "three/webgpu";
 import { Atmosphere, createSkyScene, MIST, SUN_DIRECTION } from "./atmosphere";
+import { BIOMES, type Biome, type BiomeWeights } from "./biomes";
 import { CHUNK_SIZE, ZOOM_DEFAULT, ZOOM_MIN } from "./config";
 import { gridFromWorld, type Point, type Rect, rectContains, worldFromGrid } from "./coords";
 import { CreatureView, FIRST_SIGHTING } from "./creatures";
@@ -43,6 +47,7 @@ import { buildTiles, canPlace, type GameState, say } from "./state";
 import { SENSOR_RADIUS } from "./stealth";
 import { START_CENTER, Terrain } from "./terrain";
 import type { Unit } from "./units";
+import { updateWind, windDirection, windDrift, windStrength } from "./windField";
 import type { Chunk, Resource, World } from "./world";
 
 /** "low" skips the expensive passes (ambient occlusion, sky lighting) for weak or software GPUs. */
@@ -80,12 +85,22 @@ function pitchFor(distance: number): number {
   return PITCH_CLOSE + (PITCH - PITCH_CLOSE) * t * (2 - t);
 }
 
-/** Two shades per ground type, mixed by broad patches so the land has some texture. */
-const GROUND_COLORS: Record<number, readonly [THREE.Color, THREE.Color]> = {
-  [Terrain.Dirt]: [new THREE.Color("#9c4436"), new THREE.Color("#b8683f")],
-  [Terrain.Sand]: [new THREE.Color("#c4925f"), new THREE.Color("#d8b07a")],
-  [Terrain.Acid]: [new THREE.Color("#2c4a1e"), new THREE.Color("#3a5a22")],
+type Shades = readonly [THREE.Color, THREE.Color];
+const shades = (a: string, b: string): Shades => [new THREE.Color(a), new THREE.Color(b)];
+
+/**
+ * Two shades per ground type in each region, mixed by broad patches so the land has some
+ * texture. Each corner blends the regions it belongs to, so borders fade rather than step.
+ */
+const REGION_GROUND: Record<Biome, { dirt: Shades; sand: Shades }> = {
+  rust: { dirt: shades("#9c4436", "#b8683f"), sand: shades("#c4925f", "#d8b07a") },
+  dunes: { dirt: shades("#b97a45", "#cf9a5a"), sand: shades("#d29a58", "#e8bd78") },
+  ash: { dirt: shades("#5a4450", "#73606a"), sand: shades("#857580", "#9b8b95") },
+  salt: { dirt: shades("#cdb9b2", "#e2d5ce"), sand: shades("#ddd0c4", "#efe6dc") },
+  lush: { dirt: shades("#3f5c3f", "#5f7c4c"), sand: shades("#7f8657", "#9da266") },
 };
+const ACID_GROUND = shades("#2c4a1e", "#3a5a22");
+const WATER_BED = shades("#1f3a3c", "#2a4a48");
 const CLIFF_COLOR = new THREE.Color("#4e3f3e");
 /** Tessilend paving, pale and worn, and the darker stone under their structures. */
 const PAVED_COLOR = new THREE.Color("#a3977f");
@@ -103,8 +118,12 @@ interface ChunkView {
   terrain: THREE.Mesh;
   /** A glowing film over the chunk's explored acid. */
   acid: THREE.Mesh;
+  /** Open water over the chunk's explored pools. */
+  water: THREE.Mesh;
   crystals: THREE.InstancedMesh;
   lattice: THREE.InstancedMesh;
+  /** Regions at the tile corners, worked out the first time the chunk is drawn. */
+  regions?: BiomeWeights[];
   /** Ground heights at the (CHUNK_SIZE + 1)² tile corners, and their normals. */
   cornerHeights: Float32Array;
   cornerNormals: Float32Array;
@@ -154,6 +173,81 @@ function acidMaterial(): THREE.MeshBasicNodeMaterial {
   return material;
 }
 
+/**
+ * Open water: deep teal, glossy enough to take the sky, with ripples the wind drives across it
+ * and brighter shallows where it's choppy. Vertex colour red carries fog dimming.
+ */
+function waterMaterial(): THREE.MeshStandardNodeMaterial {
+  const material = new THREE.MeshStandardNodeMaterial({
+    transparent: true,
+    roughness: 0.12,
+    metalness: 0.1,
+    depthWrite: false,
+  });
+  const p = vec2(positionWorld.x, positionWorld.z).sub(windDrift.mul(1.4));
+  const along = p.dot(windDirection);
+  const chop = sin(along.mul(4.2))
+    .mul(0.5)
+    .add(sin(p.x.mul(2.9).add(p.y.mul(3.7))).mul(0.3))
+    .add(sin(along.mul(9.1).add(p.y.mul(1.3))).mul(0.2))
+    .mul(windStrength.mul(0.8).add(0.2));
+  const shallow = chop.mul(0.5).add(0.5);
+  material.colorNode = mix(color("#174a55"), color("#3f8d8f"), shallow.mul(0.6)).mul(
+    vertexColor().r,
+  );
+  material.opacityNode = float(0.86);
+  material.normalNode = bumpMap(chop.mul(0.25), float(0.6));
+  return material;
+}
+
+const SINKHOLE_LINE =
+  "The roof of a cavern fell in, a long time ago, and a garden moved in. There's water at the bottom, and one way down. Sheltered, quiet, hard to see into from above. I approve.";
+
+/**
+ * Light into a sinkhole: soft, warm beams that fade towards the ground and the sky and breathe
+ * slowly as dust drifts through them.
+ */
+function shaftMaterial(): THREE.MeshBasicNodeMaterial {
+  const material = new THREE.MeshBasicNodeMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    fog: false,
+  });
+  const up = positionGeometry.y.div(SHAFT_LENGTH).add(0.5);
+  const fade = smoothstep(0, 0.25, up).mul(smoothstep(1, 0.55, up));
+  const breathe = sin(time.mul(0.5).add(positionWorld.x.mul(0.3)))
+    .mul(0.25)
+    .add(0.75);
+  material.colorNode = color("#ffcf96").mul(fade).mul(breathe).mul(0.028);
+  return material;
+}
+
+const SHAFT_LENGTH = 9;
+
+/** A few beams slanting down into a sinkhole, away from the low sun. */
+function createShafts(material: THREE.Material): THREE.Group {
+  const group = new THREE.Group();
+  const slant = new THREE.Vector3(-SUN_DIRECTION.x, 0, -SUN_DIRECTION.z).normalize();
+  for (let i = 0; i < 3; i++) {
+    const width = 0.3 + i * 0.16;
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(width * 0.7, width, SHAFT_LENGTH, 10, 1, true),
+      material,
+    );
+    // Lean the top of the beam towards the sun, so it falls away from it.
+    beam.rotation.set(slant.z * -0.45, 0, slant.x * 0.45);
+    beam.position.set(
+      (i - 1) * 1.6 - slant.x * 2.2,
+      SHAFT_LENGTH * 0.42,
+      (i % 2) * 1.2 - 0.6 - slant.z * 2.2,
+    );
+    group.add(beam);
+  }
+  return group;
+}
+
 /** The sensor sweep: a thin ring at the sensor's reach, and a wedge that turns. */
 function mergeSensor(): THREE.BufferGeometry {
   const ring = new THREE.RingGeometry(SENSOR_RADIUS - 0.12, SENSOR_RADIUS, 64).toNonIndexed();
@@ -190,6 +284,9 @@ export class Renderer {
   /** Turn off camera shake (a setting). */
   reducedMotion = false;
   private readonly beams: THREE.Mesh[] = [];
+  /** Light falling into the sinkholes near the camera, one group of shafts per sinkhole. */
+  private readonly shafts: THREE.Group[] = [];
+  private readonly shaftMaterial = shaftMaterial();
   private readonly beamMaterial = new THREE.MeshBasicMaterial({
     color: "#ffb347",
     transparent: true,
@@ -213,6 +310,7 @@ export class Renderer {
   private readonly crystalGeometry = createCrystalGeometry();
   private readonly terrainMaterial: THREE.Material;
   private readonly acidMaterial = acidMaterial();
+  private readonly waterMaterial = waterMaterial();
 
   private readonly markers: THREE.Mesh[] = [];
   private readonly markerGeometry = new THREE.RingGeometry(0.16, 0.24, 24).rotateX(-Math.PI / 2);
@@ -509,6 +607,8 @@ export class Renderer {
     this.lastFrame = time;
     this.frameTime = time;
     this.effects.handle(state.events);
+    // The wind never stops, even when the game is paused: it's the planet's, not ours.
+    updateWind(state.seed, time, realDt);
     this.placeCamera(state, realDt);
     this.renderChunks(state);
     this.renderUnits(state, time, realDt);
@@ -518,6 +618,7 @@ export class Renderer {
     this.renderMarkers(state);
     this.renderGhosts(state);
     this.renderBeams(state, time);
+    this.renderShafts(state);
     this.effects.update(dt, this.camera, this.width, this.height);
   }
 
@@ -605,6 +706,7 @@ export class Renderer {
       if (!shown.has(view)) {
         view.terrain.visible = false;
         view.acid.visible = false;
+        view.water.visible = false;
         view.crystals.visible = false;
         view.lattice.visible = false;
       }
@@ -613,6 +715,7 @@ export class Renderer {
     for (const view of shown) {
       view.terrain.visible = true;
       view.acid.visible = true;
+      view.water.visible = true;
       view.crystals.visible = true;
       view.lattice.visible = true;
       this.shownChunks.add(view);
@@ -646,6 +749,8 @@ export class Renderer {
     const terrain = new THREE.Mesh(new THREE.BufferGeometry(), this.terrainMaterial);
     terrain.receiveShadow = true;
     const acid = new THREE.Mesh(new THREE.BufferGeometry(), this.acidMaterial);
+    const water = new THREE.Mesh(new THREE.BufferGeometry(), this.waterMaterial);
+    water.receiveShadow = true;
     const crystals = new THREE.InstancedMesh(
       this.crystalGeometry,
       crystalMaterial,
@@ -660,13 +765,14 @@ export class Renderer {
     );
     lattice.castShadow = true;
     lattice.count = 0;
-    this.scene.add(terrain, acid, crystals, lattice);
+    this.scene.add(terrain, acid, water, crystals, lattice);
 
     const view: ChunkView = {
       chunk,
       version: -1,
       terrain,
       acid,
+      water,
       crystals,
       lattice,
       cornerHeights,
@@ -674,6 +780,22 @@ export class Renderer {
     };
     this.chunkViews.set(chunk, view);
     return view;
+  }
+
+  /** The regions at each of a chunk's tile corners; they never change, so they're kept. */
+  private cornerRegions(view: ChunkView): BiomeWeights[] {
+    if (view.regions) return view.regions;
+    const side = CHUNK_SIZE + 1;
+    const regions: BiomeWeights[] = [];
+    for (let j = 0; j < side; j++) {
+      for (let i = 0; i < side; i++) {
+        regions.push(
+          this.world.biomeAt(view.chunk.x * CHUNK_SIZE + i, view.chunk.y * CHUNK_SIZE + j),
+        );
+      }
+    }
+    view.regions = regions;
+    return regions;
   }
 
   /** Rebuild a chunk's ground mesh and crystals from its current fog and resources. */
@@ -685,6 +807,11 @@ export class Renderer {
     const colors: number[] = [];
     const indices: number[] = [];
     const acid = { positions: [] as number[], colors: [] as number[], indices: [] as number[] };
+    const water = { positions: [] as number[], colors: [] as number[], indices: [] as number[] };
+    const blend = new THREE.Color();
+    const shade = new THREE.Color();
+    // Regions at each corner, looked up once.
+    const regions = this.cornerRegions(view);
     const color = new THREE.Color();
 
     for (let ly = 0; ly < CHUNK_SIZE; ly++) {
@@ -695,10 +822,9 @@ export class Renderer {
         const x = chunk.x * CHUNK_SIZE + lx;
         const y = chunk.y * CHUNK_SIZE + ly;
         const ground = chunk.tiles[i] ?? Terrain.Dirt;
-        const palette = GROUND_COLORS[ground] ?? GROUND_COLORS[Terrain.Dirt];
-        const cliff = chunk.cliffs[i] === 1 && ground !== Terrain.Acid;
-        const seen = (chunk.watchers[i] ?? 0) > 0;
         const isAcid = ground === Terrain.Acid;
+        const cliff = chunk.cliffs[i] === 1 && !isAcid && ground !== Terrain.Water;
+        const seen = (chunk.watchers[i] ?? 0) > 0;
         const base = positions.length / 3;
         for (const [dx, dy] of CORNERS) {
           const k = lx + dx + (ly + dy) * side;
@@ -710,13 +836,29 @@ export class Renderer {
           normals.push(cornerNormals[k * 3] ?? 0, ny, cornerNormals[k * 3 + 2] ?? 0);
 
           // Colour varies smoothly over the land, so neighbouring tiles blend into each other.
-          if (palette) {
-            const patch = valueNoise(cx / 7, cy / 7, 3) * 0.7 + valueNoise(cx / 2, cy / 2, 5) * 0.3;
-            color.copy(palette[0]).lerp(palette[1], patch);
+          const patch = valueNoise(cx / 7, cy / 7, 3) * 0.7 + valueNoise(cx / 2, cy / 2, 5) * 0.3;
+          if (isAcid) {
+            color.copy(ACID_GROUND[0]).lerp(ACID_GROUND[1], patch);
+          } else {
+            color.setRGB(0, 0, 0);
+            const weights = regions[k];
+            for (const biome of BIOMES) {
+              const weight = weights?.[biome] ?? (biome === "rust" ? 1 : 0);
+              if (weight <= 0) continue;
+              const palette = REGION_GROUND[biome][ground === Terrain.Sand ? "sand" : "dirt"];
+              shade.copy(palette[0]).lerp(palette[1], patch);
+              color.add(blend.copy(shade).multiplyScalar(weight));
+            }
           }
           // Bare rock shows on steep slopes and cliffs; high ground is sun-bleached.
           const steep = Math.min(1, Math.max(0, (0.93 - ny) * 5));
           color.lerp(CLIFF_COLOR, Math.max(steep, cliff ? 0.55 : 0));
+          // Under water the bed darkens with depth, so the shore fades rather than steps.
+          const waterLevel = this.world.waterLevelAt(cx, cy);
+          if (waterLevel !== null && height < waterLevel + 0.05) {
+            const under = Math.min(1, (waterLevel + 0.05 - height) * 2.5);
+            color.lerp(blend.copy(WATER_BED[0]).lerp(WATER_BED[1], patch), under);
+          }
           if (chunk.paved[i] === 1) color.lerp(PAVED_COLOR, 0.82);
           else if (chunk.ruin[i] === 1) color.lerp(RUIN_COLOR, 0.85);
           color.multiplyScalar(0.92 + height * 0.04 + tileNoise(cx, cy) * 0.08);
@@ -735,6 +877,24 @@ export class Renderer {
           const a = acid.positions.length / 3 - 4;
           acid.indices.push(a, a + 2, a + 1, a, a + 3, a + 2);
         }
+
+        // Open water lies flat at its pool's level over every tile the ground dips below it,
+        // so the shore curves where land and water meet rather than following the tiles.
+        const level = this.world.waterLevelAt(x + 0.5, y + 0.5);
+        if (level !== null) {
+          let lowest = Number.POSITIVE_INFINITY;
+          for (const [dx, dy] of CORNERS) {
+            lowest = Math.min(lowest, cornerHeights[lx + dx + (ly + dy) * side] ?? 0);
+          }
+          if (lowest < level) {
+            const a = water.positions.length / 3;
+            for (const [dx, dy] of CORNERS) {
+              water.positions.push(x + dx, level, y + dy);
+              water.colors.push(seen ? 1 : FOGGED, 0, 0);
+            }
+            water.indices.push(a, a + 2, a + 1, a, a + 3, a + 2);
+          }
+        }
       }
     }
 
@@ -744,6 +904,14 @@ export class Renderer {
     film.setIndex(acid.indices);
     view.acid.geometry.dispose();
     view.acid.geometry = film;
+
+    const pool = new THREE.BufferGeometry();
+    pool.setAttribute("position", new THREE.Float32BufferAttribute(water.positions, 3));
+    pool.setAttribute("color", new THREE.Float32BufferAttribute(water.colors, 3));
+    pool.setIndex(water.indices);
+    pool.computeVertexNormals();
+    view.water.geometry.dispose();
+    view.water.geometry = pool;
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
@@ -952,6 +1120,38 @@ export class Renderer {
   }
 
   /** Wardens dismantling something trail an amber beam to it. */
+  /** Shafts of light into the explored sinkholes near what the camera is looking at. */
+  private renderShafts(state: GameState): void {
+    const { target } = state.camera;
+    let used = 0;
+    for (const hole of this.world.sinkholesNear(target.x, target.y, 45)) {
+      if (used >= 4) break;
+      const centre = gridFromWorld({ x: hole.x, y: hole.y });
+      if (this.world.getChunk(centre.chunkX, centre.chunkY).explored[centre.i] !== 1) continue;
+      say(state, SINKHOLE_LINE, "info", { once: "sighted-sinkhole" });
+      learn(state, {
+        id: "sinkhole",
+        category: "Lessuin",
+        title: "Sinkhole gardens",
+        text: SINKHOLE_LINE,
+      });
+      let shafts = this.shafts[used];
+      if (!shafts) {
+        shafts = createShafts(this.shaftMaterial);
+        this.shafts.push(shafts);
+        this.scene.add(shafts);
+      }
+      shafts.visible = true;
+      shafts.position.set(hole.x, this.world.heightAt(hole.x, hole.y), hole.y);
+      shafts.scale.setScalar(hole.radius / 7);
+      used++;
+    }
+    for (let i = used; i < this.shafts.length; i++) {
+      const shafts = this.shafts[i];
+      if (shafts) shafts.visible = false;
+    }
+  }
+
   private renderBeams(state: GameState, time: number): void {
     let used = 0;
     for (const unit of state.units) {
